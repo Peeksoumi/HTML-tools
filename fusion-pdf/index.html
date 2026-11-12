@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fusion de PDF</title>
+    <!-- Bibliothèques CDN stables -->
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --primary-hover: #4338CA;
+            --bg: #F3F4F6;
+            --card-bg: #FFFFFF;
+            --border: #E5E7EB;
+            --text: #111827;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container { width: 100%; max-width: 900px; text-align: center; }
+        h1 { font-size: 2rem; margin-bottom: 10px; color: #1F2937; }
+        p { color: #6B7280; margin-bottom: 30px; }
+        
+        .drop-zone {
+            border: 2px dashed #6B7280;
+            border-radius: 12px;
+            padding: 40px 20px;
+            background: var(--card-bg);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-bottom: 30px;
+        }
+        .drop-zone:hover, .drop-zone.drag-over {
+            border-color: var(--primary);
+            background: #EEF2F6;
+        }
+        .drop-zone p { margin: 0; font-weight: 500; }
+        #file-input { display: none; }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+            min-height: 100px;
+        }
+        
+        .page-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px;
+            position: relative;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            cursor: grab;
+            user-select: none;
+            transition: transform 0.15s ease;
+        }
+        .page-card:active { cursor: grabbing; }
+        .page-card.dragging { opacity: 0.4; transform: scale(0.95); }
+        .page-card canvas {
+            width: 100%;
+            height: auto;
+            border-radius: 4px;
+            background: #E5E7EB;
+        }
+        .page-info {
+            font-size: 0.75rem;
+            color: #6B7280;
+            margin-top: 8px;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        
+        .delete-btn {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #EF4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .delete-btn:hover { background: #DC2626; }
+
+        .export-options {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            width: 100%;
+            gap: 5px;
+        }
+        .input-group label { font-size: 0.85rem; font-weight: 600; color: #4B5563; }
+        .input-filename {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        .input-filename:focus { border-color: var(--primary); outline: none; }
+
+        .progress-container {
+            width: 100%;
+            background-color: #E5E7EB;
+            border-radius: 8px;
+            height: 16px;
+            overflow: hidden;
+            display: none;
+            margin-top: 10px;
+        }
+        .progress-bar {
+            width: 0%;
+            height: 100%;
+            background-color: var(--primary);
+            transition: width 0.1s linear;
+        }
+
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+            width: 100%;
+        }
+        .btn:hover { background-color: var(--primary-hover); }
+        .btn:disabled { background-color: #9CA3AF; cursor: not-allowed; }
+        
+        #status-message { margin-top: 15px; font-weight: 500; color: var(--primary); white-space: pre-line; font-size: 0.95rem; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Fusion de PDF</h1>
+    <p>Glissez vos fichiers, modifiez l'ordre des pages et exportez.</p>
+
+    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+        <p>Glissez-déposez vos fichiers PDF ici ou <span style="color: var(--primary); text-decoration: underline;">parcourez vos dossiers</span></p>
+        <input type="file" id="file-input" accept=".pdf" multiple>
+    </div>
+
+    <div class="grid" id="pages-grid"></div>
+
+    <div class="export-options">
+        <div class="input-group">
+            <label for="filename-input">Nom du fichier final</label>
+            <input type="text" id="filename-input" class="input-filename" placeholder="document_fusionne" value="document_fusionne">
+        </div>
+        
+        <button class="btn" id="export-btn" onclick="exporterLePDF()" disabled>Fusionner et Exporter PDF</button>
+        
+        <div class="progress-container" id="progress-container">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+    </div>
+    
+    <div id="status-message"></div>
+</div>
+
+<script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+    let documentsInstancies = {}; 
+    let compteurFichiers = 0;
+    const grid = document.getElementById('pages-grid');
+    const exportBtn = document.getElementById('export-btn');
+    const statusMsg = document.getElementById('status-message');
+    const dropZone = document.getElementById('drop-zone');
+    const progressContainer = document.getElementById('progress-container');
+    const progressBar = document.getElementById('progress-bar');
+    const filenameInput = document.getElementById('filename-input');
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); }, false);
+    });
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => { e.preventDefault(); dropZone.classList.remove('drag-over'); }, false);
+    });
+    dropZone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        traiterFichiers(dt.files);
+    });
+    document.getElementById('file-input').addEventListener('change', (e) => {
+        traiterFichiers(e.target.files);
+    });
+
+    async function traiterFichiers(files) {
+        if (!files.length) return;
+        statusMsg.style.color = "var(--primary)";
+        statusMsg.innerText = "Chargement et rendu des miniatures...";
+
+        for (let file of files) {
+            if (file.type !== "application/pdf") continue;
+
+            const fileId = "file_" + (++compteurFichiers);
+            const arrayBuffer = await file.arrayBuffer();
+
+            try {
+                const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                documentsInstancies[fileId] = pdfDoc;
+                
+                for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+                    const page = await pdfDoc.getPage(pageNum);
+                    
+                    const card = document.createElement('div');
+                    card.className = 'page-card';
+                    card.draggable = true;
+                    card.dataset.fileId = fileId;
+                    card.dataset.pageNum = pageNum.toString(); 
+
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    const viewport = page.getViewport({ scale: 0.25 });
+                    canvas.width = viewport.width;
+                    canvas.height = viewport.height;
+                    
+                    await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+                    card.appendChild(canvas);
+
+                    const info = document.createElement('div');
+                    info.className = 'page-info';
+                    info.innerText = `${file.name.substring(0, 10)}... (p. ${pageNum})`;
+                    card.appendChild(info);
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'delete-btn';
+                    deleteBtn.innerHTML = '&times;';
+                    deleteBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        card.remove();
+                        verifierEtatBouton();
+                    };
+                    card.appendChild(deleteBtn);
+
+                    attacherEvenementsTri(card);
+                    grid.appendChild(card);
+                }
+            } catch (err) {
+                console.error(err);
+                statusMsg.style.color = "#EF4444";
+                statusMsg.innerText = `❌ Impossible de lire : ${file.name}`;
+            }
+        }
+        statusMsg.innerText = "";
+        verifierEtatBouton();
+    }
+
+    let draggedItem = null;
+
+    function attacherEvenementsTri(item) {
+        item.addEventListener('dragstart', () => {
+            draggedItem = item;
+            setTimeout(() => item.classList.add('dragging'), 0);
+        });
+        item.addEventListener('dragend', () => {
+            setTimeout(() => {
+                draggedItem.classList.remove('dragging');
+                draggedItem = null;
+            }, 0);
+        });
+        item.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            const targetCard = e.target.closest('.page-card');
+            if (!targetCard || targetCard === draggedItem) return;
+
+            const bounding = targetCard.getBoundingClientRect();
+            const offset = e.clientX - bounding.left;
+            
+            if (offset < bounding.width / 2) {
+                grid.insertBefore(draggedItem, targetCard);
+            } else {
+                grid.insertBefore(draggedItem, targetCard.nextSibling);
+            }
+        });
+    }
+
+    function verifierEtatBouton() {
+        const cards = grid.querySelectorAll('.page-card');
+        exportBtn.disabled = cards.length === 0;
+    }
+
+    async function exporterLePDF() {
+        const cards = grid.querySelectorAll('.page-card');
+        if (cards.length === 0) return;
+
+        exportBtn.disabled = true;
+        filenameInput.disabled = true;
+        progressContainer.style.display = "block";
+        progressBar.style.width = "0%";
+        statusMsg.style.color = "var(--primary)";
+        
+        const totalPages = cards.length;
+        statusMsg.innerText = "Initialisation du moteur de rendu HD (600 DPI)...";
+
+        try {
+            const pdfFinal = await PDFLib.PDFDocument.create();
+            const hiddenCanvas = document.createElement('canvas');
+            const hiddenCtx = hiddenCanvas.getContext('2d');
+
+            let indexPageTraitee = 0;
+
+            for (let card of cards) {
+                const fileId = card.dataset.fileId;
+                const pageNum = parseInt(card.dataset.pageNum, 10);
+                const pdfDocSource = documentsInstancies[fileId];
+                
+                const page = await pdfDocSource.getPage(pageNum);
+                
+                // PASSAGE À L'ÉCHELLE 4.0 POUR UNE NETTETÉ PROCHE DU VECTORIEL ORIGINAL (600 DPI)
+                const viewport = page.getViewport({ scale: 4.0 });
+                hiddenCanvas.width = viewport.width;
+                hiddenCanvas.height = viewport.height;
+                
+                await page.render({ canvasContext: hiddenCtx, viewport: viewport }).promise;
+                
+                const imgDataUrl = hiddenCanvas.toDataURL('image/png');
+                const imgBytes = await fetch(imgDataUrl).then(res => res.arrayBuffer());
+                
+                const imageNettoye = await pdfFinal.embedPng(imgBytes);
+                
+                // Repositionnement aux dimensions d'affichage d'origine (scale 1.0)
+                const nouvellePage = pdfFinal.addPage([viewport.width / 4, viewport.height / 4]);
+                
+                nouvellePage.drawImage(imageNettoye, {
+                    x: 0, y: 0,
+                    width: viewport.width / 4,
+                    height: viewport.height / 4,
+                });
+
+                indexPageTraitee++;
+                const pourcentage = Math.round((indexPageTraitee / totalPages) * 100);
+                progressBar.style.width = `${pourcentage}%`;
+                statusMsg.innerText = `Numérisation HD des pages : ${pourcentage}% (${indexPageTraitee} / ${totalPages})`;
+
+                await new Promise(resolve => setTimeout(resolve, 40));
+            }
+
+            statusMsg.innerText = "Compilation finale de vos documents...";
+            const pdfBytes = await pdfFinal.save();
+            const blob = new Blob([pdfBytes], { type: "application/pdf" });
+            
+            let nomFichier = filenameInput.value.trim();
+            if (!nomFichier) nomFichier = "document_fusionne";
+            if (!nomFichier.toLowerCase().endsWith(".pdf")) nomFichier += ".pdf";
+
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = nomFichier;
+            link.click();
+
+            statusMsg.innerText = "✓ Exportation HD réussie avec succès !";
+            setTimeout(() => { 
+                statusMsg.innerText = ""; 
+                progressContainer.style.display = "none";
+            }, 4000);
+
+        } catch (erreur) {
+            console.error("Erreur critique de rendu :", erreur);
+            statusMsg.style.color = "#EF4444";
+            statusMsg.innerText = "❌ Une erreur s'est produite lors de la génération graphique des pages.";
+            progressContainer.style.display = "none";
+        } finally {
+            filenameInput.disabled = false;
+            verifierEtatBouton();
+        }
+    }
+</script>
+
+</body>
+</html>
