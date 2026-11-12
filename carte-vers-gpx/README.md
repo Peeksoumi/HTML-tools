@@ -11,6 +11,6 @@ Outil 100 % navigateur (un seul fichier `index.html`, aucune dépendance) qui re
 - `src/core.js` : algorithmes (masque couleur, squelette, chaînage, grille, géodésie LV95, GPX) ;
   `src/template.html` : interface.
 - `python3 build.py` régénère `index.html` (core.js inliné).
-- Tests : `python3 tests/run_all.py [URL]` (Playwright + Chrome) ; les cas sont décrits dans `tests/cases.json`, les cartes d'exemple dans `tests/examples/`. Pour ajouter un exemple qui échoue : déposer l'image, ajouter une entrée dans `cases.json` (couleur attendue, longueur en km, boucle ou non).
+- Tests : `python3 tests/search_test.py` (recherche de lieu, services simulés) et `python3 tests/run_all.py [URL]` (Playwright + Chrome) ; les cas sont décrits dans `tests/cases.json`, les cartes d'exemple dans `tests/examples/`. Pour ajouter un exemple qui échoue : déposer l'image, ajouter une entrée dans `cases.json` (couleur attendue, longueur en km, boucle ou non).
 
 Précision typique 10–50 m selon l'échelle de la carte. Recherche de lieu et altitudes : API swisstopo / OpenStreetMap.

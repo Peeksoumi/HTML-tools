@@ -167,7 +167,7 @@
       </div>
       <div id="outInfo" class="stat"></div>
     </section>
-    <div class="small" style="padding:0 4px 20px">Tout se fait dans ton navigateur : la carte n'est envoyée nulle part. Seules la recherche de lieu et les altitudes interrogent swisstopo / OpenStreetMap. Précision typique : 10–50 m selon l'échelle de la carte.<br>Une idée, un bug ? <a href="https://github.com/Peeksoumi/HTML-tools/issues" target="_blank" rel="noopener">Ouvre une « issue » sur GitHub</a>.</div>
+    <div class="small" style="padding:0 4px 20px">Tout se fait dans ton navigateur : la carte n'est envoyée nulle part. Seules la recherche de lieu (OpenStreetMap, Open-Meteo, swisstopo) et les altitudes (swisstopo) interrogent un service externe. Précision typique : 10–50 m selon l'échelle de la carte.<br>Une idée, un bug ? <a href="https://github.com/Peeksoumi/HTML-tools/issues" target="_blank" rel="noopener">Ouvre une « issue » sur GitHub</a>.</div>
   </aside>
 </main>
 
@@ -399,20 +399,31 @@ $('q').onkeydown = e => { if (e.key === 'Enter') $('qBtn').click(); };
 $('qBtn').onclick = async () => {
   const q = $('q').value.trim(); if (!q) return;
   const box = $('searchRes'); box.innerHTML = '<span class="small">Recherche…</span>';
-  let res = [];
-  try {
-    const r = await fetch(`https://api3.geo.admin.ch/rest/services/api/SearchServer?searchText=${encodeURIComponent(q)}&type=locations&sr=4326&limit=8`);
-    const j = await r.json();
-    res = (j.results || []).map(x => ({ label: x.attrs.label.replace(/<[^>]+>/g, ''), lat: x.attrs.lat, lon: x.attrs.lon, src: 'swisstopo' }));
-  } catch (_) {}
-  if (!res.length) try {
-    const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=6&q=${encodeURIComponent(q)}`);
-    res = (await r.json()).map(x => ({ label: x.display_name, lat: +x.lat, lon: +x.lon, src: 'OSM' }));
-  } catch (_) {}
-  box.innerHTML = res.length ? '' : '<span class="small err">Rien trouvé (ou pas d\'accès réseau). Saisis les coordonnées à la main.</span>';
-  res.forEach(x => {
+  const get = async (url) => { const r = await fetch(url); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); };
+  const enc = encodeURIComponent(q);
+  // trois services interrogés en parallèle : OpenStreetMap (monde entier, France comprise), Open-Meteo (villes), swisstopo (Suisse)
+  const jobs = [
+    get(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=8&accept-language=fr&q=${enc}`)
+      .then(j => j.map(x => ({ label: x.display_name, lat: +x.lat, lon: +x.lon, src: 'OpenStreetMap' }))),
+    get(`https://geocoding-api.open-meteo.com/v1/search?count=8&language=fr&format=json&name=${enc}`)
+      .then(j => (j.results || []).map(x => ({ label: [x.name, x.admin2, x.admin1, x.country].filter(Boolean).join(', '), lat: x.latitude, lon: x.longitude, src: 'Open-Meteo' }))),
+    get(`https://api3.geo.admin.ch/rest/services/api/SearchServer?searchText=${enc}&type=locations&sr=4326&limit=8`)
+      .then(j => (j.results || []).map(x => ({ label: x.attrs.label.replace(/<[^>]+>/g, ''), lat: x.attrs.lat, lon: x.attrs.lon, src: 'swisstopo' }))),
+  ];
+  const done = await Promise.allSettled(jobs);
+  const seen = new Set(), res = [];
+  done.flatMap(d => d.status === 'fulfilled' ? d.value : []).forEach(x => {
+    if (!isFinite(x.lat) || !isFinite(x.lon)) return;
+    const k = x.lat.toFixed(2) + ',' + x.lon.toFixed(2);   // même lieu trouvé par plusieurs services : une seule ligne
+    if (!seen.has(k)) { seen.add(k); res.push(x); }
+  });
+  const failed = done.filter(d => d.status === 'rejected').length;
+  box.innerHTML = res.length ? '' : (failed === done.length
+    ? '<span class="small err">Les services de recherche ne répondent pas (pas d\'accès réseau ?). Saisis les coordonnées à la main.</span>'
+    : '<span class="small err">Aucun résultat : essaie avec la commune et le pays (ex. « Chamonix, France »), ou saisis les coordonnées.</span>');
+  res.slice(0, 12).forEach(x => {
     const d = document.createElement('div'); d.textContent = `${x.label} (${x.src})`;
-    d.onclick = () => { $('cpCoord').value = `${x.lat.toFixed(6)}, ${x.lon.toFixed(6)}`; S.pendingLabel = x.label; box.innerHTML = ''; };
+    d.onclick = () => { $('cpCoord').value = `${x.lat.toFixed(6)}, ${x.lon.toFixed(6)}`; S.pendingLabel = x.label.split(',')[0]; box.innerHTML = ''; };
     box.appendChild(d);
   });
 };
