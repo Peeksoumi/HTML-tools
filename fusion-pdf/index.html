@@ -165,11 +165,16 @@
         .btn:disabled { background-color: #9CA3AF; cursor: not-allowed; }
         
         #status-message { margin-top: 15px; font-weight: 500; color: var(--primary); white-space: pre-line; font-size: 0.95rem; }
+        .ideas { display: inline-block; margin: 0 0 14px; font-size: 0.9rem; color: var(--text); text-decoration: none; border: 1px solid var(--border); background: var(--card-bg); border-radius: 8px; padding: 6px 12px; }
+        .ideas:hover { background: #E5E7EB; }
+        .site-note { margin-top: 30px; font-size: 0.85rem; color: #6B7280; }
+        .site-note a { color: var(--primary); }
     </style>
 </head>
 <body>
 
 <div class="container">
+    <a class="ideas" href="https://github.com/Peeksoumi/HTML-tools/issues/new" target="_blank" rel="noopener">💡 Proposer une amélioration</a>
     <h1>Fusion de PDF</h1>
     <p>Glissez vos fichiers, modifiez l'ordre des pages et exportez.</p>
 
@@ -194,6 +199,8 @@
     </div>
     
     <div id="status-message"></div>
+
+    <p class="site-note">Une idée, un bug ? <a href="https://github.com/Peeksoumi/HTML-tools/issues" target="_blank" rel="noopener">Ouvre une « issue » sur GitHub</a>.</p>
 </div>
 
 <script>
