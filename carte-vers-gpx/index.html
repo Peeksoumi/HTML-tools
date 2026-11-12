@@ -75,6 +75,7 @@
       <button data-m="start">🟢 Départ</button>
       <button data-m="exclude">⬛ Exclure zone</button>
       <button data-m="cp">📍 Point de calage</button>
+      <button data-m="scale">📏 Échelle</button>
       <button data-m="split">✂️ Fin d'étape</button>
     </div>
     <div id="zoomBar"><button id="zin">+</button><button id="zout">−</button><button id="zfit" title="Ajuster">⤢</button></div>
@@ -94,9 +95,11 @@
       <label>Couleur du tracé (ou 🎯 Pipette puis touche le trait sur la carte)</label>
       <div class="row">
         <input type="color" id="color" value="#fa0505" class="swatch">
+        <button class="b" id="autoCol" title="Détecter la couleur automatiquement">Auto</button>
         <div style="flex:1"><input type="range" id="tol" min="20" max="160" value="80"></div>
         <span class="small" id="tolV">±80</span>
       </div>
+      <div id="colorInfo" class="small"></div>
       <label>Épaisseur mini du trait gardé <span class="small" id="radV"></span></label>
       <div class="row">
         <input type="range" id="rad" min="0" max="40" value="0" style="flex:1">
@@ -117,7 +120,7 @@
 
     <section>
       <h2><span class="n">3</span> Géoréférencer</h2>
-      <div class="small">Place au moins <b>2 points de calage</b> (📍 puis touche un sommet, une cabane, un col…) et donne leurs coordonnées. Sur une carte suisse avec grille kilométrique, <b>1 point</b> suffit.</div>
+      <div class="small">Place <b>2 points de calage</b> (📍 puis touche un sommet, une cabane, un col…) et donne leurs coordonnées. <b>1 point suffit</b> si la carte a une grille kilométrique suisse, ou si tu donnes la <b>barre d'échelle</b> d'une capture d'appli (carte supposée orientée vers le nord).</div>
       <div id="cpEdit">
         <label style="margin-top:0">Coordonnées du point (WGS84 « 47.024, 9.236 », DMS, ou suisse « 2'738'000 / 1'210'000 »)</label>
         <input type="text" id="cpCoord" placeholder="47.0240, 9.2364">
@@ -128,6 +131,9 @@
         <div id="cpErr" class="small err"></div>
       </div>
       <div id="cpList" style="margin-top:8px"></div>
+      <label>Échelle de la carte (captures d'applis)</label>
+      <div class="row"><button class="b" id="scaleBtn">📏 Barre d'échelle</button><input type="text" id="scaleKm" placeholder="longueur lue : 5 km" style="flex:1;min-width:120px"></div>
+      <div id="scaleInfo" class="small" style="margin-top:4px"></div>
       <label>Projection de la carte</label>
       <select id="proj">
         <option value="auto">Automatique (suisse LV95 si en Suisse, sinon Web Mercator)</option>
@@ -377,6 +383,11 @@ const Core = (() => {
   // ---------- Simplification Douglas-Peucker ----------
   function simplify(pts, eps) {
     if (pts.length < 3) return pts.slice();
+    const f0 = pts[0], l0 = pts[pts.length - 1];
+    if (pts.length > 3 && f0[0] === l0[0] && f0[1] === l0[1]) {   // boucle fermée : on coupe au point le plus éloigné
+      let mi = 1, md = -1; for (let i = 1; i < pts.length - 1; i++) { const d = Math.hypot(pts[i][0] - f0[0], pts[i][1] - f0[1]); if (d > md) { md = d; mi = i; } }
+      return simplify(pts.slice(0, mi + 1), eps).concat(simplify(pts.slice(mi), eps).slice(1));
+    }
     const keep = new Uint8Array(pts.length); keep[0] = keep[pts.length - 1] = 1;
     const st = [[0, pts.length - 1]];
     while (st.length) {
@@ -423,6 +434,11 @@ const Core = (() => {
       if (a) full = [a.c, ...full];
       if (z) full = [...full, z.c];
     }
+    // boucle (les deux bouts se touchent, souvent cachés par un numéro) : on la ferme
+    if (full.length > 20 && o.closeLoop !== false) {
+      const gap = dst(full[0], full[full.length - 1]);
+      if (gap > 2 * lineW && gap <= maxGap * 0.6 && plen(full) > 6 * gap) full = [...full, full[0]];
+    }
     if (o.reverse) full = full.slice().reverse();
     const route = simplify(full, o.eps || 0.7);
     return { route, minLen, maxGap, nSegs: segs.length, nUsed: ch.used.size };
@@ -431,6 +447,77 @@ const Core = (() => {
   function extractRoute(rgba, w, h, o) {
     const p = prepare(rgba, w, h, o);
     return Object.assign(assemble(p, o), { half: p.half, radius: p.radius, opened: p.opened });
+  }
+
+  // ---------- Réduction (moyenne par blocs) pour les analyses rapides ----------
+  function downscale(rgba, w, h, maxSide) {
+    const k = Math.min(1, maxSide / Math.max(w, h));
+    if (k >= 1) return { rgba, w, h, k: 1 };
+    const nw = Math.max(1, Math.round(w * k)), nh = Math.max(1, Math.round(h * k));
+    const acc = new Float32Array(nw * nh * 4), cnt = new Uint32Array(nw * nh);
+    for (let y = 0; y < h; y++) {
+      const dy = Math.min(nh - 1, (y * nh / h) | 0);
+      for (let x = 0; x < w; x++) {
+        const di = dy * nw + Math.min(nw - 1, (x * nw / w) | 0), j = (y * w + x) * 4;
+        acc[di * 4] += rgba[j]; acc[di * 4 + 1] += rgba[j + 1]; acc[di * 4 + 2] += rgba[j + 2]; cnt[di]++;
+      }
+    }
+    const out = new Uint8ClampedArray(nw * nh * 4);
+    for (let i = 0; i < cnt.length; i++) { const c = cnt[i] || 1; out[i * 4] = acc[i * 4] / c; out[i * 4 + 1] = acc[i * 4 + 1] / c; out[i * 4 + 2] = acc[i * 4 + 2] / c; out[i * 4 + 3] = 255; }
+    return { rgba: out, w: nw, h: nh, k: nw / w };
+  }
+
+  // ---------- Couleur du tracé : on essaie les couleurs vives dominantes, on garde celle qui donne le plus long tracé ----------
+  function autoColor(rgba, w, h) {
+    const d = downscale(rgba, w, h, 1600);
+    const bins = new Map();
+    for (let i = 0, j = 0; i < d.w * d.h; i++, j += 4) {
+      const r = d.rgba[j], g = d.rgba[j + 1], b = d.rgba[j + 2], mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+      if (mx < 90 || (mx - mn) / mx < 0.55) continue;
+      const key = ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4);
+      let e = bins.get(key); if (!e) { e = [0, 0, 0, 0]; bins.set(key, e); }
+      e[0]++; e[1] += r; e[2] += g; e[3] += b;
+    }
+    const cand = [];
+    for (const e of [...bins.values()].sort((a, b) => b[0] - a[0])) {
+      if (e[0] < 30) break;
+      const c = [e[1] / e[0], e[2] / e[0], e[3] / e[0]];
+      if (cand.some(o => Math.hypot(o[0] - c[0], o[1] - c[1], o[2] - c[2]) < 70)) continue;
+      cand.push(c); if (cand.length >= 6) break;
+    }
+    let best = null; const tested = [];
+    for (const rgb of cand) {
+      const prep = prepare(d.rgba, d.w, d.h, { rgb, tol: 55 });
+      const a = assemble(prep, {});
+      const score = plen(a.route) / Math.max(d.w, d.h);   // longueur du tracé chaîné, en largeurs d'image
+      tested.push({ rgb: rgb.map(Math.round), score });
+      if (!best || score > best.score) best = { rgb: rgb.map(Math.round), tol: 55, score };
+    }
+    return best ? Object.assign(best, { tested }) : null;
+  }
+
+  // ---------- Barre d'échelle (capture d'appli) : longue ligne sombre fine avec traits aux extrémités ----------
+  function detectScaleBar(rgba, w, h) {
+    const dark = (x, y) => { const j = (y * w + x) * 4; return rgba[j] < 95 && rgba[j + 1] < 95 && rgba[j + 2] < 95; };
+    const zones = [[0, Math.round(h * 0.18)], [Math.round(h * 0.82), h]];
+    let best = null;
+    for (const [y0, y1] of zones) for (let y = y0; y < y1; y++) {
+      let x = 0;
+      while (x < w * 0.7) {
+        if (!dark(x, y)) { x++; continue; }
+        let x2 = x; while (x2 < w && dark(x2, y)) x2++;
+        const len = x2 - x;
+        if (len >= Math.max(40, w * 0.08) && len <= w * 0.6) {
+          // trait fin (≤ 4 px d'épaisseur) et traits verticaux aux deux extrémités
+          let th = 1; while (y + th < h && th < 8 && dark(x + (len >> 1), y + th)) th++;
+          const tick = (xx) => { let n = 0; for (let k = 1; k <= 8; k++) { if (y - k >= 0 && dark(xx, y - k)) n++; } for (let k = 1; k <= 8; k++) { if (y + th + k < h && dark(xx, y + th + k)) n++; } return n; };
+          const t1 = tick(x + 1), t2 = tick(x2 - 2);
+          if (th <= 4 && t1 >= 3 && t2 >= 3 && (!best || len > best.len)) best = { x1: x, x2: x2 - 1, y: y + th / 2, len };
+        }
+        x = x2 + 1;
+      }
+    }
+    return best;
   }
 
   // ---------- Détection de la grille kilométrique (lignes grises) ----------
@@ -468,7 +555,7 @@ const Core = (() => {
     return { x: lines(cols, h), y: lines(rows, w) };
   }
 
-  return { extractJpegsFromPdf, colorMask, edt, openDisk, thin, skeletonPaths, chain, simplify, prepare, assemble, extractRoute, detectGrid, plen };
+  return { extractJpegsFromPdf, colorMask, edt, openDisk, thin, skeletonPaths, chain, simplify, prepare, assemble, extractRoute, downscale, autoColor, detectScaleBar, detectGrid, plen };
 })();
 
 // ===== Géodésie =====
@@ -605,11 +692,11 @@ const cv = $('cv'), ctx = cv.getContext('2d');
 const S = {
   img: null, W: 0, H: 0, work: null, view: { s: 1, tx: 0, ty: 0 },
   mode: 'pan', exclude: [], startPt: null, reverse: false, prep: null, prepKey: '',
-  route: [], ele: null, grid: null, cps: [], pending: null, splits: [], tf: null, maskCv: null, dragRect: null,
+  route: [], ele: null, grid: null, cps: [], pending: null, splits: [], tf: null, maskCv: null, dragRect: null, scaleBar: null, scaleTmp: null,
 };
 const HINTS = {
   pan: '', pick: 'Touche le trait du tracé pour prendre sa couleur.',
-  start: 'Touche le point de départ du tracé.', exclude: 'Glisse pour dessiner une zone à ignorer (2 doigts = déplacer).',
+  start: 'Touche le point de départ du tracé.', scale: 'Touche les deux extrémités de la barre d\'échelle de la carte.', exclude: 'Glisse pour dessiner une zone à ignorer (2 doigts = déplacer).',
   cp: 'Touche un point reconnaissable (sommet, cabane, croisement…).', split: 'Touche le tracé à la fin d\'une étape.',
 };
 
@@ -644,7 +731,7 @@ async function loadFile(f) {
     const cx = c.getContext('2d', { willReadFrequently: true }); cx.imageSmoothingQuality = 'high';
     cx.drawImage(S.img, 0, 0, w, h);
     S.work = { rgba: cx.getImageData(0, 0, w, h).data, w, h, sc };
-    Object.assign(S, { exclude: [], startPt: null, reverse: false, prep: null, prepKey: '', route: [], ele: null, cps: [], pending: null, splits: [], maskCv: null });
+    Object.assign(S, { exclude: [], startPt: null, reverse: false, prep: null, prepKey: '', route: [], ele: null, cps: [], pending: null, splits: [], maskCv: null, scaleBar: null, scaleTmp: null });
     $('drop').style.display = 'none';
     $('loadInfo').innerHTML = `${esc(f.name)} — ${how}, ${S.W}×${S.H} px`;
     if (!$('tname').value || $('tname').value === 'Randonnée') $('tname').value = f.name.replace(/\.[^.]+$/, '').replace(/[_|]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -652,6 +739,10 @@ async function loadFile(f) {
     const conv = a => a && { lines: a.lines.map(v => v / sc), period: a.period / sc };
     S.grid = (g.x && g.y) ? { x: conv(g.x), y: conv(g.y) } : null;
     fitView(); ['run', 'rev', 'clrEx'].forEach(id => $(id).disabled = false);
+    $('scaleKm').value = '';
+    const sb = Core.detectScaleBar(S.work.rgba, w, h);
+    S.scaleBar = sb ? { a: [sb.x1 / sc, sb.y / sc], b: [sb.x2 / sc, sb.y / sc], auto: true } : null;
+    autoColor(false);
     busy(false);
     await runExtract();
   } catch (err) {
@@ -674,6 +765,14 @@ async function renderPdf(bytes) {
 }
 
 // ---------- Extraction ----------
+function autoColor(run) {
+  if (!S.work) return;
+  const ac = Core.autoColor(S.work.rgba, S.work.w, S.work.h);
+  if (ac) { $('color').value = rgb2hex(ac.rgb); $('tol').value = ac.tol; $('tolV').textContent = '±' + ac.tol; }
+  $('colorInfo').innerHTML = ac ? '<span class="ok">Couleur détectée automatiquement</span> — corrige avec 🎯 si ce n\'est pas la bonne.' : 'Aucune couleur vive trouvée : utilise 🎯 Pipette.';
+  if (run) runExtract();
+}
+$('autoCol').onclick = () => autoColor(true);
 const hex2rgb = h => [1, 3, 5].map(i => parseInt(h.substr(i, 2), 16));
 const rgb2hex = c => '#' + c.map(v => Math.round(v).toString(16).padStart(2, '0')).join('');
 $('tol').oninput = () => $('tolV').textContent = '±' + $('tol').value;
@@ -768,8 +867,12 @@ function computeTransform() {
   } else if (pts.length >= 2) {
     f = pts.length >= 3 && P.name !== 'LV95' ? Fit.affine(pts) : Fit.similarity(pts);
     method = pts.length >= 3 && P.name !== 'LV95' ? 'transformation affine' : 'similitude (échelle + rotation)';
+  } else if (pts.length === 1 && scaleMPP()) {
+    const sp = scaleMPP() / P.k, p0 = pts[0];
+    f = (x, y) => [p0.E + sp * (x - p0.px), p0.N - sp * (y - p0.py)];
+    method = '1 point + barre d\'échelle (carte orientée vers le nord)';
   } else if (pts.length < 2) {
-    info.push(`Points de calage : ${pts.length}/2${S.grid && P.name === 'LV95' ? ' (1 suffit avec la grille)' : ''}.`);
+    info.push(`Points de calage : ${pts.length}/2${S.grid && P.name === 'LV95' ? ' (1 suffit avec la grille)' : ' (ou 1 point + la longueur de la barre d\'échelle)'}.`);
   }
   if (S.grid) info.push(`<span class="small">Grille détectée : ${S.grid.x.lines.length} lignes verticales, ${S.grid.y.lines.length} horizontales (pas ≈ ${S.grid.x.period.toFixed(0)} px).</span>`);
   if (!f) return info;
@@ -782,6 +885,17 @@ function computeTransform() {
   });
   return info;
 }
+
+// échelle : mètres réels par pixel de l'image (null si inconnue)
+function scaleMPP() {
+  const sb = S.scaleBar, t = $('scaleKm').value.trim().toLowerCase().replace(',', '.');
+  if (!sb || !t) return null;
+  const m = t.match(/^(\d+(?:\.\d+)?)\s*(km|m)?$/); if (!m) return null;
+  const metres = parseFloat(m[1]) * (m[2] === 'm' ? 1 : 1000), d = Math.hypot(sb.b[0] - sb.a[0], sb.b[1] - sb.a[1]);
+  return d > 5 && metres > 0 ? metres / d : null;
+}
+$('scaleBtn').onclick = () => setMode('scale');
+$('scaleKm').oninput = () => refresh();
 
 // édition des points
 $('cpCancel').onclick = () => { S.pending = null; $('cpEdit').style.display = 'none'; draw(); };
@@ -910,6 +1024,10 @@ function renderOut() {
 function refresh() {
   const info = computeTransform();
   $('geoInfo').innerHTML = info.join('<br>');
+  const sb = S.scaleBar, mpp = scaleMPP();
+  $('scaleInfo').innerHTML = !sb ? '<span class="small">Pas de barre trouvée : 📏 puis touche ses deux extrémités.</span>'
+    : mpp ? `<span class="ok">✔ échelle ≈ ${mpp.toFixed(1)} m/px</span>`
+    : `${sb.auto ? 'Barre détectée automatiquement (orange sur la carte). ' : ''}Tape sa longueur lue sur la carte (ex. 5 km).`;
   renderCps(); renderSplits(); renderOut(); draw();
 }
 ['proj', 'useGrid', 'spacing'].forEach(id => $(id).onchange = refresh);
@@ -994,6 +1112,9 @@ function tap(x, y) {
     $('color').value = rgb2hex(acc.map(v => v / n)); setMode('pan'); runExtract();
   } else if (S.mode === 'start') {
     S.startPt = [x, y]; S.reverse = false; S.splits = []; setMode('pan'); runExtract(true);
+  } else if (S.mode === 'scale') {
+    if (!S.scaleTmp) { S.scaleTmp = [x, y]; draw(); }
+    else { S.scaleBar = { a: S.scaleTmp, b: [x, y] }; S.scaleTmp = null; setMode('pan'); refresh(); $('scaleKm').focus(); }
   } else if (S.mode === 'cp') {
     S.pending = [x, y]; S.pendingLabel = '';
     $('cpEdit').style.display = 'block'; $('cpCoord').value = ''; $('cpErr').textContent = ''; $('searchRes').innerHTML = '';
@@ -1046,6 +1167,13 @@ function draw() {
     dot(X(S.route.at(-1)[0]), Y(S.route.at(-1)[1]), '#c8102e', 'A');
     S.splits.forEach(i => dot(X(S.route[i][0]), Y(S.route[i][1]), '#f08c00', '✂'));
   }
+  if (S.scaleBar) {
+    const { a, b } = S.scaleBar; ctx.lineCap = 'butt';
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(X(a[0]), Y(a[1])); ctx.lineTo(X(b[0]), Y(b[1])); ctx.stroke();
+    ctx.strokeStyle = '#f08c00'; ctx.lineWidth = 3; ctx.stroke();
+    [a, b].forEach(q => { ctx.beginPath(); ctx.moveTo(X(q[0]), Y(q[1]) - 9); ctx.lineTo(X(q[0]), Y(q[1]) + 9); ctx.stroke(); });
+  }
+  if (S.scaleTmp) cross(X(S.scaleTmp[0]), Y(S.scaleTmp[1]), '#f08c00', '📏');
   S.cps.forEach((c, i) => cross(X(c.px), Y(c.py), '#1a56db', String(i + 1)));
   if (S.pending) cross(X(S.pending[0]), Y(S.pending[1]), '#f08c00', '?');
 }

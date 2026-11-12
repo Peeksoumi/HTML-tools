@@ -209,6 +209,11 @@ const Core = (() => {
   // ---------- Simplification Douglas-Peucker ----------
   function simplify(pts, eps) {
     if (pts.length < 3) return pts.slice();
+    const f0 = pts[0], l0 = pts[pts.length - 1];
+    if (pts.length > 3 && f0[0] === l0[0] && f0[1] === l0[1]) {   // boucle fermée : on coupe au point le plus éloigné
+      let mi = 1, md = -1; for (let i = 1; i < pts.length - 1; i++) { const d = Math.hypot(pts[i][0] - f0[0], pts[i][1] - f0[1]); if (d > md) { md = d; mi = i; } }
+      return simplify(pts.slice(0, mi + 1), eps).concat(simplify(pts.slice(mi), eps).slice(1));
+    }
     const keep = new Uint8Array(pts.length); keep[0] = keep[pts.length - 1] = 1;
     const st = [[0, pts.length - 1]];
     while (st.length) {
@@ -255,6 +260,11 @@ const Core = (() => {
       if (a) full = [a.c, ...full];
       if (z) full = [...full, z.c];
     }
+    // boucle (les deux bouts se touchent, souvent cachés par un numéro) : on la ferme
+    if (full.length > 20 && o.closeLoop !== false) {
+      const gap = dst(full[0], full[full.length - 1]);
+      if (gap > 2 * lineW && gap <= maxGap * 0.6 && plen(full) > 6 * gap) full = [...full, full[0]];
+    }
     if (o.reverse) full = full.slice().reverse();
     const route = simplify(full, o.eps || 0.7);
     return { route, minLen, maxGap, nSegs: segs.length, nUsed: ch.used.size };
@@ -263,6 +273,77 @@ const Core = (() => {
   function extractRoute(rgba, w, h, o) {
     const p = prepare(rgba, w, h, o);
     return Object.assign(assemble(p, o), { half: p.half, radius: p.radius, opened: p.opened });
+  }
+
+  // ---------- Réduction (moyenne par blocs) pour les analyses rapides ----------
+  function downscale(rgba, w, h, maxSide) {
+    const k = Math.min(1, maxSide / Math.max(w, h));
+    if (k >= 1) return { rgba, w, h, k: 1 };
+    const nw = Math.max(1, Math.round(w * k)), nh = Math.max(1, Math.round(h * k));
+    const acc = new Float32Array(nw * nh * 4), cnt = new Uint32Array(nw * nh);
+    for (let y = 0; y < h; y++) {
+      const dy = Math.min(nh - 1, (y * nh / h) | 0);
+      for (let x = 0; x < w; x++) {
+        const di = dy * nw + Math.min(nw - 1, (x * nw / w) | 0), j = (y * w + x) * 4;
+        acc[di * 4] += rgba[j]; acc[di * 4 + 1] += rgba[j + 1]; acc[di * 4 + 2] += rgba[j + 2]; cnt[di]++;
+      }
+    }
+    const out = new Uint8ClampedArray(nw * nh * 4);
+    for (let i = 0; i < cnt.length; i++) { const c = cnt[i] || 1; out[i * 4] = acc[i * 4] / c; out[i * 4 + 1] = acc[i * 4 + 1] / c; out[i * 4 + 2] = acc[i * 4 + 2] / c; out[i * 4 + 3] = 255; }
+    return { rgba: out, w: nw, h: nh, k: nw / w };
+  }
+
+  // ---------- Couleur du tracé : on essaie les couleurs vives dominantes, on garde celle qui donne le plus long tracé ----------
+  function autoColor(rgba, w, h) {
+    const d = downscale(rgba, w, h, 1600);
+    const bins = new Map();
+    for (let i = 0, j = 0; i < d.w * d.h; i++, j += 4) {
+      const r = d.rgba[j], g = d.rgba[j + 1], b = d.rgba[j + 2], mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+      if (mx < 90 || (mx - mn) / mx < 0.55) continue;
+      const key = ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4);
+      let e = bins.get(key); if (!e) { e = [0, 0, 0, 0]; bins.set(key, e); }
+      e[0]++; e[1] += r; e[2] += g; e[3] += b;
+    }
+    const cand = [];
+    for (const e of [...bins.values()].sort((a, b) => b[0] - a[0])) {
+      if (e[0] < 30) break;
+      const c = [e[1] / e[0], e[2] / e[0], e[3] / e[0]];
+      if (cand.some(o => Math.hypot(o[0] - c[0], o[1] - c[1], o[2] - c[2]) < 70)) continue;
+      cand.push(c); if (cand.length >= 6) break;
+    }
+    let best = null; const tested = [];
+    for (const rgb of cand) {
+      const prep = prepare(d.rgba, d.w, d.h, { rgb, tol: 55 });
+      const a = assemble(prep, {});
+      const score = plen(a.route) / Math.max(d.w, d.h);   // longueur du tracé chaîné, en largeurs d'image
+      tested.push({ rgb: rgb.map(Math.round), score });
+      if (!best || score > best.score) best = { rgb: rgb.map(Math.round), tol: 55, score };
+    }
+    return best ? Object.assign(best, { tested }) : null;
+  }
+
+  // ---------- Barre d'échelle (capture d'appli) : longue ligne sombre fine avec traits aux extrémités ----------
+  function detectScaleBar(rgba, w, h) {
+    const dark = (x, y) => { const j = (y * w + x) * 4; return rgba[j] < 95 && rgba[j + 1] < 95 && rgba[j + 2] < 95; };
+    const zones = [[0, Math.round(h * 0.18)], [Math.round(h * 0.82), h]];
+    let best = null;
+    for (const [y0, y1] of zones) for (let y = y0; y < y1; y++) {
+      let x = 0;
+      while (x < w * 0.7) {
+        if (!dark(x, y)) { x++; continue; }
+        let x2 = x; while (x2 < w && dark(x2, y)) x2++;
+        const len = x2 - x;
+        if (len >= Math.max(40, w * 0.08) && len <= w * 0.6) {
+          // trait fin (≤ 4 px d'épaisseur) et traits verticaux aux deux extrémités
+          let th = 1; while (y + th < h && th < 8 && dark(x + (len >> 1), y + th)) th++;
+          const tick = (xx) => { let n = 0; for (let k = 1; k <= 8; k++) { if (y - k >= 0 && dark(xx, y - k)) n++; } for (let k = 1; k <= 8; k++) { if (y + th + k < h && dark(xx, y + th + k)) n++; } return n; };
+          const t1 = tick(x + 1), t2 = tick(x2 - 2);
+          if (th <= 4 && t1 >= 3 && t2 >= 3 && (!best || len > best.len)) best = { x1: x, x2: x2 - 1, y: y + th / 2, len };
+        }
+        x = x2 + 1;
+      }
+    }
+    return best;
   }
 
   // ---------- Détection de la grille kilométrique (lignes grises) ----------
@@ -300,7 +381,7 @@ const Core = (() => {
     return { x: lines(cols, h), y: lines(rows, w) };
   }
 
-  return { extractJpegsFromPdf, colorMask, edt, openDisk, thin, skeletonPaths, chain, simplify, prepare, assemble, extractRoute, detectGrid, plen };
+  return { extractJpegsFromPdf, colorMask, edt, openDisk, thin, skeletonPaths, chain, simplify, prepare, assemble, extractRoute, downscale, autoColor, detectScaleBar, detectGrid, plen };
 })();
 
 // ===== Géodésie =====

@@ -1,0 +1,18 @@
+[
+  {
+    "name": "SuisseMobile PDF (grille LV95 + 1 point de calage)",
+    "file": "examples/spitzmeilen.pdf",
+    "optional": true,
+    "note": "PDF non versionné (carte de l'utilisateur) : placer le fichier à cet endroit, ou export CARTE_SPITZ_PDF=/chemin.pdf",
+    "calage": { "px": [2678, 2910], "coord": "47.024028, 9.236390", "spacing": "5000" },
+    "expect": { "colorHint": "red", "minPoints": 400, "km": [26, 31], "closed": false }
+  },
+  {
+    "name": "Capture d'appli Mapbox (tracé bleu, boucle, barre d'échelle 5 km)",
+    "file": "examples/capture-mapbox.jpg",
+    "note": "Lieu inconnu : le point de calage est fictif, seule la géométrie (longueur en km) est contrôlée.",
+    "calage": { "px": [355, 318], "coord": "45.000000, 6.500000" },
+    "scaleKm": "5",
+    "expect": { "colorHint": "blue", "scaleBarAuto": true, "minPoints": 150, "km": [48, 56], "closed": true }
+  }
+]
