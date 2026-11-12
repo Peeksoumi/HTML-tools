@@ -19,6 +19,18 @@ Toujours avec `target="_blank" rel="noopener"`. Exemple minimal :
 Pages antérieures à cette règle (ex. `fusion-pdf`) : ajouter le lien dès qu'on les modifie.
 Références : `carte-vers-gpx/src/template.html`.
 
+## Règle : bouton « Télécharger la page » si l'outil est utilisable seul
+Quand un outil fonctionne de façon autonome (tout le traitement se fait dans le navigateur, sans serveur ni API maison), la page doit proposer
+un bouton pour télécharger le fichier HTML et l'utiliser hors du site, à côté du lien « Proposer une amélioration » :
+
+```html
+<a href="index.html" download="<dossier>.html">⬇️ Télécharger la page</a>
+```
+
+- Le fichier téléchargé doit rester fonctionnel : CSS/JS inlinés ; si des bibliothèques viennent d'un CDN, le dire dans la page (connexion requise).
+- Ne pas mettre ce bouton si l'outil dépend d'un serveur ou d'un service distant.
+- À vérifier avant chaque commit : `grep -c "download=" <dossier>/index.html` doit donner au moins 1 pour les outils autonomes.
+
 ## Conventions
 - Un dossier par outil, avec `index.html` autonome (CSS/JS inlinés), un `README.md`, et un test si possible.
 - Ne pas ajouter de dépendance externe sans nécessité ; rien n'est envoyé à un serveur tiers sans le dire dans la page.

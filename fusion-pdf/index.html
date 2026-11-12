@@ -167,6 +167,7 @@
         #status-message { margin-top: 15px; font-weight: 500; color: var(--primary); white-space: pre-line; font-size: 0.95rem; }
         .ideas { display: inline-block; margin: 0 0 14px; font-size: 0.9rem; color: var(--text); text-decoration: none; border: 1px solid var(--border); background: var(--card-bg); border-radius: 8px; padding: 6px 12px; }
         .ideas:hover { background: #E5E7EB; }
+        .ideas + .ideas { margin-left: 8px; }
         .site-note { margin-top: 30px; font-size: 0.85rem; color: #6B7280; }
         .site-note a { color: var(--primary); }
     </style>
@@ -175,6 +176,7 @@
 
 <div class="container">
     <a class="ideas" href="https://github.com/Peeksoumi/HTML-tools/issues/new" target="_blank" rel="noopener">💡 Proposer une amélioration</a>
+    <a class="ideas" href="index.html" download="fusion-pdf.html" title="Enregistrer cette page pour l'utiliser hors du site">⬇️ Télécharger la page</a>
     <h1>Fusion de PDF</h1>
     <p>Glissez vos fichiers, modifiez l'ordre des pages et exportez.</p>
 
@@ -200,6 +202,7 @@
     
     <div id="status-message"></div>
 
+    <p class="site-note">La page téléchargée fonctionne seule dans ton navigateur (connexion internet requise pour charger les bibliothèques pdf-lib et pdf.js) ; tes PDF ne quittent jamais ton ordinateur.</p>
     <p class="site-note">Une idée, un bug ? <a href="https://github.com/Peeksoumi/HTML-tools/issues" target="_blank" rel="noopener">Ouvre une « issue » sur GitHub</a>.</p>
 </div>
 
