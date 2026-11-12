@@ -11,6 +11,9 @@
   header { padding:10px 14px; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--line); background:var(--card); }
   header h1 { font-size:17px; margin:0; letter-spacing:.2px; }
   header .tag { color:var(--mute); font-size:13px; }
+  header .ideas { margin-left:auto; font-size:13px; color:var(--ink); text-decoration:none; border:1px solid var(--line); border-radius:8px; padding:5px 10px; white-space:nowrap; }
+  header .ideas:hover { background:var(--bg); }
+  @media (max-width: 820px) { header .tag { display:none; } }
   main { display:flex; height:calc(100% - 49px); }
   #viewerWrap { position:relative; flex:1; min-width:0; background:#dcdad3; }
   #cv { width:100%; height:100%; display:block; touch-action:none; cursor:grab; }
@@ -60,6 +63,7 @@
 <header>
   <h1>Carte → GPX</h1>
   <span class="tag">Redessine un tracé de rando depuis un PDF ou une image de carte</span>
+  <a class="ideas" href="https://github.com/Peeksoumi/HTML-tools/issues/new" target="_blank" rel="noopener">💡 Proposer une amélioration</a>
 </header>
 <main>
   <div id="viewerWrap">
@@ -157,7 +161,7 @@
       </div>
       <div id="outInfo" class="stat"></div>
     </section>
-    <div class="small" style="padding:0 4px 20px">Tout se fait dans ton navigateur : la carte n'est envoyée nulle part. Seules la recherche de lieu et les altitudes interrogent swisstopo / OpenStreetMap. Précision typique : 10–50 m selon l'échelle de la carte.</div>
+    <div class="small" style="padding:0 4px 20px">Tout se fait dans ton navigateur : la carte n'est envoyée nulle part. Seules la recherche de lieu et les altitudes interrogent swisstopo / OpenStreetMap. Précision typique : 10–50 m selon l'échelle de la carte.<br>Une idée, un bug ? <a href="https://github.com/Peeksoumi/HTML-tools/issues" target="_blank" rel="noopener">Ouvre une « issue » sur GitHub</a>.</div>
   </aside>
 </main>
 
