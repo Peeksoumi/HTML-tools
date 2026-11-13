@@ -6,13 +6,14 @@ Dépôt public d'outils web (une page HTML autonome par dossier). Publié automa
 ## Règle obligatoire : lien vers les issues sur CHAQUE page
 Toute page HTML créée ou modifiée dans ce dépôt doit afficher, de façon visible, un lien pour proposer des améliorations :
 
-- lien principal (en-tête ou en haut de page) : `https://github.com/Peeksoumi/HTML-tools/issues/new`, libellé « 💡 Proposer une amélioration » ;
+- lien principal (en-tête ou en haut de page), libellé « 💡 Proposer une amélioration », **pré-rempli avec le nom de l'outil** (titre `[<dossier>] ` + corps indiquant l'outil et son URL),
+  pour que l'issue créée précise toujours de quelle page il s'agit : `https://github.com/Peeksoumi/HTML-tools/issues/new?title=%5B<dossier>%5D%20&body=...` (paramètres encodés ; `&` écrit `&amp;` dans le HTML) ;
 - lien secondaire (pied de page ou notes) : `https://github.com/Peeksoumi/HTML-tools/issues`.
 
 Toujours avec `target="_blank" rel="noopener"`. Exemple minimal :
 
 ```html
-<a href="https://github.com/Peeksoumi/HTML-tools/issues/new" target="_blank" rel="noopener">💡 Proposer une amélioration</a>
+<a href="https://github.com/Peeksoumi/HTML-tools/issues/new?title=%5Bmon-outil%5D%20&amp;body=Outil%20concern%C3%A9%20%3A%20mon-outil%0A%0A" target="_blank" rel="noopener">💡 Proposer une amélioration</a>
 ```
 
 À vérifier avant chaque commit, pour chaque page créée ou modifiée : `grep -c "HTML-tools/issues" <dossier>/index.html` doit donner au moins 1.
