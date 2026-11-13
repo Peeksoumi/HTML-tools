@@ -8,7 +8,7 @@ Toute page HTML créée ou modifiée dans ce dépôt doit afficher, de façon vi
 
 - lien principal (en-tête ou en haut de page), libellé « 💡 Proposer une amélioration », **pré-rempli avec le nom de l'outil** (titre `[<dossier>] ` + corps indiquant l'outil et son URL),
   pour que l'issue créée précise toujours de quelle page il s'agit : `https://github.com/Peeksoumi/HTML-tools/issues/new?title=%5B<dossier>%5D%20&body=...` (paramètres encodés ; `&` écrit `&amp;` dans le HTML) ;
-- lien secondaire (pied de page ou notes) : `https://github.com/Peeksoumi/HTML-tools/issues`.
+- un seul lien par page : pas de doublon en pied de page (ni pour les issues, ni pour le téléchargement).
 
 Toujours avec `target="_blank" rel="noopener"`. Exemple minimal :
 
@@ -28,7 +28,7 @@ un bouton pour télécharger le fichier HTML et l'utiliser hors du site, à côt
 <a href="index.html" download="<dossier>.html">⬇️ Télécharger la page</a>
 ```
 
-- Le fichier téléchargé doit rester fonctionnel : CSS/JS inlinés ; si des bibliothèques viennent d'un CDN, le dire dans la page (connexion requise).
+- Le fichier téléchargé doit rester fonctionnel : CSS/JS inlinés ; si des bibliothèques viennent d'un CDN, le dire (connexion requise), par ex. dans l'infobulle `title` du bouton.
 - Ne pas mettre ce bouton si l'outil dépend d'un serveur ou d'un service distant.
 - À vérifier avant chaque commit : `grep -c "download=" <dossier>/index.html` doit donner au moins 1 pour les outils autonomes.
 
