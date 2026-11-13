@@ -35,6 +35,7 @@ un bouton pour télécharger le fichier HTML et l'utiliser hors du site, à côt
 ## Conventions
 - Un dossier par outil, avec `index.html` autonome (CSS/JS inlinés), un `README.md`, et un test si possible.
 - Ne pas ajouter de dépendance externe sans nécessité ; rien n'est envoyé à un serveur tiers sans le dire dans la page.
+- Tout nouvel outil doit avoir sa carte (Ouvrir + Télécharger la page) dans `index.html` à la racine, la page d'accueil du site.
 - Après modification : tester, puis fusionner dans `main` (le serveur se met à jour seul).
 
 ---

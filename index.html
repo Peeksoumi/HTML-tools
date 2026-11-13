@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HTML-tools — outils web</title>
+<style>
+  :root { --bg:#f3f4f6; --card:#fff; --ink:#111827; --mute:#6b7280; --line:#e5e7eb; --acc:#4f46e5; --acc-h:#4338ca; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width:900px; margin:0 auto; padding:40px 20px 56px; }
+  .top { display:flex; justify-content:flex-end; margin-bottom:8px; }
+  .ideas { font-size:.9rem; color:var(--ink); text-decoration:none; border:1px solid var(--line); background:var(--card); border-radius:8px; padding:6px 12px; }
+  .ideas:hover { background:#e5e7eb; }
+  h1 { font-size:2rem; margin:0 0 6px; }
+  .lead { color:var(--mute); margin:0 0 32px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:20px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px; display:flex; flex-direction:column; gap:10px; box-shadow:0 1px 3px rgba(0,0,0,.05); }
+  .card h2 { font-size:1.15rem; margin:0; }
+  .card p { margin:0; color:var(--mute); font-size:.95rem; flex:1; }
+  .actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
+  .btn { font:inherit; font-size:.9rem; font-weight:600; text-decoration:none; border-radius:8px; padding:8px 14px; border:1px solid var(--acc); }
+  .btn.primary { background:var(--acc); color:#fff; }
+  .btn.primary:hover { background:var(--acc-h); }
+  .btn.secondary { background:var(--card); color:var(--acc); }
+  .btn.secondary:hover { background:#eef2ff; }
+  .note { margin-top:32px; font-size:.85rem; color:var(--mute); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="ideas" href="https://github.com/Peeksoumi/HTML-tools/issues/new?title=%5Bindex%5D%20&amp;body=Outil%20concern%C3%A9%20%3A%20index%20(page%20d%27accueil)%20(http%3A%2F%2F141.227.151.70%3A8080%2F)%0A%0A**Ma%20suggestion%20ou%20le%20bug%20rencontr%C3%A9%20%3A**%0A%0A" target="_blank" rel="noopener">💡 Proposer une amélioration</a>
+  </div>
+  <h1>HTML-tools</h1>
+  <p class="lead">Des petits outils web qui fonctionnent directement dans ton navigateur. Ouvre-les ici, ou télécharge la page pour l'utiliser chez toi.</p>
+
+  <div class="grid">
+    <article class="card">
+      <h2>Fusion de PDF</h2>
+      <p>Charge plusieurs PDF, réordonne ou supprime des pages par glisser-déposer, puis exporte un seul PDF.</p>
+      <div class="actions">
+        <a class="btn primary" href="fusion-pdf/">Ouvrir</a>
+        <a class="btn secondary" href="fusion-pdf/index.html" download="fusion-pdf.html" title="Enregistrer la page (connexion internet requise pour charger pdf-lib et pdf.js)">⬇️ Télécharger la page</a>
+      </div>
+    </article>
+
+    <article class="card">
+      <h2>Carte → GPX</h2>
+      <p>Redessine un itinéraire tracé sur une carte (PDF ou image) et le convertit en fichier GPX.</p>
+      <div class="actions">
+        <a class="btn primary" href="carte-vers-gpx/">Ouvrir</a>
+        <a class="btn secondary" href="carte-vers-gpx/index.html" download="carte-vers-gpx.html" title="Enregistrer la page (connexion requise pour la recherche de lieu et les altitudes)">⬇️ Télécharger la page</a>
+      </div>
+    </article>
+  </div>
+
+  <p class="note">Les fichiers que tu charges restent dans ton navigateur. Seules la recherche de lieu et les altitudes de Carte → GPX interrogent des services publics (Open-Meteo, swisstopo).</p>
+</div>
+</body>
+</html>
