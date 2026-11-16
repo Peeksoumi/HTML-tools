@@ -29,3 +29,14 @@ sur des relevés réels de renverse (ex. AIS du bac, ADCP) à Lola et à Nantes.
 - Constantes harmoniques : Hart-Davis, M., Dettmering, D., Seitz, F. (2025), TICON-4, SEANOE, <https://doi.org/10.17882/109129> (CC BY 4.0) ; relayées par le projet [neaps/tide-database](https://github.com/neaps/tide-database).
 - Grand Port Maritime de Nantes Saint-Nazaire, « Horaires des marées – Tables de corrections » (table 5).
 - SHOM (prédictions de marée) pour le calage ; Vigicrues / Hub'Eau pour le débit.
+
+## Collecte de données réelles (pour affiner le modèle)
+`collecteur/collect_debit.py` enregistre le débit de la Loire à Montjean (Hub'Eau, station M530001010) dans un CSV. À lancer depuis un serveur
+qui a accès à Internet, par exemple en cron toutes les 30 min :
+
+```
+*/30 * * * * cd /chemin/courant-loire/collecteur && python3 collect_debit.py --out /chemin/donnees/montjean_debit.csv
+```
+
+Test : `python3 collecteur/test_collect_debit.py` (Hub'Eau simulé). Le script n'a pas pu être essayé en réel depuis l'environnement de développement (accès à Hub'Eau refusé).
+Piste suivante : niveaux d'eau observés à Le Pellerin et Nantes Salorges (REFMAR/SHOM) et relevés AIS, pour mesurer les vraies heures d'étale et de renverse selon le débit.
