@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parking gratuit autour de moi</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --txt:#1c2330; --mut:#667085; --ok:#12a150; --ko:#d92d20; --warn:#dc6803; --pri:#2563eb; --bd:#e4e7ec; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#10141b; --card:#1a202b; --txt:#e8ecf3; --mut:#98a2b3; --bd:#2b3442; } }
+  * { box-sizing:border-box; }
+  body { margin:0; font:16px/1.45 system-ui,sans-serif; background:var(--bg); color:var(--txt); }
+  main { max-width:900px; margin:0 auto; padding:12px; }
+  h1 { font-size:1.35rem; margin:.3rem 0 .6rem; }
+  h2 { font-size:1.05rem; margin:1.2rem 0 .4rem; }
+  .card { background:var(--card); border:1px solid var(--bd); border-radius:12px; padding:12px; }
+  form { display:flex; flex-wrap:wrap; gap:8px; }
+  input, select, button { font:inherit; padding:9px 11px; border-radius:9px; border:1px solid var(--bd); background:var(--card); color:var(--txt); }
+  input[type=search] { flex:1 1 240px; }
+  button { cursor:pointer; background:var(--pri); color:#fff; border:0; }
+  button.sec { background:var(--card); color:var(--txt); border:1px solid var(--bd); }
+  #msg { margin:.6rem 0; color:var(--mut); min-height:1.3em; }
+  #msg.err { color:var(--ko); }
+  .tuiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; margin-top:10px; }
+  .tuile { background:var(--card); border:1px solid var(--bd); border-radius:12px; padding:10px; }
+  .tuile b { display:block; font-size:1.7rem; }
+  .tuile span { color:var(--mut); font-size:.85rem; }
+  #map { height:340px; border-radius:12px; margin-top:10px; border:1px solid var(--bd); }
+  ul { list-style:none; padding:0; margin:0; display:grid; gap:6px; }
+  li { background:var(--card); border:1px solid var(--bd); border-radius:10px; padding:9px 11px; display:flex; justify-content:space-between; gap:10px; cursor:pointer; }
+  li small { color:var(--mut); display:block; }
+  .nb { text-align:right; white-space:nowrap; font-weight:600; }
+  .ok { color:var(--ok); } .ko { color:var(--ko); } .w { color:var(--warn); }
+  .badge { font-size:.72rem; border:1px solid var(--bd); border-radius:99px; padding:0 7px; margin-left:4px; color:var(--mut); }
+  footer { margin:1.5rem 0 2rem; color:var(--mut); font-size:.85rem; display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; }
+  footer a { color:var(--pri); }
+  .hide { display:none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>🅿️ Parking gratuit autour de moi</h1>
+  <div class="card">
+    <form id="f">
+      <input type="search" id="q" placeholder="Ville, adresse… ou position GPS « 47.2184, -1.5536 »" autocomplete="off">
+      <select id="rayon" title="Rayon de recherche">
+        <option value="500">500 m</option><option value="1000" selected>1 km</option>
+        <option value="2000">2 km</option><option value="3000">3 km</option>
+      </select>
+      <button type="submit">Chercher</button>
+      <button type="button" class="sec" id="geo">📍 Ma position</button>
+    </form>
+  </div>
+  <div id="msg"></div>
+  <div id="res" class="hide">
+    <div class="tuiles" id="tuiles"></div>
+    <div id="map"></div>
+    <h2>🅿️ Parkings gratuits</h2><ul id="lp"></ul>
+    <h2>🛣️ Rues réputées avoir beaucoup de places</h2><ul id="lr"></ul>
+    <p id="avert" style="color:var(--mut);font-size:.85rem"></p>
+    <details><summary>Sources interrogées</summary><ul id="ls"></ul></details>
+  </div>
+  <footer>
+    <a href="https://github.com/Peeksoumi/HTML-tools/issues/new?title=%5Bparking_gratuit%5D%20&amp;body=Outil%20concern%C3%A9%20%3A%20parking_gratuit%20(http%3A%2F%2F141.227.151.70%3A8080%2Fparking%2F)%0A%0A**Ma%20suggestion%20ou%20le%20bug%20rencontr%C3%A9%20%3A**%0A%0A" target="_blank" rel="noopener">💡 Proposer une amélioration</a>
+    <span>Données © contributeurs OpenStreetMap (ODbL) et open data des collectivités.</span>
+  </footer>
+</main>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let map, couche;
+const msg = (t, err) => { $('msg').textContent = t || ''; $('msg').className = err ? 'err' : ''; };
+
+async function api(chemin) {
+  const r = await fetch(chemin);
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.erreur || ('HTTP ' + r.status));
+  return j;
+}
+
+async function chercherTexte(texte) {
+  const m = texte.match(/^\s*(-?\d{1,2}(?:[.,]\d+)?)\s*[,; ]\s*(-?\d{1,3}(?:[.,]\d+)?)\s*$/);
+  if (m) return rechercher(parseFloat(m[1].replace(',', '.')), parseFloat(m[2].replace(',', '.')));
+  msg('Recherche du lieu…');
+  const g = await api('api/geocode?q=' + encodeURIComponent(texte));
+  if (!g.resultats.length) throw new Error('Lieu introuvable');
+  $('q').value = g.resultats[0].nom.split(',').slice(0, 2).join(',');
+  return rechercher(g.resultats[0].lat, g.resultats[0].lon);
+}
+
+async function rechercher(lat, lon) {
+  msg('Interrogation des sources…');
+  const d = await api(`api/recherche?lat=${lat}&lon=${lon}&rayon=${$('rayon').value}`);
+  afficher(d);
+  msg('');
+}
+
+function afficher(d) {
+  const t = d.totaux;
+  $('res').classList.remove('hide');
+  $('tuiles').innerHTML = [
+    [t.libres_temps_reel, 'places libres (temps réel, ' + t.parkings_temps_reel + ' parking(s))', 'ok'],
+    [t.capacite_sans_temps_reel, 'places au total sans temps réel (' + t.parkings_sans_temps_reel + ' parking(s))', ''],
+    [t.places_rues_estimees, 'places de rue estimées (' + t.rues + ' rue(s))', 'w'],
+    [t.parkings_gratuits, 'parkings gratuits' + (t.parkings_tarif_inconnu ? ' + ' + t.parkings_tarif_inconnu + ' au tarif inconnu' : ''), '']
+  ].map(([n, l, c]) => `<div class="tuile"><b class="${c}">${n}</b><span>${esc(l)}</span></div>`).join('');
+
+  $('lp').innerHTML = d.parkings.map((p, i) => {
+    const rt = p.libres != null;
+    const nb = rt ? `<span class="${p.libres > 0 ? 'ok' : 'ko'}">${p.libres} libres</span>` + (p.capacite ? ` / ${p.capacite}` : '')
+                  : (p.capacite ? `~${p.capacite} places` : 'capacité inconnue');
+    const deduit = p.nom_deduit && p.nom_deduit !== 'inconnu' ? `<span class="badge" title="Nom déduit de la position">nom déduit : ${esc(p.nom_deduit)}</span>` : '';
+    const tarif = deduit + (p.gratuit === null ? '<span class="badge">tarif inconnu</span>' : (p.certitude === 'probable' ? '<span class="badge">gratuit probable</span>' : ''));
+    return `<li data-i="${i}"><div>${esc(p.nom)}${tarif}<small>${esc(p.sources.join(' + '))}${p.distance_m != null ? ' · ' + p.distance_m + ' m' : ''}${p.horodatage ? ' · ' + esc(p.horodatage) : ''}</small></div><div class="nb">${nb}</div></li>`;
+  }).join('') || '<li>Aucun parking gratuit trouvé dans ce rayon.</li>';
+
+  $('lr').innerHTML = d.rues.map((r, i) =>
+    `<li data-r="${i}"><div>${esc(r.nom)}<small>${esc(r.orientation)} · ${r.longueur_m} m · ${r.distance_m} m${r.dont_probable ? ' · gratuité probable' : ''}${r.dont_disque ? ' · dont zone bleue ' + r.dont_disque : ''}</small></div><div class="nb">~${r.places_estimees} places</div></li>`
+  ).join('') || '<li>Aucune rue avec stationnement renseigné dans OpenStreetMap ici.</li>';
+
+  $('ls').innerHTML = d.sources.map(s =>
+    `<li><div>${esc(s.nom)}<small>${s.ok ? s.nb + ' élément(s)' : esc(s.erreur)}</small></div><div class="nb ${s.ok ? 'ok' : 'ko'}">${s.ok ? 'OK' : 'échec'}</div></li>`).join('');
+  $('avert').textContent = d.avertissement + (d.anonymes_masques ? ' ' + d.anonymes_masques + ' mini parking(s) anonyme(s) (moins de 5 places) masqué(s).' : '');
+
+  if (!map) { map = L.map('map'); L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map); }
+  if (couche) couche.remove();
+  couche = L.layerGroup().addTo(map);
+  const c = [d.centre.lat, d.centre.lon];
+  L.circle(c, { radius: d.rayon, color: '#2563eb', weight: 1, fillOpacity: .04 }).addTo(couche);
+  L.marker(c).addTo(couche).bindPopup('Position de recherche');
+  d.parkings.forEach(p => { if (p.lat == null) return;
+    const col = p.libres == null ? '#2563eb' : (p.libres > 0 ? '#12a150' : '#d92d20');
+    L.circleMarker([p.lat, p.lon], { radius: 9, color: '#fff', weight: 2, fillColor: col, fillOpacity: .95 }).addTo(couche)
+      .bindPopup(`<b>${esc(p.nom)}</b><br>${p.libres != null ? p.libres + ' libres' : (p.capacite ? '~' + p.capacite + ' places' : 'capacité inconnue')}`); });
+  d.rues.forEach(r => L.circleMarker([r.lat, r.lon], { radius: 7, color: '#fff', weight: 2, fillColor: '#dc6803', fillOpacity: .9 }).addTo(couche)
+      .bindPopup(`<b>${esc(r.nom)}</b><br>~${r.places_estimees} places (estimation)`));
+  map.setView(c, d.rayon <= 500 ? 16 : d.rayon <= 1000 ? 15 : d.rayon <= 2000 ? 14 : 13);
+  setTimeout(() => map.invalidateSize(), 50);
+  window._d = d;
+}
+
+$('res').addEventListener('click', e => {
+  const li = e.target.closest('li'); if (!li || !window._d) return;
+  const o = li.dataset.i != null ? window._d.parkings[li.dataset.i] : window._d.rues[li.dataset.r];
+  if (o && o.lat != null) { map.setView([o.lat, o.lon], 17); $('map').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+});
+
+$('f').addEventListener('submit', e => { e.preventDefault();
+  const t = $('q').value.trim(); if (!t) return msg('Saisissez une ville, une adresse ou une position GPS.', true);
+  chercherTexte(t).catch(x => msg(x.message, true)); });
+
+$('geo').addEventListener('click', () => {
+  if (!navigator.geolocation) return msg('Géolocalisation indisponible sur cet appareil.', true);
+  msg('Localisation en cours…');
+  navigator.geolocation.getCurrentPosition(
+    p => { $('q').value = p.coords.latitude.toFixed(5) + ', ' + p.coords.longitude.toFixed(5);
+           rechercher(p.coords.latitude, p.coords.longitude).catch(x => msg(x.message, true)); },
+    er => msg(er.code === 1 ? 'Localisation refusée : autorisez-la dans le navigateur (elle exige HTTPS) ou saisissez la ville.' : 'Position introuvable.', true),
+    { enableHighAccuracy: true, timeout: 15000 });
+});
+
+</script>
+</body>
+</html>

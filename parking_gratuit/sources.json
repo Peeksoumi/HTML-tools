@@ -1,0 +1,37 @@
+{
+  "_commentaire": "Sources temps réel (Opendatasoft). 'champs' liste les noms de colonnes possibles ; 'gratuit' vaut true/false/null (inconnu), 'gratuit_si_nom' est une regex sur le nom. Ces deux sources n'ont pas pu être testées depuis le poste de développement : le job server/jobs/061_parking_gratuit.sh les teste depuis le VPS (journal dans la branche server-logs).",
+  "sources": [
+    {
+      "id": "nantes",
+      "nom": "Nantes Métropole (Naolib)",
+      "centre": [47.2184, -1.5536],
+      "rayon_km": 30,
+      "url": "https://data.nantesmetropole.fr/api/explore/v2.1/catalog/datasets/244400404_parkings-publics-nantes-disponibilites/records?limit=100",
+      "champs": {
+        "nom": ["grp_nom", "nom"],
+        "libres": ["grp_disponible", "disponible"],
+        "total": ["grp_exploitation", "capacite"],
+        "horodatage": ["grp_horodatage", "horodatage"]
+      },
+      "gratuit": null,
+      "gratuit_si_nom": "relais|P\\+R"
+    },
+    {
+      "id": "strasbourg",
+      "nom": "Eurométropole de Strasbourg",
+      "centre": [48.5734, 7.7521],
+      "rayon_km": 30,
+      "url": "https://data.strasbourg.eu/api/explore/v2.1/catalog/datasets/occupation-parkings-temps-reel/records?limit=100",
+      "positions_url": "https://data.strasbourg.eu/api/explore/v2.1/catalog/datasets/parkings/records?limit=100",
+      "champs": {
+        "nom": ["nom_parking", "nom", "libelle", "name"],
+        "nom_position": ["nom_parking", "nom", "libelle", "name"],
+        "libres": ["libre", "disponible", "places_libres", "free"],
+        "total": ["total", "capacite", "max"],
+        "horodatage": ["horodatage", "date", "datetime"]
+      },
+      "gratuit": null,
+      "gratuit_si_nom": "relais|P\\+R"
+    }
+  ]
+}
