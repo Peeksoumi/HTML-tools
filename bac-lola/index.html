@@ -48,7 +48,6 @@ tr:last-child td{border-bottom:none}
 th:first-child,td:first-child{text-align:left;white-space:nowrap;color:var(--text);font-size:13px}
 th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--dim);padding-left:10px}
 .d-ok{color:var(--vert)}.d-moy{color:var(--orange)}.d-fort{color:var(--rouge)}.d-av{color:var(--bleu)}
-tr.seed td{font-style:italic;opacity:.75}
 .cpt{display:block;font-size:10px;color:var(--faint)}
 .vide{font-family:var(--mono);font-size:12px;color:var(--faint);padding:10px 0}
 .pied{font-family:var(--mono);font-size:11px;color:var(--faint);margin:6px 4px 0}
@@ -76,7 +75,7 @@ tr.seed td{font-style:italic;opacity:.75}
   <h2>Fonctionnement et sources</h2>
   <h3>Fonctionnement</h3>
   <ul>
-    <li><b>Détection</b> : la position AIS de Lola est lue toutes les 10 s et projetée sur le chenal ; arrivée et départ à un quai sont confirmés par deux relevés cohérents (position et vitesse). Tout reste dans le navigateur.</li>
+    <li><b>Détection</b> : à l'ouverture, la page rejoue les 12 dernières heures de positions AIS de Lola (projetées sur le chenal) puis suit les nouvelles ; arrivée et départ à un quai sont confirmés par deux positions cohérentes (lieu et vitesse). Tout le calcul reste dans le navigateur.</li>
     <li><b>Nominal</b> : grille GTFS, un départ toutes les 20 min par quai (semaine : Basse-Indre 05:30→22:10, Indret 05:40→22:20 ; week-end et fériés : 06:30→21:30 et 06:40→21:20). Arrivée nominale = départ nominal + 3 min.</li>
     <li><b>Lecture</b> : chaque quai affiche son prochain départ prévu et la situation du bac (à quai ici, en traversée vers l'autre quai, à l'autre quai, en traversée vers ici) ; l'enchaînement complet des changements est listé une seule fois, avec l'écart Δ à l'horaire officiel.</li>
     <li><b>Modes</b> : <i>rotation continue</i> si les départs consécutifs sont espacés de ≤ 8,5 min ; <i>retard / perturbation</i> si l'écart médian à la grille dépasse 4,5 min ; <i>arrêt</i> hors service ou sans mouvement depuis 30 min.</li>
@@ -86,15 +85,14 @@ tr.seed td{font-style:italic;opacity:.75}
   <h3>Sources de données</h3>
   <ul>
     <li><b>GTFS « Horaires des bacs de Loire en Loire-Atlantique »</b> (Département de Loire-Atlantique, data.gouv.fr, Licence Ouverte) : créneaux nominaux et jours fériés.</li>
-    <li><b>Position AIS de Lola</b> (MMSI 227158520) via le proxy lola-proxy.swortom44.workers.dev, la même source que la page d'alerte : seul appel réseau de la page.</li>
-    <li><b>Relevés du serveur</b> (AISVesselTracker, Shiptrail), 13–17/11/2026 : calibrage du modèle et derniers événements affichés à l'ouverture, en italique « relevé serveur ».</li>
-    <li><b>Stockage local</b> : journal des événements mesurés dans le navigateur (localStorage) ; rien n'est envoyé.</li>
+    <li><b>Position AIS de Lola</b> (MMSI 227158520) : AISVesselTracker, repli Shiptrail, relevée toutes les 10 s par le serveur du site et publiées en JSON (12 dernières heures, peeksoumi.com) ; seul appel réseau de la page, rien n'y est envoyé.</li>
+    <li><b>Calibrage</b> : relevés du serveur du 13 au 17/11/2026 (paramètres du modèle).</li>
   </ul>
   <h3>Limites</h3>
   <ul>
     <li>Calibrage sur 5 jours seulement, dont 2 jours de semaine : décalages et fenêtres de rotation provisoires, vendredi et vacances non étudiés.</li>
     <li>Les causes d'un retard (autre bateau, changement de sens de la marée, vent) ne sont pas détectées en direct ; le serveur les enregistre pour une version ultérieure.</li>
-    <li>Heures mesurées à ± 1 min (un relevé serveur par minute ; 10 s dans la page ouverte, mais les événements survenus page fermée viennent du serveur et peuvent être périmés).</li>
+    <li>Les sources AIS publiques se rafraîchissent environ chaque minute, avec ~1 min de retard : heures mesurées à ± 1 min, prévisions en retard d'autant. Au-delà de 10 min sans nouvelle position, les prévisions sont suspendues.</li>
     <li>Manœuvres hors service (positionnement de début ou de fin de journée) non prévues ; un arrêt est déclaré après 30 min sans mouvement en période de service.</li>
   </ul>
 </div>
@@ -453,44 +451,43 @@ function positionSurTrace(lat,lon){
 
 const SEUIL_HORS_ZONE=0.0008; // écart au chenal (unités lat/lon) au-delà duquel le relevé est ignoré
 
-const SEED = [{"t":1794864266838,"type":"dep","q":"N"},{"t":1794888891379,"type":"arr","q":"N"},{"t":1794889304336,"type":"dep","q":"N"},{"t":1794889374841,"type":"arr","q":"N"},{"t":1794889909361,"type":"dep","q":"N"},{"t":1794890111073,"type":"arr","q":"S"},{"t":1794890498912,"type":"dep","q":"S"},{"t":1794890645344,"type":"arr","q":"N","approx":true},{"t":1794891098343,"type":"dep","q":"N","approx":true},{"t":1794891269839,"type":"arr","q":"S","approx":true},{"t":1794891723377,"type":"dep","q":"S","approx":true},{"t":1794891894835,"type":"arr","q":"N","approx":true},{"t":1794892276880,"type":"dep","q":"N","approx":true},{"t":1794892438052,"type":"arr","q":"S"},{"t":1794892891873,"type":"dep","q":"S"},{"t":1794893012879,"type":"arr","q":"N","approx":true},{"t":1794893465841,"type":"dep","q":"N","approx":true},{"t":1794893727838,"type":"arr","q":"S"},{"t":1794894110843,"type":"dep","q":"S"},{"t":1794894272838,"type":"arr","q":"N","approx":true},{"t":1794894665859,"type":"dep","q":"N","approx":true},{"t":1794894906841,"type":"arr","q":"S"},{"t":1794895254836,"type":"dep","q":"S"},{"t":1794895400842,"type":"arr","q":"N"}]; // derniers événements enregistrés par le serveur (relevés du 17/11/2026)
 
 // ====================================================================
 //  INTERFACE
 // ====================================================================
-const URL_PROXY = "https://lola-proxy.swortom44.workers.dev/";
-const CLE_J="bac-lola-journal-v1", CLE_E="bac-lola-etat-v1";
-function lire(c,d){ try{ const v=localStorage.getItem(c); return v?JSON.parse(v):d; }catch(e){ return d; } }
-function ecrire(c,v){ try{ localStorage.setItem(c,JSON.stringify(v)); }catch(e){} }
+// Positions AIS de Lola : relevés du serveur du site (AISVesselTracker, repli Shiptrail), publiés en JSON (12 dernières heures).
+const URL_POSITIONS = "https://peeksoumi.com/lola-live/positions.json";
 const $=id=>document.getElementById(id);
 
-let journal=lire(CLE_J,null);
-if(!Array.isArray(journal)) journal=SEED.map(e=>Object.assign({seed:true},e));
-let vitesse=null, derniereMesure=null, derniereMarche=0, lecturesOk=false;
+let journal=[], detecteur=null, dernierTs=0, derniereMarche=0, vitesse=null, derniereMesure=null, lecturesOk=false, prec=null;
 
-const sauvegarde=lire(CLE_E,null);
-const etatInit=(sauvegarde&&sauvegarde.maj&&Date.now()-sauvegarde.maj<20*60000)?sauvegarde.etat:null;
-const detecteur=creerDetecteur(etatInit,e=>{ journal.push(e); ecrire(CLE_J,journal.slice(-400)); rendre(); });
-
+function vitesseDeplacement(a,b){ // nœuds, entre deux positions [ts,lat,lon] (quand la source ne donne pas la vitesse)
+    const dt=(b[0]-a[0])/1000; if(dt<=0) return 0;
+    const dx=(b[2]-a[2])*COS_LAT_REFERENCE*111320, dy=(b[1]-a[1])*110574;
+    return Math.sqrt(dx*dx+dy*dy)/dt/0.514444;
+}
+function traiter(s){ // s = [ts (heure AIS, ms), lat, lon, vitesse|null, cap|null]
+    const v=s[3]!=null ? s[3] : (prec ? vitesseDeplacement(prec,s) : 0);
+    const pos=positionSurTrace(s[1],s[2]);
+    detecteur.pousser({t:s[0],p:Math.max(0,Math.min(1,pos.progression)),vitesse:v,hors:pos.ecart>SEUIL_HORS_ZONE});
+    if(v>=V_MARCHE) derniereMarche=s[0];
+    vitesse=v; derniereMesure=s[0]; dernierTs=s[0]; prec=s;
+}
 function evenementsEffectifs(now){
+    if(!detecteur) return [];
     const evs=journal.slice(), s=detecteur.etat(), last=evs.length?evs[evs.length-1].t:0;
     if(s.phase==="quai" && s.tArr-last>1000) evs.push({type:"arr",q:s.q,t:Math.round(s.tArr),approx:true});
     if(s.phase==="traversee" && s.de && ((s.tDep||now-30000)-last>1000)) evs.push({type:"dep",q:s.de,t:Math.round(s.tDep||now-30000),approx:true});
     return evs;
 }
-
 async function lirePosition(){
     try{
-        const rep=await fetch(URL_PROXY,{cache:"no-store"});
+        const rep=await fetch(URL_POSITIONS,{cache:"no-store"});
         if(!rep.ok) throw new Error();
-        const v=(await rep.text()).trim().split(/\s+/);
-        const lat=parseFloat(v[0]), lon=parseFloat(v[1]), vit=parseFloat(v[2]);
-        if(!isFinite(lat)||!isFinite(lon)||!isFinite(vit)) throw new Error();
-        const pos=positionSurTrace(lat,lon), t=Date.now();
-        detecteur.pousser({t,p:Math.max(0,Math.min(1,pos.progression)),vitesse:vit,hors:pos.ecart>SEUIL_HORS_ZONE});
-        vitesse=vit; derniereMesure=t; lecturesOk=true;
-        if(vit>=V_MARCHE) derniereMarche=t;
-        ecrire(CLE_E,{maj:t,etat:detecteur.etat()});
+        const d=await rep.json();
+        if(!detecteur){ journal=[]; detecteur=creerDetecteur(null,e=>{ journal.push(e); }); } // première lecture : rejeu des 12 h
+        d.samples.filter(s=>s[0]>dernierTs).forEach(traiter);
+        lecturesOk=true;
     }catch(e){ lecturesOk=false; }
     rendre();
 }
@@ -518,11 +515,14 @@ function rendre(){
     const now=Date.now(), evs=evenementsEffectifs(now);
     const pr=prevoir(evs,now,10,derniereMarche), mode=pr.mode;
     const b=$("bandeau");
+    const age=derniereMesure?now-derniereMesure:null;
+    const indispo=age===null || age>10*60000;
+    const live = derniereMesure ? '<span class="led'+(lecturesOk&&!indispo?'':' off')+'"></span>Position AIS de '+formatHMS(derniereMesure)+' (il y a '+(age<90000?Math.round(age/1000)+' s':Math.round(age/60000)+' min')+')'+(vitesse!=null?' · '+vitesse.toFixed(1).replace(".",",")+' nd':'')
+                                 : '<span class="led off"></span>'+(lecturesOk?'Aucune position reçue':'En attente de la position du bac…');
+    if(indispo){ mode.mode="arret"; mode.raison=derniereMesure?"Position AIS indisponible":"En attente de la position…"; mode.detail=derniereMesure?"Dernière position il y a "+Math.round(age/60000)+" min":""; }
     b.className="m-"+mode.mode;
-    const live = derniereMesure ? '<span class="led'+(lecturesOk?'':' off')+'"></span>Position il y a '+Math.round((now-derniereMesure)/1000)+' s · '+(vitesse!=null?vitesse.toFixed(1).replace(".",",")+' nd':'')
-                                 : '<span class="led off"></span>En attente de la position du bac…';
     b.innerHTML='<div class="mode">'+mode.raison+'</div><div class="detail">'+mode.detail+'</div><div class="live">'+live+'</div>';
-    const panne=mode.mode==="arret" && mode.raison.indexOf("Arrêt")===0;
+    const panne=indispo || (mode.mode==="arret" && mode.raison.indexOf("Arrêt")===0);
     const horsService=mode.mode==="arret" && !panne;
     let html="";
     ["N","S"].forEach(Q=>{
@@ -531,7 +531,7 @@ function rendre(){
         const arr=pr.evenements.find(x=>x.type==="arr"&&x.q===Q);
         const s=situation(Q,evs);
         let etat="", grand="—", cpt="", sec="", suiv="";
-        if(panne){ etat="Arrêt en cours : pas de prévision"; }
+        if(panne){ etat=indispo?"Position du bac indisponible : pas de prévision":"Arrêt en cours : pas de prévision"; }
         else if(deps.length){
             const d=deps[0];
             grand=formatHM(d.t); cpt=horsService?"Reprise du service"+jourTag(d.t,now):dans(d.t,now).replace("maintenant","imminent");
@@ -547,13 +547,13 @@ function rendre(){
             +'<div class="etat">'+etat+'</div><div class="sec">'+sec+'</div>'+(suiv?'<div class="suivant">'+suiv+'</div>':'')+'</section>';
     });
     $("quais").innerHTML=html;
-    $("chaine").innerHTML = panne ? '<div class="vide">Prévisions suspendues pendant l\'arrêt.</div>' :
+    $("chaine").innerHTML = panne ? '<div class="vide">Prévisions suspendues : '+(indispo?"position AIS indisponible":"arrêt en cours")+'.</div>' :
         '<table><tr><th>Heure</th><th>Changement</th><th>Officiel</th><th>Δ</th></tr>'+pr.evenements.slice(0,6).map(e=>
         '<tr><td>'+formatHM(e.t)+'</td><td>'+NOM_EV(e)+'</td><td>'+(e.nominal==null?"–":formatHM(e.nominal))+'</td><td class="'+(e.mode==="rotation"?"":classeDelta(e.delta))+'">'+fmtDelta(e.delta)+'</td></tr>').join("")+'</table>';
     const mes=[];
     for(let i=evs.length-1;i>=0&&mes.length<8;i--){ const nom=nominalMesure(evs,i); mes.push({e:evs[i],nom,d:nom==null?null:(evs[i].t-nom)/60000}); }
     $("mesures").innerHTML = mes.length ? '<table><tr><th>Heure</th><th>Changement</th><th>Officiel</th><th>Δ</th></tr>'+mes.map(m=>
-        '<tr'+(m.e.seed?' class="seed"':'')+'><td>'+formatHMS(m.e.t)+(m.e.approx?' ~':'')+'</td><td>'+NOM_EV(m.e)+(m.e.seed?'<span class="cpt">relevé serveur · '+partiesParis(m.e.t).cle.slice(5).split("-").reverse().join("/")+'</span>':'')+'</td><td>'+cellNominal(m.nom)+'</td><td class="'+classeDelta(m.d)+'">'+fmtDelta(m.d)+'</td></tr>').join("")+'</table>'
+        '<tr><td>'+formatHMS(m.e.t)+(m.e.approx?' ~':'')+'</td><td>'+NOM_EV(m.e)+(jourTag(m.e.t,now)?'<span class="cpt">'+partiesParis(m.e.t).cle.slice(5).split("-").reverse().join("/")+'</span>':'')+'</td><td>'+cellNominal(m.nom)+'</td><td class="'+classeDelta(m.d)+'">'+fmtDelta(m.d)+'</td></tr>').join("")+'</table>'
         : '<div class="vide">Aucun changement mesuré pour l\'instant.</div>';
 }
 

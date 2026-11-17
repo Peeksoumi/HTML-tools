@@ -8,7 +8,9 @@ liste de l'enchaînement prévu des changements (horaire officiel et écart Δ e
 ## Méthode (modèle hybride)
 1. **Nominal** : GTFS « Bacs de Loire en Loire-Atlantique » 2026 (ligne Basse-Indre <> Indret), 1 départ / 20 min / quai. Semaine : BI 05:30→22:10,
    Indret 05:40→22:20 ; week-end et fériés : BI 06:30→21:30, Indret 06:40→21:20. Arrivée nominale = départ nominal + 3 min.
-2. **Détection** : position AIS (même proxy que la page d'alerte) projetée sur le chenal ; arrivée / départ confirmés par 2 relevés.
+2. **Détection** : positions AIS de Lola (AISVesselTracker, repli Shiptrail) collectées toutes les 10 s par le serveur du site et publiées en JSON
+   (`/lola-live/positions.json`, 12 dernières heures, heure = heure de la position AIS). À l'ouverture la page rejoue ces 12 h dans le détecteur
+   (projection sur le chenal ; arrivée / départ confirmés par 2 positions), puis suit les nouvelles positions toutes les 10 s.
 3. **Modes** : rotation continue si les départs consécutifs sont espacés de ≤ 8,5 min ; perturbation si l'écart médian à la grille > 4,5 min ;
    arrêt hors service ou sans mouvement depuis 30 min.
 4. **Prévision** : simulation du cycle. Grille : créneau + décalage appris (BI +2,3 min, Indret +2,0 min, réajusté sur les 5 derniers départs),
@@ -29,7 +31,7 @@ Les paramètres (décalages, séjours, fenêtres) sont appris sur les mêmes don
 il y aura plus de jours de semaine, de vendredis et de vacances.
 
 ## Limites
-Les causes d'un retard (autre bateau, changement de sens de la marée, vent) ne sont pas détectées en direct ; le serveur les enregistre
+La page suspend ses prévisions après 10 min sans nouvelle position AIS. Les causes d'un retard (autre bateau, changement de sens de la marée, vent) ne sont pas détectées en direct ; le serveur les enregistre
 (navires voisins, marée, météo) pour une version ultérieure. Heures mesurées à ± 1 min. Calibrage sur 5 jours.
 
 ## Développement
