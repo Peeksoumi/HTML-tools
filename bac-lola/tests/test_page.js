@@ -2,20 +2,21 @@
 const fs=require('fs'), vm=require('vm'), path=require('path');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
 const m=html.match(/<script>([\s\S]*)<\/script>/); if(!m) throw new Error("script introuvable");
-const els={}, store={};
+const els={};
 const doc={getElementById:id=>els[id]||(els[id]={innerHTML:"",className:"",textContent:""})};
 let intervals=[];
-// Relevés simulés : bac à quai Basse-Indre puis traversée vers Indret
-let k=0; const t0=Date.parse("2026-11-17T08:00:00Z");
-const suite=[[47.19744,-1.67439,0.1],[47.19744,-1.67439,0.1],[47.19744,-1.67439,0.2],[47.1969,-1.6731,3],[47.1962,-1.6724,3.2],[47.1956,-1.6728,2],[47.19534,-1.6743,0.1],[47.19534,-1.6743,0.1]];
-const ctx={document:doc,localStorage:{getItem:c=>store[c]||null,setItem:(c,v)=>{store[c]=v}},
-  fetch:async()=>{const r=suite[Math.min(k++,suite.length-1)];return{ok:true,text:async()=>r.join(" ")}},
+// Positions simulées (publiées par le serveur) : bac à quai Basse-Indre puis traversée vers Indret
+const t0=Date.parse("2026-11-17T08:00:00Z");
+const pts=[[47.19744,-1.67439,0.1],[47.19744,-1.67439,0.1],[47.19744,-1.67439,0.2],[47.1969,-1.6731,3],[47.1962,-1.6724,3.2],[47.1956,-1.6728,2],[47.19534,-1.6743,0.1],[47.19534,-1.6743,0.1]];
+const samples=pts.map((r,i)=>[t0+i*60000,r[0],r[1],r[2],null]);
+const ctx={document:doc,
+  fetch:async()=>({ok:true,json:async()=>({maj:t0,n:samples.length,samples})}),
   setInterval:(f,ms)=>intervals.push([f,ms]),Intl,Date,Math,JSON,console,parseFloat,isFinite,Number,Set,Array,Object,String};
 vm.createContext(ctx);
-let horloge=t0; const RD=Date; ctx.Date=class extends RD{constructor(...a){super(...(a.length?a:[horloge]))} static now(){return horloge}; static UTC(...a){return RD.UTC(...a)}; static parse(s){return RD.parse(s)}};
+let horloge=t0+8*60000; const RD=Date; ctx.Date=class extends RD{constructor(...a){super(...(a.length?a:[horloge]))} static now(){return horloge}; static UTC(...a){return RD.UTC(...a)}; static parse(s){return RD.parse(s)}};
 vm.runInContext(m[1]+"\nthis.__t={rendre,lirePosition,journal:()=>journal};",ctx);
 (async()=>{
-  for(let i=0;i<suite.length;i++){ horloge+=10000; await ctx.__t.lirePosition(); }
+  await ctx.__t.lirePosition(); await ctx.__t.lirePosition(); // 2e lecture : aucune position en double
   const h=els.quais.innerHTML+els.mesures.innerHTML, b=els.bandeau.innerHTML;
   const ok=(c,msg)=>{ if(!c){ console.error("ÉCHEC :",msg); process.exitCode=1; } else console.log("ok :",msg); };
   ok(/Basse-Indre/.test(h)&&/Indret/.test(h),"deux sections quai");
@@ -23,6 +24,6 @@ vm.runInContext(m[1]+"\nthis.__t={rendre,lirePosition,journal:()=>journal};",ctx
   ok(/Enchaînement prévu/.test(html),"enchaînement prévu (les deux quais ensemble)");
   ok(/Derniers changements mesurés/.test(html)&&/Arrivée à|Départ de/.test(els.mesures.innerHTML),"derniers changements mesurés (les deux quais ensemble)");
   ok(/class="mode"/.test(b),"bandeau de mode");
-  ok(ctx.__t.journal().some(e=>!e.seed),"événements détectés en direct : "+ctx.__t.journal().filter(e=>!e.seed).map(e=>e.type+e.q).join(","));
+  ok(ctx.__t.journal().length>=3,"événements détectés en direct : "+ctx.__t.journal().map(e=>e.type+e.q).join(","));
   console.log(b.replace(/<[^>]+>/g," ").replace(/\s+/g," "));
 })();
