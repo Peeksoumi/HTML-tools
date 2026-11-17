@@ -44,6 +44,10 @@
   summary { cursor:pointer; font-weight:600; }
   details ul { margin:8px 0 0; padding-left:20px; }
   .warn { font-size:.85rem; color:#7c2d12; background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; padding:8px 10px; margin-top:10px; }
+  .fonct { margin-top:24px; padding:14px 16px; border:1px solid var(--line); border-radius:12px; background:var(--card); color:var(--ink); text-align:left; font-size:.88rem; line-height:1.45; }
+  .fonct h2 { font-size:1rem; margin:0 0 4px; }
+  .fonct h3 { font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; color:var(--mute); margin:12px 0 4px; }
+  .fonct ul { margin:0; padding-left:18px; } .fonct li { margin:2px 0; }
 </style>
 </head>
 <body>
@@ -72,19 +76,11 @@
 
   <div class="sites" id="sites"></div>
 
-  <div class="panel" style="margin-top:16px">
-    <details>
-      <summary>Précision, méthode et sources</summary>
-      <ul>
-        <li><b>Précision réaliste : ± 10 à 20 minutes</b>, pas ± 5. Les tables du Port donnent des fourchettes de 10 à 30 min pour le décalage entre l'étale et le renversement du courant ; l'heure de l'étale elle-même est calée à ± 3 min (pleine mer) à ± 7 min (basse mer) sur les prédictions du SHOM. L'incertitude affichée combine les deux.</li>
-        <li>Vent, pression atmosphérique, ouvrages et débit des affluents peuvent décaler la réalité de plusieurs minutes, surtout en morte-eau (coefficient &lt; 45) où l'étale dure 1 à 3 h.</li>
-        <li><b>Marée</b> : analyse harmonique à partir des constantes mesurées par REFMAR (Saint-Nazaire, Le Pellerin, Nantes Salorges et Usine Brûlée), interpolées pour Lola, puis calées sur les horaires SHOM de Nantes-Chantenay. Coefficient d'après le marnage calculé à Brest. Marnage affiché = hauteur moyenne entre l'étale et ses deux voisines, au site.</li>
-        <li><b>Courant</b> : décalages « renverse de courant / étale » des tables 5 du Port de Nantes Saint-Nazaire (Nantes Usine Brûlée et Cordemais, coefficients 45, 70, 95, débits 200, 1 000 et 3 000 m³/s), interpolés selon le coefficient, le débit et la position (Lola ≈ 15 % du trajet Nantes → Cordemais). Hors de 45–95, on garde la valeur du bord. Quand le courant de flot tombe sous 0,3 nœud (crue), aucun renversement n'est annoncé.</li>
-        <li>Le débit est lu sur la station de Montjean-sur-Loire (Vigicrues, via l'API Hub'Eau) ; tu peux aussi le saisir à la main. Le Port le prend en compte avec un retard de 14 à 72 h, non géré ici.</li>
-        <li>Les positions de Lola (47,1985 N ; 1,6755 O) et de l'île de Nantes (station Salorges) sont approximatives. Outil indicatif : ne remplace ni les avis à la batellerie ni la prudence du navigateur.</li>
-        <li>Sources : constantes harmoniques TICON-4, Hart-Davis, Dettmering &amp; Seitz (2025), SEANOE, doi 10.17882/109129, licence CC BY 4.0 ; Grand Port Maritime de Nantes Saint-Nazaire, « Horaires des marées – Tables de corrections » (table 5) ; SHOM (prédictions de marée) pour le calage ; Vigicrues / Hub'Eau pour le débit.</li>
-      </ul>
-    </details>
+  <div class="fonct" id="fonctionnement">
+    <h2>Fonctionnement et sources</h2>
+    <h3>Fonctionnement</h3><ul><li><b>Marée</b> : analyse harmonique des constantes REFMAR (Saint-Nazaire, Le Pellerin, Nantes Usine Brûlée et Salorges), interpolée pour Lola, calée sur 58 marées publiées par le SHOM ; coefficient d'après le marnage calculé à Brest.</li><li><b>Renverse du courant</b> = étale + décalage lu dans la table 5 du Port (Nantes Usine Brûlée, Cordemais), interpolé selon le coefficient, le débit et la position (Lola ≈ 15 % du trajet Nantes → Cordemais).</li><li>Courant de flot &lt; 0,3 nœud (crue) : aucune renverse annoncée.</li></ul>
+    <h3>Sources de données</h3><ul><li><b>Constantes harmoniques</b> : TICON-4, Hart-Davis, Dettmering &amp; Seitz (2025), SEANOE, doi 10.17882/109129 (CC BY 4.0).</li><li><b>Corrections de renverse</b> : Grand Port Maritime de Nantes Saint-Nazaire, « Horaires des marées – Tables de corrections » (table 5).</li><li><b>Calage</b> : SHOM (prédictions de marée). <b>Débit</b> : Vigicrues via Hub'Eau, station de Montjean-sur-Loire (saisie manuelle possible).</li></ul>
+    <h3>Limites</h3><ul><li><b>Précision réaliste : ± 10 à 20 min</b> (étale calée à ± 3 min en pleine mer, ± 7 min en basse mer ; tables du Port en fourchettes de 10 à 30 min).</li><li>Vent, pression, affluents et morte-eau (coefficient &lt; 45, étale de 1 à 3 h) peuvent décaler la réalité ; retard du débit (14 à 72 h) non géré ; positions de Lola et de l'île de Nantes approximatives.</li><li>Outil indicatif : ne remplace ni les avis à la batellerie ni la prudence du navigateur.</li></ul>
   </div>
 </div>
 

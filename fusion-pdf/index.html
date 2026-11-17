@@ -170,7 +170,12 @@
         .ideas + .ideas { margin-left: 8px; }
         .site-note { margin-top: 30px; font-size: 0.85rem; color: #6B7280; }
         .site-note a { color: var(--primary); }
-    </style>
+      .fonct { margin-top:24px; padding:14px 16px; border:1px solid var(--border); border-radius:12px; background:var(--card-bg); color:var(--text); text-align:left; font-size:.88rem; line-height:1.45; }
+  .fonct h2 { font-size:1rem; margin:0 0 4px; }
+  .fonct h3 { font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; color:#6B7280; margin:12px 0 4px; }
+  .fonct ul { margin:0; padding-left:18px; } .fonct li { margin:2px 0; }
+  .fonct h2, .fonct h3 { text-align:left; }
+</style>
 </head>
 <body>
 
@@ -201,6 +206,13 @@
     </div>
     
     <div id="status-message"></div>
+
+    <div class="fonct" id="fonctionnement">
+      <h2>Fonctionnement et sources</h2>
+      <h3>Fonctionnement</h3><ul><li><b>Lecture</b> : chaque PDF est ouvert dans ton navigateur et ses pages sont affichées en miniatures ; tu les réordonnes ou les supprimes.</li><li><b>Export</b> : chaque page conservée est rendue en image PNG (échelle 4, ≈ 288 dpi) puis réinsérée dans un nouveau PDF.</li><li>Les fichiers ne quittent jamais ton navigateur.</li></ul>
+      <h3>Sources de données et bibliothèques</h3><ul><li>Aucune donnée externe.</li><li>Bibliothèques chargées depuis un CDN : pdf-lib 1.17.1 (assemblage, unpkg) et pdf.js 3.4.120 (rendu, cdnjs) ; connexion requise.</li></ul>
+      <h3>Limites</h3><ul><li>Le texte du PDF exporté n'est plus sélectionnable et le fichier est plus lourd, car les pages sont des images.</li></ul>
+    </div>
 
 </div>
 

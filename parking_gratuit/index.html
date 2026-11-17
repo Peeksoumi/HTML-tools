@@ -35,6 +35,10 @@
   footer { margin:1.5rem 0 2rem; color:var(--mut); font-size:.85rem; display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; }
   footer a { color:var(--pri); }
   .hide { display:none; }
+  .fonct { margin-top:24px; padding:14px 16px; border:1px solid var(--bd); border-radius:12px; background:var(--card); color:var(--txt); text-align:left; font-size:.88rem; line-height:1.45; }
+  .fonct h2 { font-size:1rem; margin:0 0 4px; }
+  .fonct h3 { font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; color:var(--mut); margin:12px 0 4px; }
+  .fonct ul { margin:0; padding-left:18px; } .fonct li { margin:2px 0; }
 </style>
 </head>
 <body>
@@ -59,6 +63,12 @@
     <h2>🛣️ Rues réputées avoir beaucoup de places</h2><ul id="lr"></ul>
     <p id="avert" style="color:var(--mut);font-size:.85rem"></p>
     <details><summary>Sources interrogées</summary><ul id="ls"></ul></details>
+  </div>
+  <div class="fonct" id="fonctionnement">
+    <h2>Fonctionnement et sources</h2>
+    <h3>Fonctionnement</h3><ul><li><b>Recherche</b> : le serveur du site interroge les sources autour de la position, fusionne les résultats et écarte les parkings payants.</li><li><b>Fusion</b> : un même parking vu par plusieurs sources est regroupé (&lt; 25 m, ou &lt; 300 m avec un nom ressemblant) ; le temps réel de l'opérateur l'emporte sur la capacité OSM ; deux sources contradictoires sur la gratuité → tarif « inconnu ».</li><li><b>Places de rue</b> (estimation) = longueur × côtés × 85 % ÷ 5,5 m (parallèle), 3 m (épi) ou 2,5 m (perpendiculaire).</li><li><b>Lecture des chiffres</b> : « places libres » = temps réel des parkings gratuits ; capacités sans temps réel et places de rue sont des estimations, à ne pas additionner.</li></ul>
+    <h3>Sources de données</h3><ul><li><b>OpenStreetMap</b> (Overpass) : parkings (capacité, gratuité) et rues avec stationnement ; © contributeurs OSM, ODbL.</li><li><b>Open data temps réel</b> (Opendatasoft) : places libres par parking, pour Nantes et Strasbourg seulement.</li><li><b>Nominatim</b> : géocodage des adresses et noms déduits des parkings anonymes.</li></ul>
+    <h3>Limites</h3><ul><li>Pas de temps réel hors des villes configurées ; parkings en ouvrage exclus sauf gratuité renseignée ; qualité dépendante de la saisie OSM ; zones bleues signalées mais non détaillées.</li></ul>
   </div>
   <footer>
     <a href="https://github.com/Peeksoumi/HTML-tools/issues/new?title=%5Bparking_gratuit%5D%20&amp;body=Outil%20concern%C3%A9%20%3A%20parking_gratuit%20(http%3A%2F%2F141.227.151.70%3A8080%2Fparking%2F)%0A%0A**Ma%20suggestion%20ou%20le%20bug%20rencontr%C3%A9%20%3A**%0A%0A" target="_blank" rel="noopener">💡 Proposer une amélioration</a>
