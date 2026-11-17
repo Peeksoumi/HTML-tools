@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Nuages – 10 prochaines minutes</title>
+<title>Météo radar – nuages et pluie à 10 minutes</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
   :root { --bg:#f6f7f9; --card:#fff; --txt:#1c2330; --mut:#667085; --ko:#d92d20; --pri:#2563eb; --bd:#e4e7ec; }
@@ -18,6 +18,7 @@
   button, select { font:inherit; padding:8px 11px; border-radius:9px; border:1px solid var(--bd); background:var(--card); color:var(--txt); cursor:pointer; }
   button.pri { background:var(--pri); color:#fff; border:0; }
   input[type=range] { flex:1 1 220px; }
+  button.mode.on { background:var(--pri); color:#fff; border-color:var(--pri); }
   #heure { font-weight:600; min-width:15em; }
   #heure.est { color:#dc6803; }
   #map { height:calc(100vh - 250px); min-height:360px; border-radius:12px; border:1px solid var(--bd); background:#111; }
@@ -38,12 +39,16 @@
   </filter>
 </svg>
 <main>
-  <h1>☁️ Nuages – 10 prochaines minutes</h1>
+  <h1>🌦️ Météo radar : nuages et pluie à 10 min</h1>
   <div class="liens">
-    <a href="https://github.com/Peeksoumi/HTML-tools/issues/new?title=%5Bnuages-10min%5D%20&amp;body=Outil%20concern%C3%A9%20%3A%20nuages-10min%20(http%3A%2F%2F141.227.151.70%3A8080%2Fnuages-10min%2F)%0A%0A**Ma%20suggestion%20ou%20le%20bug%20rencontr%C3%A9%20%3A**%0A%0A" target="_blank" rel="noopener">💡 Proposer une amélioration</a>
-    <a href="index.html" download="nuages-10min.html" title="Enregistrer la page (connexion requise : carte, satellite EUMETSAT et vent Open-Meteo)">⬇️ Télécharger la page</a>
+    <a href="https://github.com/Peeksoumi/HTML-tools/issues/new?title=%5Bmeteo-radar%5D%20&amp;body=Outil%20concern%C3%A9%20%3A%20meteo-radar%20(http%3A%2F%2F141.227.151.70%3A8080%2Fmeteo-radar%2F)%0A%0A**Ma%20suggestion%20ou%20le%20bug%20rencontr%C3%A9%20%3A**%0A%0A" target="_blank" rel="noopener">💡 Proposer une amélioration</a>
+    <a href="index.html" download="meteo-radar.html" title="Enregistrer la page (connexion requise : carte, satellite EUMETSAT, radar RainViewer et vent Open-Meteo)">⬇️ Télécharger la page</a>
   </div>
 
+  <div class="barre" role="group" aria-label="Couche affichée">
+    <button id="m-nuages" class="mode on" type="button">☁️ Nuages</button>
+    <button id="m-pluie" class="mode" type="button">🌧️ Pluie</button>
+  </div>
   <div class="barre">
     <button id="play" class="pri" type="button" aria-label="Lecture / pause">⏸</button>
     <input id="slider" type="range" min="0" max="0" value="0" aria-label="Image">
@@ -52,22 +57,22 @@
   <div class="barre">
     <label>Vent de déplacement
       <select id="niveau">
-        <option value="850">850 hPa (≈ 1,5 km, nuages bas)</option>
-        <option value="700" selected>700 hPa (≈ 3 km, nuages moyens)</option>
-        <option value="500">500 hPa (≈ 5,5 km, nuages hauts)</option>
+        <option value="850">850 hPa (≈ 1,5 km, bas)</option>
+        <option value="700" selected>700 hPa (≈ 3 km, moyen)</option>
+        <option value="500">500 hPa (≈ 5,5 km, haut)</option>
       </select>
     </label>
     <button id="loc" type="button">📍 Ma position</button>
   </div>
-  <div id="msg">Recherche de la dernière image satellite…</div>
+  <div id="msg">Chargement…</div>
 
   <div id="map"></div>
 
   <div class="fonct" id="fonctionnement">
     <h2>Fonctionnement et sources</h2>
-    <h3>Fonctionnement</h3><ul><li><b>Rendu</b> : l'infrarouge est affiché en blanc dont l'opacité suit la luminosité (froid = nuage haut et épais = opaque ; sol chaud = transparent).</li><li><b>Images observées</b> : les 6 dernières images satellite (≈ 50 min), une toutes les 10 min, avec 10 à 20 min de latence.</li><li><b>Estimation « maintenant » et « +10 min »</b> : la dernière image réelle est déplacée de (vent × temps écoulé), vent du modèle Météo-France au niveau choisi (850, 700 ou 500 hPa), interpolé à l'heure courante au centre de la carte.</li><li>Hypothèse : déplacement uniforme sur la zone affichée, sans formation ni disparition de nuages.</li></ul>
-    <h3>Sources de données</h3><ul><li><b>Satellite</b> : Meteosat-12 (MTG-I1), infrarouge 10,5 µm, via EUMETSAT EUMETView (WMS).</li><li><b>Vent</b> : Open-Meteo (modèles Météo-France), CC BY 4.0.</li><li><b>Fond de carte</b> : imagerie et noms de lieux Esri (World Imagery, Maxar, Earthstar Geographics) ; repli sur © contributeurs OpenStreetMap si Esri ne répond pas. <b>Carte</b> : Leaflet (unpkg).</li></ul>
-    <h3>Limites</h3><ul><li>Aucune source publique gratuite ne fournit une vraie prévision de nuages à 10 min : les deux dernières images sont une estimation.</li><li>En infrarouge, les nuages hauts et épais ressortent bien, les nuages bas peu (choisir 850 hPa pour les déplacer).</li></ul>
+    <h3>Fonctionnement</h3><ul><li><b>Nuages</b> : les 6 dernières images satellite (≈ 50 min, une toutes les 10 min, 10 à 20 min de latence) ; l'infrarouge est affiché en blanc dont l'opacité suit la luminosité (froid = nuage haut et épais = opaque ; sol chaud = transparent).</li><li><b>Pluie</b> : les 6 dernières images radar (≈ 50 min, pas de 10 min) ; les échos sont colorés en bleu, de plus en plus soutenu quand l'intensité augmente.</li><li><b>Estimation « maintenant » et « +10 min »</b> (les deux couches) : la dernière image réelle est déplacée de (vent × temps écoulé), vent du modèle Météo-France au niveau choisi (850, 700 ou 500 hPa), interpolé à l'heure courante au centre de la carte. Hypothèse : déplacement uniforme, sans formation ni disparition.</li></ul>
+    <h3>Sources de données</h3><ul><li><b>Satellite</b> : Meteosat-12 (MTG-I1), infrarouge 10,5 µm, via EUMETSAT EUMETView (WMS).</li><li><b>Radar</b> : RainViewer (API publique gratuite, radars de nombreux pays), palette « Universal Blue ».</li><li><b>Vent</b> : Open-Meteo (modèles Météo-France), CC BY 4.0.</li><li><b>Fond de carte</b> : imagerie et noms de lieux Esri (World Imagery, Maxar, Earthstar Geographics) ; repli sur © contributeurs OpenStreetMap si Esri ne répond pas. <b>Carte</b> : Leaflet (unpkg).</li></ul>
+    <h3>Limites</h3><ul><li>Aucune source publique gratuite ne fournit de vraie prévision à 10 min : les deux dernières images sont une estimation, sans évolution des nuages ni des cellules de pluie.</li><li><b>Radar</b> : résolution limitée (zoom natif 7, soit environ 1 km par pixel, agrandi au-delà) et 100 requêtes par minute et par IP côté RainViewer ; images passées seulement.</li><li><b>Nuages</b> : en infrarouge, les nuages hauts et épais ressortent bien, les nuages bas peu (choisir 850 hPa pour les déplacer).</li></ul>
   </div>
 </main>
 
@@ -116,6 +121,26 @@ function buildFrames(L0, now) {
   f.push({ t: now + STEP, kind: 'est', label: '+10 min' });
   return f;
 }
+
+// ---- Pluie (radar RainViewer) ----
+const RAIN_JSON = 'https://api.rainviewer.com/public/weather-maps.json';
+// Tuiles 512 px, palette 2 (Universal Blue), lissé + neige ; {z}/{x}/{y} remplis par Leaflet (tileSize 512, zoomOffset -1).
+function rainTileUrl(host, path) { return host + path + '/512/{z}/{x}/{y}/2/1_1.png'; }
+
+// 6 dernières images radar (past = [{time en s, path}]) puis « maintenant » et « +10 min » estimés à partir de la dernière.
+function buildRainFrames(past, now) {
+  const p = past.slice(-6), last = p[p.length - 1];
+  const f = p.map(x => ({ t: x.time * 1000, kind: 'obs', path: x.path }));
+  f.push({ t: now, kind: 'est', label: 'maintenant', path: last.path });
+  f.push({ t: now + STEP, kind: 'est', label: '+10 min', path: last.path });
+  return f;
+}
+
+// Déplacement au sol (m, est / nord) → décalage écran (px, droite / bas) au zoom Leaflet et à la latitude donnés.
+function metersToPixels(dx, dy, zoom, latDeg) {
+  const mpp = 156543.03392 * Math.cos(latDeg * Math.PI / 180) / Math.pow(2, zoom);
+  return { px: dx / mpp, py: -dy / mpp };
+}
 // ==/CORE==
 
 if (typeof document !== 'undefined') {
@@ -138,6 +163,7 @@ if (typeof document !== 'undefined') {
   });
 
   let L0 = null, frames = [], overlays = [], wind = null, idx = 0, timer = null, playing = true;
+  let mode = location.hash === '#pluie' ? 'pluie' : 'nuages', rainHost = '';
 
   const msg = (t, err) => { $('msg').textContent = t; $('msg').className = err ? 'err' : ''; };
 
@@ -160,6 +186,23 @@ if (typeof document !== 'undefined') {
     return null;
   }
 
+  async function loadClouds() {
+    const l = await findLatest();
+    return l && { L0: l, frames: buildFrames(l, Date.now()) };
+  }
+
+  async function loadRain() {
+    const r = await fetch(RAIN_JSON);
+    if (!r.ok) throw new Error('RainViewer ' + r.status);
+    const j = await r.json(), past = (j.radar && j.radar.past) || [];
+    if (!past.length) return null;
+    rainHost = j.host;
+    const f = buildRainFrames(past, Date.now());
+    return { L0: past[past.length - 1].time * 1000, frames: f };
+  }
+
+  const lastText = () => (mode === 'pluie' ? 'Dernière image radar : ' : 'Dernière image satellite : ') + hhmm(L0);
+
   async function fetchWind() {
     const c = map.getCenter(), lvl = $('niveau').value;
     const u = 'https://api.open-meteo.com/v1/forecast?latitude=' + c.lat.toFixed(2) + '&longitude=' + c.lng.toFixed(2) +
@@ -172,6 +215,17 @@ if (typeof document !== 'undefined') {
 
   function layout() {
     if (!overlays.length) return;
+    if (mode === 'pluie') { // tuiles : on décale le conteneur de la couche, en pixels
+      const z = map.getZoom(), lat = map.getCenter().lat;
+      frames.forEach((f, i) => {
+        let dx = 0, dy = 0;
+        if (f.kind === 'est' && wind) ({ dx, dy } = windToDisplacement(wind.speed, wind.dirFrom, (f.t - L0) / 1000));
+        const o = metersToPixels(dx, dy, z, lat);
+        overlays[i].getContainer().style.transform = 'translate(' + o.px.toFixed(1) + 'px,' + o.py.toFixed(1) + 'px)';
+      });
+      show(idx);
+      return;
+    }
     const b = map.getBounds().pad(0.25);
     const sw = P(b.getSouthWest()), ne = P(b.getNorthEast());
     const sz = map.getSize();
@@ -211,25 +265,44 @@ if (typeof document !== 'undefined') {
   }
 
   async function init() {
-    msg('Recherche de la dernière image satellite…');
-    const [l, wOk] = await Promise.all([findLatest(), fetchWind().then(() => true, () => { wind = null; return false; })]);
-    if (!l) { msg('Impossible de charger les images EUMETSAT (réseau ou service indisponible).', true); return; }
-    L0 = l;
+    const m = mode;
+    msg(m === 'pluie' ? 'Chargement du radar…' : 'Recherche de la dernière image satellite…');
+    const windP = fetchWind().then(() => true, () => { wind = null; return false; });
+    let data = null;
+    try { data = m === 'pluie' ? await loadRain() : await loadClouds(); } catch (e) { data = null; }
+    const wOk = await windP;
+    if (m !== mode) return; // couche changée pendant le chargement
+    if (!data) { msg(m === 'pluie' ? 'Impossible de charger le radar RainViewer (réseau ou service indisponible).' : 'Impossible de charger les images EUMETSAT (réseau ou service indisponible).', true); return; }
+    L0 = data.L0;
     overlays.forEach(o => map.removeLayer(o));
-    frames = buildFrames(L0, Date.now());
-    overlays = frames.map(() => L.imageOverlay('', map.getBounds(), { opacity: 0, className: 'nuage', interactive: false }).addTo(map));
+    frames = data.frames;
+    overlays = frames.map(f => m === 'pluie'
+      ? L.tileLayer(rainTileUrl(rainHost, f.path), { tileSize: 512, zoomOffset: -1, maxNativeZoom: 8, maxZoom: 12, opacity: 0, attribution: 'Radar © RainViewer' }).addTo(map)
+      : L.imageOverlay('', map.getBounds(), { opacity: 0, className: 'nuage', interactive: false }).addTo(map));
     $('slider').max = frames.length - 1;
     layout();
     show(frames.length - 1);
     play(playing);
-    msg('Dernière image satellite : ' + hhmm(L0) + ' · ' + windText() + (wOk ? '' : ' (Open-Meteo injoignable)'), !wOk);
+    msg(lastText() + ' · ' + windText() + (wOk ? '' : ' (Open-Meteo injoignable)'), !wOk);
   }
+
+  function setMode(m) {
+    mode = m;
+    history.replaceState(null, '', m === 'pluie' ? '#pluie' : location.pathname + location.search);
+    $('m-nuages').classList.toggle('on', m === 'nuages');
+    $('m-pluie').classList.toggle('on', m === 'pluie');
+    init();
+  }
+  $('m-nuages').onclick = () => setMode('nuages');
+  $('m-pluie').onclick = () => setMode('pluie');
+  $('m-nuages').classList.toggle('on', mode === 'nuages');
+  $('m-pluie').classList.toggle('on', mode === 'pluie');
 
   let tm;
   map.on('moveend', () => { clearTimeout(tm); tm = setTimeout(layout, 300); });
   $('play').onclick = () => play(!playing);
   $('slider').oninput = e => { play(false); show(+e.target.value); };
-  $('niveau').onchange = async () => { try { await fetchWind(); } catch (e) { wind = null; } layout(); msg('Dernière image satellite : ' + hhmm(L0) + ' · ' + windText()); };
+  $('niveau').onchange = async () => { try { await fetchWind(); } catch (e) { wind = null; } layout(); msg(lastText() + ' · ' + windText()); };
   $('loc').onclick = () => map.locate({ setView: true, maxZoom: 9 });
   map.on('locationerror', () => msg('Position indisponible (autorisation refusée ?).', true));
   init();
