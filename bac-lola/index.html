@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bac Lola · situation à chaque quai</title>
+<style>
+:root{
+    --bg:#000;--panel:#0a0f12;--panel2:#12181c;--inset:#070b0d;--border:#232d33;--soft:#171f24;
+    --text:#e6ebed;--dim:#8a97a0;--faint:#5b6770;
+    --vert:#4fae83;--orange:#d9a55c;--rouge:#d9635f;--bleu:#4f8fbd;--gris:#7b868d;
+    --mono:ui-monospace,'JetBrains Mono','Courier New',monospace;
+    --sans:system-ui,'Space Grotesk',Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);padding:max(12px,env(safe-area-inset-top)) 10px 24px}
+#app{max-width:1000px;margin:0 auto}
+header{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-content:space-between;margin:4px 4px 10px}
+h1{font-size:26px;margin:0;font-weight:600}
+.liens{display:flex;gap:14px;font-size:13px}
+.liens a{color:var(--bleu);text-decoration:none}
+.liens a:hover{text-decoration:underline}
+#bandeau{background:var(--panel);border:1px solid var(--border);border-left-width:6px;border-radius:10px;padding:12px 14px;margin-bottom:12px}
+#bandeau .mode{font-size:20px;font-weight:600}
+#bandeau .detail,#bandeau .live{font-family:var(--mono);font-size:13px;color:var(--dim);margin-top:4px}
+.m-normal{border-left-color:var(--vert)}.m-normal .mode{color:var(--vert)}
+.m-rotation{border-left-color:var(--bleu)}.m-rotation .mode{color:var(--bleu)}
+.m-perturbation{border-left-color:var(--orange)}.m-perturbation .mode{color:var(--orange)}
+.m-arret{border-left-color:var(--gris)}.m-arret .mode{color:var(--gris)}
+.led{width:7px;height:7px;display:inline-block;border-radius:50%;background:var(--vert);box-shadow:0 0 4px var(--vert);margin-right:6px}
+.led.off{background:var(--rouge);box-shadow:0 0 4px var(--rouge)}
+#quais{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:720px){#quais{grid-template-columns:1fr}}
+section.quai{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px;min-width:0}
+section.quai h2{font-size:20px;margin:0 0 2px}
+.rive{font-family:var(--mono);font-size:12px;color:var(--faint);margin-bottom:10px}
+.situations{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px}
+.sit{background:var(--inset);border:1px solid var(--soft);border-radius:8px;padding:7px 8px;font-size:12px;color:var(--faint);line-height:1.3}
+.sit.actif{border-color:var(--bleu);color:var(--text);background:#0d1a24}
+.depuis{font-family:var(--mono);font-size:12px;color:var(--dim);margin:0 0 4px;min-height:16px}
+h3{font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin:14px 0 4px}
+table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
+th{font-weight:500;color:var(--faint);text-align:right;padding:4px 3px;border-bottom:1px solid var(--border)}
+td{text-align:right;padding:6px 3px;border-bottom:1px solid var(--soft);color:var(--dim);white-space:nowrap}
+th:first-child,td:first-child{text-align:left;white-space:normal;color:var(--text)}
+td.prevu{color:var(--orange);font-size:14px}
+.cpt{display:block;font-size:11px;color:var(--faint)}
+.d-ok{color:var(--vert)}.d-moy{color:var(--orange)}.d-fort{color:var(--rouge)}.d-av{color:var(--bleu)}
+tr.seed td{font-style:italic;opacity:.75}
+.vide{font-family:var(--mono);font-size:12px;color:var(--faint);padding:8px 0}
+.fonct{margin:22px 4px 0;padding-top:14px;border-top:1px solid var(--border);font-size:13px;color:var(--dim);line-height:1.5}
+.fonct h2{font-size:17px;color:var(--text);margin:0 0 6px}
+.fonct h3{font-family:var(--sans);font-size:13px;letter-spacing:0;text-transform:none;color:var(--text);margin:12px 0 4px}
+.fonct ul{margin:0;padding-left:18px}.fonct li{margin:3px 0}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+    <h1>Bac Lola · situation à chaque quai</h1>
+    <div class="liens">
+        <a href="https://github.com/Peeksoumi/HTML-tools/issues/new?title=%5Bbac-lola%5D%20&amp;body=Outil%20concern%C3%A9%20%3A%20bac-lola%0A%0A" target="_blank" rel="noopener">💡 Proposer une amélioration</a>
+        <a href="index.html" download="bac-lola.html" title="Enregistrer la page (le calcul fonctionne hors ligne ; la position en direct du bac demande une connexion)">⬇️ Télécharger la page</a>
+    </div>
+</header>
+<div id="bandeau" class="m-arret"><div class="mode">Chargement…</div><div class="detail"></div><div class="live"></div></div>
+<div id="quais"></div>
+<div class="fonct" id="fonctionnement">
+  <h2>Fonctionnement et sources</h2>
+  <h3>Fonctionnement</h3>
+  <ul>
+    <li><b>Détection</b> : la position AIS de Lola est lue toutes les 10 s et projetée sur le chenal ; arrivée et départ à un quai sont confirmés par deux relevés cohérents (position et vitesse). Tout reste dans le navigateur.</li>
+    <li><b>Nominal</b> : grille GTFS, un départ toutes les 20 min par quai (semaine : Basse-Indre 05:30→22:10, Indret 05:40→22:20 ; week-end et fériés : 06:30→21:30 et 06:40→21:20). Arrivée nominale = départ nominal + 3 min.</li>
+    <li><b>Quatre situations par quai</b> : bac à quai ici → en traversée vers l'autre quai → à l'autre quai → en traversée vers ici. Chaque changement est prévu et comparé au nominal (Δ).</li>
+    <li><b>Modes</b> : <i>rotation continue</i> si les départs consécutifs sont espacés de ≤ 8,5 min ; <i>retard / perturbation</i> si l'écart médian à la grille dépasse 4,5 min ; <i>arrêt</i> hors service ou sans mouvement depuis 30 min.</li>
+    <li><b>Prévision hybride</b> : simulation du cycle départ → traversée (2,8 min) → arrivée → départ. En grille : créneau + décalage appris (+2,3 min Basse-Indre, +2,0 min Indret, réajusté sur les 5 derniers départs). En rotation : arrivée + 3,6 min de séjour. En semaine, les fenêtres de pointe observées (06:55–09:30, 16:10–19:45) anticipent l'entrée et la sortie de rotation.</li>
+    <li><b>Validation</b> : rejeu sur 98 départs du 13 au 17/11/2026 : erreur médiane 0,5 min, 92 % à ±2 min (grille officielle seule : 23 %). En rotation continue, erreur moyenne 1,1 min contre 7,7 min pour la grille.</li>
+  </ul>
+  <h3>Sources de données</h3>
+  <ul>
+    <li><b>GTFS « Horaires des bacs de Loire en Loire-Atlantique »</b> (Département de Loire-Atlantique, data.gouv.fr, Licence Ouverte) : créneaux nominaux et jours fériés.</li>
+    <li><b>Position AIS de Lola</b> (MMSI 227158520) via le proxy lola-proxy.swortom44.workers.dev, la même source que la page d'alerte : seul appel réseau de la page.</li>
+    <li><b>Relevés du serveur</b> (AISVesselTracker, Shiptrail), 13–17/11/2026 : calibrage du modèle et derniers événements affichés à l'ouverture, en italique « relevé serveur ».</li>
+    <li><b>Stockage local</b> : journal des événements mesurés dans le navigateur (localStorage) ; rien n'est envoyé.</li>
+  </ul>
+  <h3>Limites</h3>
+  <ul>
+    <li>Calibrage sur 5 jours seulement, dont 2 jours de semaine : décalages et fenêtres de rotation provisoires, vendredi et vacances non étudiés.</li>
+    <li>Les causes d'un retard (autre bateau, changement de sens de la marée, vent) ne sont pas détectées en direct ; le serveur les enregistre pour une version ultérieure.</li>
+    <li>Heures mesurées à ± 1 min (un relevé serveur par minute ; 10 s dans la page ouverte, mais les événements survenus page fermée viennent du serveur et peuvent être périmés).</li>
+    <li>Manœuvres hors service (positionnement de début ou de fin de journée) non prévues ; un arrêt est déclaré après 30 min sans mouvement en période de service.</li>
+  </ul>
+</div>
+</div>
+<script>
+// ====================================================================
+//  MOTEUR : horaires nominaux (GTFS), détecteur, modèle hybride
+//  S = quai d'Indret, N = quai de Basse-Indre. Temps en ms, durées en minutes.
+// ====================================================================
+const NOM_QUAI = { S:"Indret", N:"Basse-Indre" };
+const autre = q => q==="S" ? "N" : "S";
+
+// --- Horaires nominaux : GTFS « Bacs de Loire en Loire-Atlantique » 2026, ligne Basse-Indre <> Indret ---
+// Un départ toutes les 20 min et par quai (début, fin en minutes depuis minuit).
+const PAS_GRILLE = 20;
+const GRILLE = {
+    SEMAINE: { N:[330,1330], S:[340,1340] },   // lun-ven : BI 05:30→22:10, Indret 05:40→22:20
+    WEEKEND: { N:[390,1290], S:[400,1280] }    // sam, dim, fériés : BI 06:30→21:30, Indret 06:40→21:20
+};
+// Jours fériés servis comme un week-end (calendar_dates du GTFS) ; 2027-05-01 : pas de service.
+const FERIES = new Set(["2026-11-11","2026-12-25","2027-01-01","2027-03-29","2027-05-06","2027-05-17","2027-07-14","2027-11-01","2027-11-11"]);
+const SANS_SERVICE = new Set(["2027-05-01"]);
+
+// --- Paramètres appris sur les relevés du 13 au 17/11/2026 (voir README) ---
+const PARAM = {
+    decalage:{ N:2.3, S:2.0 },  // min : départ réel moyen après le créneau officiel (en régime de grille)
+    traversee:{ N:2.8, S:2.8 }, // min : durée de traversée mesurée (départ de N / de S)
+    traverseeRef:3,             // min : traversée « officielle » (anciens GTFS) pour l'arrivée nominale
+    sejourMin:2.7,              // min : plus court séjour à quai observé (5 % des cas)
+    sejourRotation:3.6,         // min : séjour à quai en rotation continue
+    tolRetard:6,                // min : en retard de moins que ça, le bac repart sans attendre le créneau suivant
+    seuilRotation:8.5,          // min : intervalle entre deux départs consécutifs en dessous duquel = rotation continue
+    seuilPerturbation:4.5,      // min : écart médian à la grille au-delà duquel = retard / perturbation
+    arretMin:30,                // min : sans mouvement en période de service = arrêt
+    fenetresRotation:[[415,570],[970,1185]] // semaine : 06:55→09:30 et 16:10→19:45 (observé)
+};
+
+// --- Heure de Paris ---
+const fmtParis = new Intl.DateTimeFormat("en-GB",{
+    timeZone:"Europe/Paris", weekday:"short", year:"numeric", month:"2-digit", day:"2-digit",
+    hour:"2-digit", minute:"2-digit", second:"2-digit", hourCycle:"h23"
+});
+function partiesParis(ms){
+    const o={};
+    fmtParis.formatToParts(new Date(ms)).forEach(p=>{ o[p.type]=p.value; });
+    const h=(+o.hour)%24;
+    return { cle:o.year+"-"+o.month+"-"+o.day, minute:h*60+(+o.minute)+(+o.second)/60, weekend:(o.weekday==="Sat"||o.weekday==="Sun") };
+}
+function msParis(cle, minute){
+    const [y,m,d]=cle.split("-").map(Number);
+    let g=Date.UTC(y,m-1,d,0,0)+minute*60000;
+    for(let i=0;i<2;i++){
+        const p=partiesParis(g);
+        const dm=(p.cle===cle ? p.minute : (p.cle>cle ? p.minute+1440 : p.minute-1440)) - minute;
+        g-=dm*60000;
+    }
+    return g;
+}
+function cleVoisine(cle, delta){ return partiesParis(msParis(cle,720)+delta*86400000).cle; }
+const pad=n=>String(n).padStart(2,"0");
+function formatHM(ms){ const p=partiesParis(ms), h=Math.floor(p.minute/60), m=Math.floor(p.minute%60); return pad(h)+":"+pad(m); }
+function formatHMS(ms){ const p=partiesParis(ms); return formatHM(ms)+":"+pad(Math.floor((p.minute*60)%60)); }
+
+// --- Créneaux officiels ---
+function typeService(cle){
+    if(SANS_SERVICE.has(cle)) return null;
+    const we=partiesParis(msParis(cle,720)).weekend;
+    return (we||FERIES.has(cle)) ? "WEEKEND" : "SEMAINE";
+}
+function creneauxJour(cle,Q){
+    const ts=typeService(cle); if(!ts) return [];
+    const [a,b]=GRILLE[ts][Q], l=[];
+    for(let m=a;m<=b;m+=PAS_GRILLE) l.push(msParis(cle,m));
+    return l;
+}
+function creneauxAutour(t,Q){
+    const cle=partiesParis(t).cle;
+    return [].concat(creneauxJour(cleVoisine(cle,-1),Q),creneauxJour(cle,Q),creneauxJour(cleVoisine(cle,1),Q));
+}
+// créneau le plus proche (nominal d'un départ réel ou prévu) ; null si on est loin de tout service
+function creneauProche(t,Q){
+    let best=null;
+    for(const s of creneauxAutour(t,Q)) if(best===null||Math.abs(s-t)<Math.abs(best-t)) best=s;
+    return (best!==null && Math.abs(best-t)<=12*60000) ? best : null;
+}
+function creneauSuivant(x,Q){
+    let best=null;
+    for(const s of creneauxAutour(x,Q)) if(s>=x && (best===null||s<best)) best=s;
+    return best;
+}
+function dansService(t){
+    const cle=partiesParis(t).cle;
+    const tous=[].concat(creneauxJour(cle,"N"),creneauxJour(cle,"S")).sort((a,b)=>a-b);
+    return tous.length>0 && t>=tous[0]-15*60000 && t<=tous[tous.length-1]+15*60000;
+}
+function prochainService(t){
+    let cle=partiesParis(t).cle;
+    for(let i=0;i<8;i++){
+        const tous=[].concat(creneauxJour(cle,"N"),creneauxJour(cle,"S")).sort((a,b)=>a-b);
+        if(tous.length && tous[0]>t) return tous[0];
+        cle=cleVoisine(cle,1);
+    }
+    return null;
+}
+function dansFenetreRotation(t){
+    const p=partiesParis(t);
+    if(typeService(p.cle)!=="SEMAINE") return null;
+    return PARAM.fenetresRotation.find(w=>p.minute>=w[0]&&p.minute<w[1]) || null;
+}
+
+// ====================================================================
+//  DÉTECTEUR d'événements (arrivée / départ à un quai) — voir README
+//  Entrée : relevés {t, p (0 Indret → 1 Basse-Indre), vitesse (nds), hors}
+// ====================================================================
+const P_QUAI=0.15, V_ARRET=0.8, V_MARCHE=1.5, DEPLACEMENT_DEPART=0.05, LACUNE_MAX_MS=60000;
+function creerDetecteur(init, onEvenement){
+    let etat=(init&&init.phase)?init:{phase:"inconnu"}, cand=null, prev=null;
+    function pousser(s){
+        if(s.hors){ prev=s; return; }
+        const proche = s.p<=P_QUAI ? "S" : (s.p>=1-P_QUAI ? "N" : null);
+        const arret = s.vitesse<V_ARRET;
+        if(etat.phase==="quai"){
+            const marche = s.vitesse>=V_MARCHE || Math.abs(s.p-etat.pRepos)>DEPLACEMENT_DEPART;
+            if(marche){
+                if(!cand||cand.type!=="dep"){
+                    cand={type:"dep",n:1,t:(etat.tDern!=null)?(etat.tDern+s.t)/2:s.t,lacune:(etat.tDern!=null?s.t-etat.tDern:0)};
+                } else cand.n++;
+                if(cand.n>=2){
+                    const ev={t:Math.round(cand.t),type:"dep",q:etat.q};
+                    if(cand.lacune>LACUNE_MAX_MS) ev.approx=true;
+                    onEvenement(ev);
+                    etat={phase:"traversee",de:ev.q,vers:autre(ev.q),tDep:cand.t};
+                    cand=null;
+                }
+            } else { cand=null; etat.tDern=s.t; etat.pRepos=0.8*etat.pRepos+0.2*s.p; }
+        } else {
+            if(proche && arret){
+                if(!cand||cand.type!=="arr"||cand.q!==proche) cand={type:"arr",q:proche,n:1,t:s.t,lacune:(prev?s.t-prev.t:0)};
+                else cand.n++;
+                if(cand.n>=2){
+                    const approx=(etat.phase==="inconnu")||cand.lacune>LACUNE_MAX_MS;
+                    const ev={t:Math.round(cand.t),type:"arr",q:proche};
+                    if(approx) ev.approx=true;
+                    onEvenement(ev);
+                    etat={phase:"quai",q:proche,tArr:cand.t,tDern:s.t,pRepos:s.p,approx};
+                    cand=null;
+                }
+            } else {
+                cand=null;
+                if(etat.phase==="inconnu" && s.vitesse>=V_MARCHE && prev && !prev.hors && Math.abs(s.p-prev.p)>0.005){
+                    const vers=s.p>prev.p?"N":"S";
+                    etat={phase:"traversee",de:autre(vers),vers,tDep:null};
+                }
+            }
+        }
+        prev=s;
+    }
+    return {pousser, etat:()=>etat};
+}
+
+// ====================================================================
+//  MODÈLE HYBRIDE
+//  1. grille officielle + décalage appris (priors PARAM, ajustés sur les derniers départs)
+//  2. mode détecté (normal / rotation continue / retard-perturbation / arrêt)
+//  3. simulation du cycle : départ N → arrivée S → départ S → arrivée N …
+// ====================================================================
+const mediane=a=>{ if(!a.length) return NaN; a=[...a].sort((x,y)=>x-y); const m=a.length>>1; return a.length%2?a[m]:(a[m-1]+a[m])/2; };
+const MIN=60000;
+
+// Écart (min) d'un départ réel au créneau officiel le plus proche
+function ecartGrille(e){
+    const s=creneauProche(e.t,e.q);
+    return s===null ? null : (e.t-s)/MIN;
+}
+
+// État du service à l'instant `now` d'après les événements `evs` (triés)
+function detecterMode(evs, now, activite){
+    const dernier=evs.length?evs[evs.length-1]:null;
+    const derniereActivite=Math.max(dernier?dernier.t:0, activite||0); // dernier mouvement vu (événement ou position en marche)
+    if(!dansService(now)){
+        const p=prochainService(now);
+        return {mode:"arret", raison:"Hors service", detail:p?("Reprise prévue à "+formatHM(p)):"", depuis:dernier?dernier.t:null};
+    }
+    if(!dernier || now-derniereActivite>PARAM.arretMin*MIN){
+        return {mode:"arret", raison:"Arrêt (panne ou interruption)", detail:dernier?("Aucun mouvement depuis "+Math.round((now-derniereActivite)/MIN)+" min"):"Aucun relevé", depuis:dernier?dernier.t:null};
+    }
+    const deps=evs.filter(e=>e.type==="dep").slice(-5);
+    const inter=[];
+    for(let i=1;i<deps.length;i++){ const d=(deps[i].t-deps[i-1].t)/MIN; if(d<=15) inter.push(d); }
+    const rec=inter.slice(-3);
+    if(rec.length>=2 && mediane(rec)<=PARAM.seuilRotation) return {mode:"rotation", raison:"Rotation continue", detail:"Départs toutes les ~"+Math.round(mediane(rec))+" min, hors grille"};
+    const ecarts=deps.slice(-2).map(ecartGrille).filter(x=>x!==null);
+    if(ecarts.length && mediane(ecarts.map(Math.abs))>PARAM.seuilPerturbation){
+        const m=mediane(ecarts);
+        return {mode:"perturbation", raison:m>0?"Retard / perturbation":"Départs en avance", detail:"Écart à la grille : "+(m>0?"+":"")+m.toFixed(0)+" min"};
+    }
+    return {mode:"normal", raison:"Service normal", detail:"Respecte la grille horaire"};
+}
+
+// Paramètres vivants : priors ajustés par les derniers événements
+function parametresVivants(evs, now){
+    const rec=evs.filter(e=>now-e.t<4*3600*1000);
+    const off={}, tra={};
+    for(const Q of ["N","S"]){
+        const d=rec.filter(e=>e.type==="dep"&&e.q===Q&&!e.approx).map(ecartGrille).filter(x=>x!==null&&x>-6&&x<8).slice(-5);
+        off[Q]=(3*PARAM.decalage[Q]+d.reduce((a,b)=>a+b,0))/(3+d.length);
+        const tt=[];
+        for(let i=1;i<rec.length;i++) if(rec[i-1].type==="dep"&&rec[i-1].q===Q&&rec[i].type==="arr"&&rec[i].q!==Q&&!rec[i-1].approx&&!rec[i].approx) tt.push((rec[i].t-rec[i-1].t)/MIN);
+        const m=tt.slice(-6);
+        tra[Q]=(3*PARAM.traversee[Q]+m.reduce((a,b)=>a+b,0))/(3+m.length);
+    }
+    const sj=[];
+    for(let i=1;i<rec.length;i++) if(rec[i-1].type==="arr"&&rec[i].type==="dep"&&rec[i-1].q===rec[i].q&&!rec[i-1].approx&&!rec[i].approx) sj.push((rec[i].t-rec[i-1].t)/MIN);
+    const sjr=sj.filter(x=>x<5.5).slice(-5);
+    return {off,tra,sejourRot:(3*PARAM.sejourRotation+sjr.reduce((a,b)=>a+b,0))/(3+sjr.length)};
+}
+
+// Départ prévu depuis Q pour un bac arrivé à `tArr`, selon le mode simulé
+function departPrevu(Q, tArr, simMode, pv){
+    if(simMode==="rotation"){
+        const t=tArr+pv.sejourRot*MIN;
+        return {t, nominal:creneauProche(t,Q)};
+    }
+    const off=pv.off[Q]*MIN, mini=tArr+PARAM.sejourMin*MIN;
+    let s=creneauSuivant(mini-off-PARAM.tolRetard*MIN,Q);
+    if(s===null) return {t:mini, nominal:null};
+    return {t:Math.max(s+off,mini), nominal:s};
+}
+
+// Simule les n prochains événements (alternance dép./arr.) à partir de l'état déduit des événements
+function prevoir(evs, now, n, activite){
+    const dernier=evs.length?evs[evs.length-1]:null;
+    const etatMode=detecterMode(evs,now,activite);
+    if(!dernier) return {mode:etatMode,evenements:[]};
+    const pv=parametresVivants(evs,now);
+    const sortie=[];
+    let simMode = etatMode.mode==="rotation" ? "rotation" : "grille";
+    let phase = dernier.type==="arr" ? {a:"quai",Q:dernier.q,t:dernier.t} : {a:"mer",de:dernier.q,t:dernier.t};
+    const plancher=now+15000;
+    for(let k=0;k<n;k++){
+        if(phase.a==="quai"){
+            const w=dansFenetreRotation(phase.t);
+            if(typeService(partiesParis(phase.t).cle)==="SEMAINE"){
+                if(simMode==="rotation" && !w) simMode="grille";
+                else if(simMode==="grille" && w && etatMode.mode!=="arret") simMode="rotation";
+            }
+            const d=departPrevu(phase.Q,phase.t,simMode,pv);
+            const t=Math.max(d.t,plancher);
+            sortie.push({type:"dep",q:phase.Q,t,nominal:d.nominal,mode:simMode});
+            phase={a:"mer",de:phase.Q,t};
+        } else {
+            const t=Math.max(phase.t+pv.tra[phase.de]*MIN,plancher);
+            const prevDep=sortie.length&&sortie[sortie.length-1].type==="dep"?sortie[sortie.length-1]:null;
+            const nomDep=prevDep ? prevDep.nominal : creneauProche(phase.t,phase.de);
+            sortie.push({type:"arr",q:autre(phase.de),t,nominal:nomDep===null||nomDep===undefined?null:nomDep+PARAM.traverseeRef*MIN,mode:simMode});
+            phase={a:"quai",Q:autre(phase.de),t};
+        }
+    }
+    for(const e of sortie) e.delta=e.nominal==null?null:(e.t-e.nominal)/MIN;
+    return {mode:etatMode,evenements:sortie};
+}
+
+// Nominal et écart d'un événement mesuré (départ : créneau le plus proche ; arrivée : départ nominal précédent + traversée de référence)
+function nominalMesure(evs,i){
+    const e=evs[i];
+    if(e.type==="dep"){ const s=creneauProche(e.t,e.q); return s===null?null:s; }
+    const p=i>0?evs[i-1]:null;
+    if(p&&p.type==="dep"&&p.q!==e.q){ const s=creneauProche(p.t,p.q); return s===null?null:s+PARAM.traverseeRef*MIN; }
+    return null;
+}
+
+// ====================================================================
+//  BACKTEST : à chaque arrivée, prévoir le départ suivant ; à chaque départ, l'arrivée suivante
+// ====================================================================
+function backtest(evs){
+    const res={modele:[],officiel:[],decale:[]};
+    for(let i=1;i<evs.length-1;i++){
+        const e=evs[i], suiv=evs[i+1];
+        if(e.approx||suiv.approx||e.type!=="arr"||suiv.type!=="dep"||suiv.q!==e.q) continue;
+        const pas=(suiv.t-e.t)/MIN; if(pas>40) continue;
+        const now=e.t+5000;
+        const sim=prevoir(evs.slice(0,i+1),now,1);
+        const pr=sim.evenements[0];
+        if(!pr||sim.mode.mode==="arret") continue;
+        const mini=e.t+PARAM.sejourMin*MIN;
+        const sOff=creneauSuivant(mini,e.q);
+        const rot=(()=>{ const d=evs.slice(0,i+1).filter(x=>x.type==="dep").slice(-3); return d.length>=3 && (d[2].t-d[0].t)/MIN/2<=PARAM.seuilRotation; })();
+        res.modele.push({err:(pr.t-suiv.t)/MIN,rot});
+        res.officiel.push({err:sOff===null?NaN:(sOff-suiv.t)/MIN,rot});
+        res.decale.push({err:sOff===null?NaN:(sOff+PARAM.decalage[e.q]*MIN-suiv.t)/MIN,rot});
+    }
+    return res;
+}
+function statErreurs(l){
+    const a=l.map(x=>Math.abs(x.err)).filter(x=>isFinite(x)&&x<60); // > 1 h : manœuvre de fin / début de service, hors sujet
+    const biais=mediane(l.map(x=>x.err).filter(isFinite));
+    return {n:a.length, mae:a.reduce((x,y)=>x+y,0)/a.length, med:mediane(a), dans1:a.filter(x=>x<=1).length/a.length, dans2:a.filter(x=>x<=2).length/a.length, biais};
+}
+
+// --- Tracés officiels du chenal (identiques à la page d'alerte) -----
+const traceOfficiel = [
+    { lat:47.19583,   lon:-1.67574,    dist:0.0 },
+    { lat:47.195988,  lon:-1.6759925,  dist:30.392446 },
+    { lat:47.19613,   lon:-1.6761373,  dist:52.98436 },
+    { lat:47.19642,   lon:-1.6763519,  dist:93.28704 },
+    { lat:47.19673,   lon:-1.6764485,  dist:129.41317 },
+    { lat:47.19703,   lon:-1.6764216,  dist:162.81936 },
+    { lat:47.19724,   lon:-1.6762393,  dist:193.90133 },
+    { lat:47.197395,  lon:-1.6759496,  dist:230.56577 },
+    { lat:47.197483,  lon:-1.6755311,  dist:278.15167 },
+    { lat:47.19751,   lon:-1.6751771,  dist:317.66671 },
+    { lat:47.19744,   lon:-1.67439,    dist:405.714361 }
+];
+const traceRetour = [
+    { lat:47.195334, lon:-1.6743426, dist:0.0 },
+    { lat:47.195283, lon:-1.6740076, dist:30.392446 },
+    { lat:47.195283, lon:-1.6737533, dist:52.98436 },
+    { lat:47.195329, lon:-1.6732804, dist:93.28704 },
+    { lat:47.195452, lon:-1.6728507, dist:129.41317 },
+    { lat:47.195639, lon:-1.6725036, dist:162.81936 },
+    { lat:47.195860, lon:-1.6723539, dist:193.90133 },
+    { lat:47.196110, lon:-1.6723320, dist:230.56577 },
+    { lat:47.196394, lon:-1.6724646, dist:278.15167 },
+    { lat:47.196607, lon:-1.6726341, dist:317.66671 },
+    { lat:47.197006, lon:-1.6731680, dist:405.714361 }
+];
+const DISTANCE_TOTALE_TRACE = traceOfficiel[traceOfficiel.length-1].dist;
+const COS_LAT_REFERENCE = Math.cos(47.1965*Math.PI/180);
+
+function versPlan(lat,lon){ return { x:lon*COS_LAT_REFERENCE, y:lat }; }
+
+function projeterSurTrace(point, trace){
+    let meilleureDistancePerp = Infinity, meilleureDistanceParcourue = 0;
+    for(let i=0;i<trace.length-1;i++){
+        const a=versPlan(trace[i].lat,trace[i].lon), b=versPlan(trace[i+1].lat,trace[i+1].lon);
+        const dx=b.x-a.x, dy=b.y-a.y, l2=dx*dx+dy*dy;
+        let t=0;
+        if(l2>0){ t=((point.x-a.x)*dx+(point.y-a.y)*dy)/l2; t=Math.max(0,Math.min(1,t)); }
+        const ex=point.x-(a.x+t*dx), ey=point.y-(a.y+t*dy);
+        const d=Math.sqrt(ex*ex+ey*ey);
+        if(d<meilleureDistancePerp){
+            meilleureDistancePerp=d;
+            meilleureDistanceParcourue=trace[i].dist+t*(trace[i+1].dist-trace[i].dist);
+        }
+    }
+    return { distancePerp:meilleureDistancePerp, distanceParcourue:meilleureDistanceParcourue };
+}
+
+// progression 0 (Indret) → 1 (Basse-Indre) + écart au chenal
+function positionSurTrace(lat,lon){
+    const pt=versPlan(lat,lon);
+    const a=projeterSurTrace(pt,traceOfficiel), r=projeterSurTrace(pt,traceRetour);
+    const m = a.distancePerp<=r.distancePerp ? a : r;
+    return { progression:m.distanceParcourue/DISTANCE_TOTALE_TRACE, ecart:m.distancePerp };
+}
+
+const SEUIL_HORS_ZONE=0.0008; // écart au chenal (unités lat/lon) au-delà duquel le relevé est ignoré
+
+const SEED = [{"t":1794864266838,"type":"dep","q":"N"},{"t":1794888891379,"type":"arr","q":"N"},{"t":1794889304336,"type":"dep","q":"N"},{"t":1794889374841,"type":"arr","q":"N"},{"t":1794889909361,"type":"dep","q":"N"},{"t":1794890111073,"type":"arr","q":"S"},{"t":1794890498912,"type":"dep","q":"S"},{"t":1794890645344,"type":"arr","q":"N","approx":true},{"t":1794891098343,"type":"dep","q":"N","approx":true},{"t":1794891269839,"type":"arr","q":"S","approx":true},{"t":1794891723377,"type":"dep","q":"S","approx":true},{"t":1794891894835,"type":"arr","q":"N","approx":true},{"t":1794892276880,"type":"dep","q":"N","approx":true},{"t":1794892438052,"type":"arr","q":"S"},{"t":1794892891873,"type":"dep","q":"S"},{"t":1794893012879,"type":"arr","q":"N","approx":true},{"t":1794893465841,"type":"dep","q":"N","approx":true},{"t":1794893727838,"type":"arr","q":"S"},{"t":1794894110843,"type":"dep","q":"S"},{"t":1794894272838,"type":"arr","q":"N","approx":true},{"t":1794894665859,"type":"dep","q":"N","approx":true},{"t":1794894906841,"type":"arr","q":"S"},{"t":1794895254836,"type":"dep","q":"S"},{"t":1794895400842,"type":"arr","q":"N"}]; // derniers événements enregistrés par le serveur (relevés du 17/11/2026)
+
+// ====================================================================
+//  INTERFACE
+// ====================================================================
+const URL_PROXY = "https://lola-proxy.swortom44.workers.dev/";
+const CLE_J="bac-lola-journal-v1", CLE_E="bac-lola-etat-v1";
+function lire(c,d){ try{ const v=localStorage.getItem(c); return v?JSON.parse(v):d; }catch(e){ return d; } }
+function ecrire(c,v){ try{ localStorage.setItem(c,JSON.stringify(v)); }catch(e){} }
+const $=id=>document.getElementById(id);
+
+let journal=lire(CLE_J,null);
+if(!Array.isArray(journal)) journal=SEED.map(e=>Object.assign({seed:true},e));
+let vitesse=null, derniereMesure=null, derniereMarche=0, lecturesOk=false;
+
+const sauvegarde=lire(CLE_E,null);
+const etatInit=(sauvegarde&&sauvegarde.maj&&Date.now()-sauvegarde.maj<20*60000)?sauvegarde.etat:null;
+const detecteur=creerDetecteur(etatInit,e=>{ journal.push(e); ecrire(CLE_J,journal.slice(-400)); rendre(); });
+
+function evenementsEffectifs(now){
+    const evs=journal.slice(), s=detecteur.etat(), last=evs.length?evs[evs.length-1].t:0;
+    if(s.phase==="quai" && s.tArr-last>1000) evs.push({type:"arr",q:s.q,t:Math.round(s.tArr),approx:true});
+    if(s.phase==="traversee" && s.de && ((s.tDep||now-30000)-last>1000)) evs.push({type:"dep",q:s.de,t:Math.round(s.tDep||now-30000),approx:true});
+    return evs;
+}
+
+async function lirePosition(){
+    try{
+        const rep=await fetch(URL_PROXY,{cache:"no-store"});
+        if(!rep.ok) throw new Error();
+        const v=(await rep.text()).trim().split(/\s+/);
+        const lat=parseFloat(v[0]), lon=parseFloat(v[1]), vit=parseFloat(v[2]);
+        if(!isFinite(lat)||!isFinite(lon)||!isFinite(vit)) throw new Error();
+        const pos=positionSurTrace(lat,lon), t=Date.now();
+        detecteur.pousser({t,p:Math.max(0,Math.min(1,pos.progression)),vitesse:vit,hors:pos.ecart>SEUIL_HORS_ZONE});
+        vitesse=vit; derniereMesure=t; lecturesOk=true;
+        if(vit>=V_MARCHE) derniereMarche=t;
+        ecrire(CLE_E,{maj:t,etat:detecteur.etat()});
+    }catch(e){ lecturesOk=false; }
+    rendre();
+}
+
+// --- affichage ---
+const fmtDelta=d=>d==null?"–":(d>=0?"+":"−")+Math.abs(d).toFixed(1).replace(".",",");
+function classeDelta(d){ if(d==null) return ""; if(d<-2) return "d-av"; if(d<=2.5) return "d-ok"; if(d<=5) return "d-moy"; return "d-fort"; }
+function cellNominal(ms){ return ms==null?"–":formatHM(ms); }
+function dans(ms,now){ const m=Math.round((ms-now)/60000); return m<=0?"maintenant":"dans "+m+" min"; }
+
+function situation(Q,evs){
+    if(!evs.length) return null;
+    const e=evs[evs.length-1];
+    if(e.type==="arr") return e.q===Q ? 0 : 2;
+    return e.q===Q ? 1 : 3;
+}
+
+function rendre(){
+    const now=Date.now(), evs=evenementsEffectifs(now);
+    const pr=prevoir(evs,now,8,derniereMarche), mode=pr.mode;
+    const b=$("bandeau");
+    b.className="m-"+mode.mode;
+    const live = derniereMesure ? '<span class="led'+(lecturesOk?'':' off')+'"></span>Position il y a '+Math.round((now-derniereMesure)/1000)+' s · '+(vitesse!=null?vitesse.toFixed(1).replace(".",",")+' nd':'')
+                                 : '<span class="led off"></span>En attente de la position du bac…';
+    b.innerHTML='<div class="mode">'+mode.raison+'</div><div class="detail">'+mode.detail+'</div><div class="live">'+live+'</div>';
+    const sit=evs.length?situation("N",evs):null;
+    const panne=mode.mode==="arret" && mode.raison.indexOf("Arrêt")===0;
+    let html="";
+    ["N","S"].forEach(Q=>{
+        const O=autre(Q), nq=NOM_QUAI[Q], no=NOM_QUAI[O];
+        const s=situation(Q,evs);
+        const noms=["Bac à quai ici","En traversée vers "+no,"Bac à quai à "+no,"En traversée vers ici"];
+        const last=evs.length?evs[evs.length-1]:null;
+        const pills=noms.map((n,i)=>'<div class="sit'+(s===i?' actif':'')+'">'+n+'</div>').join("");
+        const depuis=last?("Depuis "+formatHMS(last.t)+" ("+Math.max(0,Math.round((now-last.t)/60000))+" min)"+(last.approx?" · heure approximative":"")):"";
+        // prochains changements : première occurrence de chacun des 4 changements de situation
+        const types=[["dep",Q,"Départ d'ici → traversée vers "+no],["arr",O,"Arrivée à "+no],["dep",O,"Départ de "+no+" → traversée vers ici"],["arr",Q,"Arrivée ici"]];
+        const lignes=[];
+        types.forEach(t=>{ const e=pr.evenements.find(x=>x.type===t[0]&&x.q===t[1]); if(e) lignes.push({e,lib:t[2]}); });
+        lignes.sort((a,b)=>a.e.t-b.e.t);
+        let prochains;
+        if(panne) prochains='<div class="vide">Prévisions suspendues pendant l\'arrêt.</div>';
+        else prochains='<table><tr><th>Changement</th><th>Nominal</th><th>Prévu</th><th>Δ</th></tr>'+lignes.map(l=>
+            '<tr><td>'+l.lib+'</td><td>'+cellNominal(l.e.nominal)+'</td><td class="prevu">'+formatHM(l.e.t)+'<span class="cpt">'+dans(l.e.t,now)+'</span></td><td class="'+classeDelta(l.e.delta)+'">'+fmtDelta(l.e.delta)+'</td></tr>').join("")+'</table>';
+        // derniers changements mesurés à ce quai
+        const mes=[];
+        for(let i=evs.length-1;i>=0&&mes.length<6;i--) if(evs[i].q===Q){ const nom=nominalMesure(evs,i); mes.push({e:evs[i],nom,d:nom==null?null:(evs[i].t-nom)/60000}); }
+        const mesures=mes.length?'<table><tr><th>Mesuré</th><th>Nominal</th><th>Δ</th></tr>'+mes.map(m=>
+            '<tr'+(m.e.seed?' class="seed"':'')+'><td>'+(m.e.type==="arr"?"Arrivée":"Départ")+' '+formatHMS(m.e.t)+(m.e.approx?' ~':'')+(m.e.seed?'<span class="cpt">relevé serveur · '+partiesParis(m.e.t).cle.slice(5).split("-").reverse().join("/")+'</span>':'')+'</td><td>'+cellNominal(m.nom)+'</td><td class="'+classeDelta(m.d)+'">'+fmtDelta(m.d)+'</td></tr>').join("")+'</table>'
+            : '<div class="vide">Aucun changement mesuré pour l\'instant.</div>';
+        html+='<section class="quai"><h2>'+nq+'</h2><div class="rive">Rive '+(Q==="N"?"nord":"sud")+' · minutes, Δ = prévu − nominal</div>'
+            +'<div class="situations">'+pills+'</div><div class="depuis">'+depuis+'</div>'
+            +'<h3>Prochains changements de situation</h3>'+prochains
+            +'<h3>Derniers changements mesurés</h3>'+mesures+'</section>';
+    });
+    $("quais").innerHTML=html;
+}
+
+rendre();
+lirePosition();
+setInterval(lirePosition,10000);
+setInterval(rendre,1000);
+</script>
+</body>
+</html>
