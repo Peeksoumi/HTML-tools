@@ -16,12 +16,12 @@ let horloge=t0; const RD=Date; ctx.Date=class extends RD{constructor(...a){super
 vm.runInContext(m[1]+"\nthis.__t={rendre,lirePosition,journal:()=>journal};",ctx);
 (async()=>{
   for(let i=0;i<suite.length;i++){ horloge+=10000; await ctx.__t.lirePosition(); }
-  const h=els.quais.innerHTML, b=els.bandeau.innerHTML;
+  const h=els.quais.innerHTML+els.mesures.innerHTML, b=els.bandeau.innerHTML;
   const ok=(c,msg)=>{ if(!c){ console.error("ÉCHEC :",msg); process.exitCode=1; } else console.log("ok :",msg); };
   ok(/Basse-Indre/.test(h)&&/Indret/.test(h),"deux sections quai");
-  ok((h.match(/class="sit( actif)?"/g)||[]).length===8,"4 situations par quai");
-  ok((h.match(/Prochains changements/g)||[]).length===2,"prochains changements pour chaque quai");
-  ok(/Derniers changements mesurés/.test(h),"derniers changements mesurés");
+  ok((h.match(/Prochain départ/g)||[]).length===2,"prochain départ affiché pour chaque quai");
+  ok(/Enchaînement prévu/.test(html),"enchaînement prévu (les deux quais ensemble)");
+  ok(/Derniers changements mesurés/.test(html)&&/Arrivée à|Départ de/.test(els.mesures.innerHTML),"derniers changements mesurés (les deux quais ensemble)");
   ok(/class="mode"/.test(b),"bandeau de mode");
   ok(ctx.__t.journal().some(e=>!e.seed),"événements détectés en direct : "+ctx.__t.journal().filter(e=>!e.seed).map(e=>e.type+e.q).join(","));
   console.log(b.replace(/<[^>]+>/g," ").replace(/\s+/g," "));
