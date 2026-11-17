@@ -21,6 +21,7 @@
   #heure { font-weight:600; min-width:15em; }
   #heure.est { color:#dc6803; }
   #map { height:calc(100vh - 250px); min-height:360px; border-radius:12px; border:1px solid var(--bd); background:#111; }
+  .fond { filter:invert(1) hue-rotate(180deg) brightness(.8) contrast(.9) grayscale(.4); } /* OSM en mode sombre, sans clé d'API */
   .nuage { mix-blend-mode:screen; }
   #msg { margin:.5rem 0; color:var(--mut); min-height:1.3em; font-size:.92rem; }
   #msg.err { color:var(--ko); }
@@ -60,7 +61,7 @@
   <div class="fonct" id="fonctionnement">
     <h2>Fonctionnement et sources</h2>
     <h3>Fonctionnement</h3><ul><li><b>Images observées</b> : les 6 dernières images satellite (≈ 50 min), une toutes les 10 min, avec 10 à 20 min de latence.</li><li><b>Estimation « maintenant » et « +10 min »</b> : la dernière image réelle est déplacée de (vent × temps écoulé), vent du modèle Météo-France au niveau choisi (850, 700 ou 500 hPa), interpolé à l'heure courante au centre de la carte.</li><li>Hypothèse : déplacement uniforme sur la zone affichée, sans formation ni disparition de nuages.</li></ul>
-    <h3>Sources de données</h3><ul><li><b>Satellite</b> : Meteosat-12 (MTG-I1), infrarouge 10,5 µm, via EUMETSAT EUMETView (WMS).</li><li><b>Vent</b> : Open-Meteo (modèles Météo-France), CC BY 4.0.</li><li><b>Fond de carte</b> : © OpenStreetMap contributors, © CARTO. <b>Carte</b> : Leaflet (unpkg).</li></ul>
+    <h3>Sources de données</h3><ul><li><b>Satellite</b> : Meteosat-12 (MTG-I1), infrarouge 10,5 µm, via EUMETSAT EUMETView (WMS).</li><li><b>Vent</b> : Open-Meteo (modèles Météo-France), CC BY 4.0.</li><li><b>Fond de carte</b> : © contributeurs OpenStreetMap (tuiles tile.openstreetmap.org, assombries dans la page). <b>Carte</b> : Leaflet (unpkg).</li></ul>
     <h3>Limites</h3><ul><li>Aucune source publique gratuite ne fournit une vraie prévision de nuages à 10 min : les deux dernières images sont une estimation.</li><li>En infrarouge, les nuages hauts et épais ressortent bien, les nuages bas peu (choisir 850 hPa pour les déplacer).</li></ul>
   </div>
 </main>
@@ -119,12 +120,8 @@ if (typeof document !== 'undefined') {
   const P = ll => L.CRS.EPSG3857.project(ll);
 
   const map = L.map('map', { center: [47.2, -1.6], zoom: 7 });
-  map.createPane('etiquettes').style.zIndex = 450;
-  map.getPane('etiquettes').style.pointerEvents = 'none';
-  const CARTO = 'https://{s}.basemaps.cartocdn.com/';
-  const attr = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/attributions">CARTO</a> · images © EUMETSAT';
-  L.tileLayer(CARTO + 'dark_nolabels/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 12, attribution: attr }).addTo(map);
-  L.tileLayer(CARTO + 'dark_only_labels/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 12, pane: 'etiquettes' }).addTo(map);
+  const attr = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · images © EUMETSAT';
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 12, className: 'fond', attribution: attr }).addTo(map);
 
   let L0 = null, frames = [], overlays = [], wind = null, idx = 0, timer = null, playing = true;
 
