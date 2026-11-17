@@ -66,7 +66,7 @@
         <input type="date" id="date">
       </label>
       <label>Débit de la Loire à Montjean (m³/s)
-        <input type="number" id="debit" min="50" max="6000" step="50" value="500">
+        <input type="number" id="debit" min="50" max="6000" step="50" value="250">
       </label>
       <button type="button" id="auto" title="Lit le dernier débit publié par Vigicrues via Hub'Eau (connexion requise)">↻ Débit en direct</button>
       <span class="hint" id="debitInfo"></span>
@@ -491,7 +491,7 @@ function etats(renverses) {
   return ev.map((r, i) => ({ dir: r.type, from: r.t, to: ev[i + 1] ? ev[i + 1].t : Infinity }));
 }
 
-let debit = 500;
+let debit = 250;
 
 function render() {
   const dateStr = $('date').value || todayStr();
@@ -583,7 +583,7 @@ function graphique(r, ev, day0, day1, now) {
 async function chargerDebit() {
   $('debitInfo').textContent = 'Lecture du débit…';
   try {
-    const url = 'https://hubeau.eaufrance.fr/api/v1/hydrometrie/observations_tr?code_entite=M530001010&grandeur_hydro=Q&size=1&sort=desc&fields=date_obs,resultat_obs';
+    const url = 'https://hubeau.eaufrance.fr/api/v2/hydrometrie/observations_tr?code_entite=M530001010&grandeur_hydro=Q&size=1&sort=desc&format=json';
     const j = await (await fetch(url)).json();
     const o = j.data && j.data[0];
     const q = o ? o.resultat_obs / 1000 : NaN; // l/s -> m³/s
@@ -592,7 +592,7 @@ async function chargerDebit() {
     $('debit').value = debit;
     $('debitInfo').textContent = `Débit mesuré à Montjean : ${debit} m³/s (${fmtD(Date.parse(o.date_obs))} ${fmtT(Date.parse(o.date_obs))}).`;
   } catch (e) {
-    $('debitInfo').textContent = 'Débit en direct indisponible : saisis-le à la main (500 m³/s par défaut).';
+    $('debitInfo').textContent = 'Débit en direct indisponible : saisis-le à la main (250 m³/s par défaut).';
   }
   render();
 }
