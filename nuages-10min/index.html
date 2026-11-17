@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nuages – 10 prochaines minutes</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --txt:#1c2330; --mut:#667085; --ko:#d92d20; --pri:#2563eb; --bd:#e4e7ec; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#10141b; --card:#1a202b; --txt:#e8ecf3; --mut:#98a2b3; --bd:#2b3442; } }
+  * { box-sizing:border-box; }
+  body { margin:0; font:16px/1.45 system-ui,sans-serif; background:var(--bg); color:var(--txt); }
+  main { max-width:1100px; margin:0 auto; padding:12px; }
+  h1 { font-size:1.35rem; margin:.3rem 0 .4rem; }
+  .liens { display:flex; flex-wrap:wrap; gap:8px 14px; margin-bottom:.6rem; font-size:.9rem; }
+  .liens a { color:var(--pri); }
+  .barre { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:.4rem 0; }
+  button, select { font:inherit; padding:8px 11px; border-radius:9px; border:1px solid var(--bd); background:var(--card); color:var(--txt); cursor:pointer; }
+  button.pri { background:var(--pri); color:#fff; border:0; }
+  input[type=range] { flex:1 1 220px; }
+  #heure { font-weight:600; min-width:15em; }
+  #heure.est { color:#dc6803; }
+  #map { height:calc(100vh - 250px); min-height:360px; border-radius:12px; border:1px solid var(--bd); background:#111; }
+  .nuage { mix-blend-mode:screen; }
+  #msg { margin:.5rem 0; color:var(--mut); min-height:1.3em; font-size:.92rem; }
+  #msg.err { color:var(--ko); }
+  .note { color:var(--mut); font-size:.85rem; margin:.8rem 0 2rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>☁️ Nuages – 10 prochaines minutes</h1>
+  <div class="liens">
+    <a href="https://github.com/Peeksoumi/HTML-tools/issues/new?title=%5Bnuages-10min%5D%20&amp;body=Outil%20concern%C3%A9%20%3A%20nuages-10min%20(http%3A%2F%2F141.227.151.70%3A8080%2Fnuages-10min%2F)%0A%0A**Ma%20suggestion%20ou%20le%20bug%20rencontr%C3%A9%20%3A**%0A%0A" target="_blank" rel="noopener">💡 Proposer une amélioration</a>
+    <a href="index.html" download="nuages-10min.html" title="Enregistrer la page (connexion requise : carte, satellite EUMETSAT et vent Open-Meteo)">⬇️ Télécharger la page</a>
+  </div>
+
+  <div class="barre">
+    <button id="play" class="pri" type="button" aria-label="Lecture / pause">⏸</button>
+    <input id="slider" type="range" min="0" max="0" value="0" aria-label="Image">
+    <span id="heure">…</span>
+  </div>
+  <div class="barre">
+    <label>Vent de déplacement
+      <select id="niveau">
+        <option value="850">850 hPa (≈ 1,5 km, nuages bas)</option>
+        <option value="700" selected>700 hPa (≈ 3 km, nuages moyens)</option>
+        <option value="500">500 hPa (≈ 5,5 km, nuages hauts)</option>
+      </select>
+    </label>
+    <button id="loc" type="button">📍 Ma position</button>
+  </div>
+  <div id="msg">Recherche de la dernière image satellite…</div>
+
+  <div id="map"></div>
+
+  <p class="note">
+    <b>Comment lire la carte.</b> Les 6 premières images sont <i>observées</i> par le satellite Meteosat-12 (MTG-I1, infrarouge 10,5 µm, une image toutes les 10 min,
+    source EUMETSAT / EUMETView). Les deux dernières (« maintenant » et « +10 min ») sont une <i>estimation</i> : la dernière image réelle est déplacée selon le vent
+    du modèle Météo-France (via Open-Meteo) au niveau choisi. L'estimation ne prévoit ni formation ni disparition de nuages et suppose un déplacement uniforme dans la zone affichée.
+    L'infrarouge montre surtout les nuages froids (hauts, épais) ; les nuages bas sont peu contrastés. La dernière image satellite a en général 10 à 20 min de retard.
+    Services interrogés par ta page : EUMETSAT (images), Open-Meteo (vent, CC BY 4.0), CARTO / OpenStreetMap (fond de carte), unpkg (bibliothèque Leaflet).
+    Fond de carte © OpenStreetMap contributors © CARTO ; images © EUMETSAT.
+  </p>
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ==CORE==
+const STEP = 10 * 60e3;
+const WMS = 'https://view.eumetsat.int/geoserver/wms';
+const LAYER = 'mtg_fd:ir105_hrfi';
+
+// Instants candidats (ms) de la dernière image, du plus récent au plus ancien.
+function latestCandidates(now, n, lag) {
+  const base = Math.floor((now - (lag === undefined ? 12 * 60e3 : lag)) / STEP) * STEP;
+  return Array.from({ length: n }, (_, i) => base - i * STEP);
+}
+
+// Déplacement (m, vers l'est / le nord) d'un nuage porté par un vent venant de dirFrom (°) pendant sec secondes.
+function windToDisplacement(speed, dirFrom, sec) {
+  const r = dirFrom * Math.PI / 180;
+  return { dx: -speed * Math.sin(r) * sec, dy: -speed * Math.cos(r) * sec };
+}
+
+// Vent horaire (times en ms, vitesses m/s, directions °) interpolé à l'instant now sur ses composantes u/v.
+function interpWind(times, speeds, dirs, now) {
+  const uv = i => { const r = dirs[i] * Math.PI / 180; return [-speeds[i] * Math.sin(r), -speeds[i] * Math.cos(r)]; };
+  let i = times.findIndex(t => t > now) - 1;
+  if (i < 0) i = times[0] > now ? 0 : times.length - 1;
+  const j = Math.min(i + 1, times.length - 1);
+  const f = j === i ? 0 : Math.min(1, Math.max(0, (now - times[i]) / (times[j] - times[i])));
+  const a = uv(i), b = uv(j);
+  const u = a[0] + (b[0] - a[0]) * f, v = a[1] + (b[1] - a[1]) * f;
+  return { speed: Math.hypot(u, v), dirFrom: (Math.atan2(-u, -v) * 180 / Math.PI + 360) % 360 };
+}
+
+function wmsUrl(base, layer, bbox, w, h, ms) {
+  return base + '?service=WMS&version=1.3.0&request=GetMap&layers=' + encodeURIComponent(layer) +
+    '&styles=&format=image%2Fpng&transparent=true&crs=EPSG%3A3857&bbox=' + bbox.map(v => v.toFixed(1)).join(',') +
+    '&width=' + w + '&height=' + h + '&time=' + encodeURIComponent(new Date(ms).toISOString());
+}
+
+// 6 images observées (la dernière à L0) puis « maintenant » et « +10 min » estimés à partir de L0.
+function buildFrames(L0, now) {
+  const f = [];
+  for (let i = 5; i >= 0; i--) f.push({ t: L0 - i * STEP, kind: 'obs' });
+  f.push({ t: now, kind: 'est', label: 'maintenant' });
+  f.push({ t: now + STEP, kind: 'est', label: '+10 min' });
+  return f;
+}
+// ==/CORE==
+
+if (typeof document !== 'undefined') {
+  const $ = id => document.getElementById(id);
+  const hhmm = ms => new Date(ms).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  const OP = 0.9;
+  const P = ll => L.CRS.EPSG3857.project(ll);
+
+  const map = L.map('map', { center: [47.2, -1.6], zoom: 7 });
+  map.createPane('etiquettes').style.zIndex = 450;
+  map.getPane('etiquettes').style.pointerEvents = 'none';
+  const CARTO = 'https://{s}.basemaps.cartocdn.com/';
+  const attr = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/attributions">CARTO</a> · images © EUMETSAT';
+  L.tileLayer(CARTO + 'dark_nolabels/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 12, attribution: attr }).addTo(map);
+  L.tileLayer(CARTO + 'dark_only_labels/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 12, pane: 'etiquettes' }).addTo(map);
+
+  let L0 = null, frames = [], overlays = [], wind = null, idx = 0, timer = null, playing = true;
+
+  const msg = (t, err) => { $('msg').textContent = t; $('msg').className = err ? 'err' : ''; };
+
+  function probe(url) {
+    return new Promise(res => {
+      const im = new Image();
+      const to = setTimeout(() => res(false), 15000);
+      im.onload = () => { clearTimeout(to); res(true); };
+      im.onerror = () => { clearTimeout(to); res(false); };
+      im.src = url;
+    });
+  }
+
+  async function findLatest() {
+    const b = map.getBounds();
+    const sw = P(b.getSouthWest()), ne = P(b.getNorthEast());
+    for (const c of latestCandidates(Date.now(), 7)) {
+      if (await probe(wmsUrl(WMS, LAYER, [sw.x, sw.y, ne.x, ne.y], 256, 256, c))) return c;
+    }
+    return null;
+  }
+
+  async function fetchWind() {
+    const c = map.getCenter(), lvl = $('niveau').value;
+    const u = 'https://api.open-meteo.com/v1/forecast?latitude=' + c.lat.toFixed(2) + '&longitude=' + c.lng.toFixed(2) +
+      '&hourly=wind_speed_' + lvl + 'hPa,wind_direction_' + lvl + 'hPa&wind_speed_unit=ms&forecast_days=2&timezone=GMT';
+    const r = await fetch(u);
+    if (!r.ok) throw new Error('Open-Meteo ' + r.status);
+    const h = (await r.json()).hourly;
+    wind = interpWind(h.time.map(t => Date.parse(t + 'Z')), h['wind_speed_' + lvl + 'hPa'], h['wind_direction_' + lvl + 'hPa'], Date.now());
+  }
+
+  function layout() {
+    if (!overlays.length) return;
+    const b = map.getBounds().pad(0.25);
+    const sw = P(b.getSouthWest()), ne = P(b.getNorthEast());
+    const sz = map.getSize();
+    const w = Math.min(1600, Math.round(sz.x * 1.5)), h = Math.min(1600, Math.round(sz.y * 1.5));
+    const k = 1 / Math.cos(map.getCenter().lat * Math.PI / 180); // mètres Mercator par mètre au sol
+    frames.forEach((f, i) => {
+      let dx = 0, dy = 0;
+      if (f.kind === 'est' && wind) ({ dx, dy } = windToDisplacement(wind.speed, wind.dirFrom, (f.t - L0) / 1000));
+      // On demande l'image décalée à l'opposé : son contenu apparaît déplacé dans le sens du vent.
+      const bbox = [sw.x - dx * k, sw.y - dy * k, ne.x - dx * k, ne.y - dy * k];
+      overlays[i].setBounds(b);
+      overlays[i].setUrl(wmsUrl(WMS, LAYER, bbox, w, h, f.kind === 'obs' ? f.t : L0));
+    });
+    show(idx);
+  }
+
+  function show(i) {
+    idx = i;
+    overlays.forEach((o, j) => o.setOpacity(j === i ? OP : 0));
+    $('slider').value = i;
+    const f = frames[i];
+    $('heure').className = f.kind === 'est' ? 'est' : '';
+    $('heure').textContent = f.kind === 'est' ? hhmm(f.t) + ' · ' + f.label + ' (estimé)' : hhmm(f.t) + ' · observé';
+  }
+
+  function play(on) {
+    playing = on;
+    $('play').textContent = on ? '⏸' : '▶';
+    clearInterval(timer);
+    if (on) timer = setInterval(() => show((idx + 1) % frames.length), 900);
+  }
+
+  function windText() {
+    if (!wind) return 'vent indisponible : les deux dernières images ne sont pas déplacées';
+    const km = wind.speed * 600 / 1000;
+    return 'vent à ' + $('niveau').value + ' hPa : ' + Math.round(wind.speed * 3.6) + ' km/h venant de ' + Math.round(wind.dirFrom) + '° → déplacement ≈ ' + km.toFixed(1).replace('.', ',') + ' km en 10 min';
+  }
+
+  async function init() {
+    msg('Recherche de la dernière image satellite…');
+    const [l, wOk] = await Promise.all([findLatest(), fetchWind().then(() => true, () => { wind = null; return false; })]);
+    if (!l) { msg('Impossible de charger les images EUMETSAT (réseau ou service indisponible).', true); return; }
+    L0 = l;
+    overlays.forEach(o => map.removeLayer(o));
+    frames = buildFrames(L0, Date.now());
+    overlays = frames.map(() => L.imageOverlay('', map.getBounds(), { opacity: 0, className: 'nuage', interactive: false }).addTo(map));
+    $('slider').max = frames.length - 1;
+    layout();
+    show(frames.length - 1);
+    play(playing);
+    msg('Dernière image satellite : ' + hhmm(L0) + ' · ' + windText() + (wOk ? '' : ' (Open-Meteo injoignable)'), !wOk);
+  }
+
+  let tm;
+  map.on('moveend', () => { clearTimeout(tm); tm = setTimeout(layout, 300); });
+  $('play').onclick = () => play(!playing);
+  $('slider').oninput = e => { play(false); show(+e.target.value); };
+  $('niveau').onchange = async () => { try { await fetchWind(); } catch (e) { wind = null; } layout(); msg('Dernière image satellite : ' + hhmm(L0) + ' · ' + windText()); };
+  $('loc').onclick = () => map.locate({ setView: true, maxZoom: 9 });
+  map.on('locationerror', () => msg('Position indisponible (autorisation refusée ?).', true));
+  init();
+  setInterval(init, 5 * 60e3); // une nouvelle image arrive toutes les 10 min
+}
+</script>
+</body>
+</html>
