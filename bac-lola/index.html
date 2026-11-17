@@ -29,25 +29,29 @@ h1{font-size:26px;margin:0;font-weight:600}
 .m-arret{border-left-color:var(--gris)}.m-arret .mode{color:var(--gris)}
 .led{width:7px;height:7px;display:inline-block;border-radius:50%;background:var(--vert);box-shadow:0 0 4px var(--vert);margin-right:6px}
 .led.off{background:var(--rouge);box-shadow:0 0 4px var(--rouge)}
-#quais{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-@media(max-width:720px){#quais{grid-template-columns:1fr}}
-section.quai{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px;min-width:0}
-section.quai h2{font-size:20px;margin:0 0 2px}
-.rive{font-family:var(--mono);font-size:12px;color:var(--faint);margin-bottom:10px}
-.situations{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px}
-.sit{background:var(--inset);border:1px solid var(--soft);border-radius:8px;padding:7px 8px;font-size:12px;color:var(--faint);line-height:1.3}
-.sit.actif{border-color:var(--bleu);color:var(--text);background:#0d1a24}
-.depuis{font-family:var(--mono);font-size:12px;color:var(--dim);margin:0 0 4px;min-height:16px}
-h3{font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin:14px 0 4px}
+#quais{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.quai{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 12px;min-width:0;text-align:center}
+.quai .nom{font-size:17px;font-weight:600}
+.quai .rive{display:block;font-family:var(--mono);font-size:11px;color:var(--faint);font-weight:400}
+.quai .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-top:12px}
+.quai .grand{font-family:var(--mono);font-size:44px;line-height:1.1;color:var(--orange);margin-top:2px}
+.quai .cpt2{font-family:var(--mono);font-size:15px;color:var(--text)}
+.quai .etat{font-size:13px;color:var(--dim);margin-top:10px;line-height:1.35;min-height:36px}
+.quai .sec{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:8px}
+.quai .suivant{font-family:var(--mono);font-size:13px;color:var(--dim);margin-top:8px;padding-top:8px;border-top:1px solid var(--soft)}
+h2.t{font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin:18px 4px 4px}
+.bloc{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:6px 12px}
 table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
-th{font-weight:500;color:var(--faint);text-align:right;padding:4px 3px;border-bottom:1px solid var(--border)}
-td{text-align:right;padding:6px 3px;border-bottom:1px solid var(--soft);color:var(--dim);white-space:nowrap}
-th:first-child,td:first-child{text-align:left;white-space:normal;color:var(--text)}
-td.prevu{color:var(--orange);font-size:14px}
-.cpt{display:block;font-size:11px;color:var(--faint)}
+th{font-weight:500;color:var(--faint);text-align:right;padding:6px 3px;border-bottom:1px solid var(--border)}
+td{text-align:right;padding:7px 3px;border-bottom:1px solid var(--soft);color:var(--faint);white-space:nowrap}
+tr:last-child td{border-bottom:none}
+th:first-child,td:first-child{text-align:left;white-space:nowrap;color:var(--text);font-size:13px}
+th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--dim);padding-left:10px}
 .d-ok{color:var(--vert)}.d-moy{color:var(--orange)}.d-fort{color:var(--rouge)}.d-av{color:var(--bleu)}
 tr.seed td{font-style:italic;opacity:.75}
-.vide{font-family:var(--mono);font-size:12px;color:var(--faint);padding:8px 0}
+.cpt{display:block;font-size:10px;color:var(--faint)}
+.vide{font-family:var(--mono);font-size:12px;color:var(--faint);padding:10px 0}
+.pied{font-family:var(--mono);font-size:11px;color:var(--faint);margin:6px 4px 0}
 .fonct{margin:22px 4px 0;padding-top:14px;border-top:1px solid var(--border);font-size:13px;color:var(--dim);line-height:1.5}
 .fonct h2{font-size:17px;color:var(--text);margin:0 0 6px}
 .fonct h3{font-family:var(--sans);font-size:13px;letter-spacing:0;text-transform:none;color:var(--text);margin:12px 0 4px}
@@ -65,13 +69,16 @@ tr.seed td{font-style:italic;opacity:.75}
 </header>
 <div id="bandeau" class="m-arret"><div class="mode">Chargement…</div><div class="detail"></div><div class="live"></div></div>
 <div id="quais"></div>
+<h2 class="t">Enchaînement prévu</h2><div class="bloc" id="chaine"></div>
+<h2 class="t">Derniers changements mesurés</h2><div class="bloc" id="mesures"></div>
+<div class="pied">Prévisions à ± 2 min près dans 9 cas sur 10 · Δ = écart prévu − horaire officiel (minutes)</div>
 <div class="fonct" id="fonctionnement">
   <h2>Fonctionnement et sources</h2>
   <h3>Fonctionnement</h3>
   <ul>
     <li><b>Détection</b> : la position AIS de Lola est lue toutes les 10 s et projetée sur le chenal ; arrivée et départ à un quai sont confirmés par deux relevés cohérents (position et vitesse). Tout reste dans le navigateur.</li>
     <li><b>Nominal</b> : grille GTFS, un départ toutes les 20 min par quai (semaine : Basse-Indre 05:30→22:10, Indret 05:40→22:20 ; week-end et fériés : 06:30→21:30 et 06:40→21:20). Arrivée nominale = départ nominal + 3 min.</li>
-    <li><b>Quatre situations par quai</b> : bac à quai ici → en traversée vers l'autre quai → à l'autre quai → en traversée vers ici. Chaque changement est prévu et comparé au nominal (Δ).</li>
+    <li><b>Lecture</b> : chaque quai affiche son prochain départ prévu et la situation du bac (à quai ici, en traversée vers l'autre quai, à l'autre quai, en traversée vers ici) ; l'enchaînement complet des changements est listé une seule fois, avec l'écart Δ à l'horaire officiel.</li>
     <li><b>Modes</b> : <i>rotation continue</i> si les départs consécutifs sont espacés de ≤ 8,5 min ; <i>retard / perturbation</i> si l'écart médian à la grille dépasse 4,5 min ; <i>arrêt</i> hors service ou sans mouvement depuis 30 min.</li>
     <li><b>Prévision hybride</b> : simulation du cycle départ → traversée (2,8 min) → arrivée → départ. En grille : créneau + décalage appris (+2,3 min Basse-Indre, +2,0 min Indret, réajusté sur les 5 derniers départs). En rotation : arrivée + 3,6 min de séjour. En semaine, les fenêtres de pointe observées (06:55–09:30, 16:10–19:45) anticipent l'entrée et la sortie de rotation.</li>
     <li><b>Validation</b> : rejeu sur 98 départs du 13 au 17/11/2026 : erreur médiane 0,5 min, 92 % à ±2 min (grille officielle seule : 23 %). En rotation continue, erreur moyenne 1,1 min contre 7,7 min pour la grille.</li>
@@ -500,46 +507,54 @@ function situation(Q,evs){
     if(e.type==="arr") return e.q===Q ? 0 : 2;
     return e.q===Q ? 1 : 3;
 }
+function jourTag(t,now){
+    const a=partiesParis(t).cle, b=partiesParis(now).cle;
+    if(a===b) return "";
+    return a===partiesParis(now+86400000).cle ? " demain" : " "+a.slice(5).split("-").reverse().join("/");
+}
+const NOM_EV=e=>e.type==="dep" ? "Départ de "+NOM_QUAI[e.q]+" → "+NOM_QUAI[autre(e.q)] : "Arrivée à "+NOM_QUAI[e.q];
 
 function rendre(){
     const now=Date.now(), evs=evenementsEffectifs(now);
-    const pr=prevoir(evs,now,8,derniereMarche), mode=pr.mode;
+    const pr=prevoir(evs,now,10,derniereMarche), mode=pr.mode;
     const b=$("bandeau");
     b.className="m-"+mode.mode;
     const live = derniereMesure ? '<span class="led'+(lecturesOk?'':' off')+'"></span>Position il y a '+Math.round((now-derniereMesure)/1000)+' s · '+(vitesse!=null?vitesse.toFixed(1).replace(".",",")+' nd':'')
                                  : '<span class="led off"></span>En attente de la position du bac…';
     b.innerHTML='<div class="mode">'+mode.raison+'</div><div class="detail">'+mode.detail+'</div><div class="live">'+live+'</div>';
-    const sit=evs.length?situation("N",evs):null;
     const panne=mode.mode==="arret" && mode.raison.indexOf("Arrêt")===0;
+    const horsService=mode.mode==="arret" && !panne;
     let html="";
     ["N","S"].forEach(Q=>{
-        const O=autre(Q), nq=NOM_QUAI[Q], no=NOM_QUAI[O];
+        const O=autre(Q), no=NOM_QUAI[O];
+        const deps=pr.evenements.filter(x=>x.type==="dep"&&x.q===Q);
+        const arr=pr.evenements.find(x=>x.type==="arr"&&x.q===Q);
         const s=situation(Q,evs);
-        const noms=["Bac à quai ici","En traversée vers "+no,"Bac à quai à "+no,"En traversée vers ici"];
-        const last=evs.length?evs[evs.length-1]:null;
-        const pills=noms.map((n,i)=>'<div class="sit'+(s===i?' actif':'')+'">'+n+'</div>').join("");
-        const depuis=last?("Depuis "+formatHMS(last.t)+" ("+Math.max(0,Math.round((now-last.t)/60000))+" min)"+(last.approx?" · heure approximative":"")):"";
-        // prochains changements : première occurrence de chacun des 4 changements de situation
-        const types=[["dep",Q,"Départ d'ici → traversée vers "+no],["arr",O,"Arrivée à "+no],["dep",O,"Départ de "+no+" → traversée vers ici"],["arr",Q,"Arrivée ici"]];
-        const lignes=[];
-        types.forEach(t=>{ const e=pr.evenements.find(x=>x.type===t[0]&&x.q===t[1]); if(e) lignes.push({e,lib:t[2]}); });
-        lignes.sort((a,b)=>a.e.t-b.e.t);
-        let prochains;
-        if(panne) prochains='<div class="vide">Prévisions suspendues pendant l\'arrêt.</div>';
-        else prochains='<table><tr><th>Changement</th><th>Nominal</th><th>Prévu</th><th>Δ</th></tr>'+lignes.map(l=>
-            '<tr><td>'+l.lib+'</td><td>'+cellNominal(l.e.nominal)+'</td><td class="prevu">'+formatHM(l.e.t)+'<span class="cpt">'+dans(l.e.t,now)+'</span></td><td class="'+classeDelta(l.e.delta)+'">'+fmtDelta(l.e.delta)+'</td></tr>').join("")+'</table>';
-        // derniers changements mesurés à ce quai
-        const mes=[];
-        for(let i=evs.length-1;i>=0&&mes.length<6;i--) if(evs[i].q===Q){ const nom=nominalMesure(evs,i); mes.push({e:evs[i],nom,d:nom==null?null:(evs[i].t-nom)/60000}); }
-        const mesures=mes.length?'<table><tr><th>Mesuré</th><th>Nominal</th><th>Δ</th></tr>'+mes.map(m=>
-            '<tr'+(m.e.seed?' class="seed"':'')+'><td>'+(m.e.type==="arr"?"Arrivée":"Départ")+' '+formatHMS(m.e.t)+(m.e.approx?' ~':'')+(m.e.seed?'<span class="cpt">relevé serveur · '+partiesParis(m.e.t).cle.slice(5).split("-").reverse().join("/")+'</span>':'')+'</td><td>'+cellNominal(m.nom)+'</td><td class="'+classeDelta(m.d)+'">'+fmtDelta(m.d)+'</td></tr>').join("")+'</table>'
-            : '<div class="vide">Aucun changement mesuré pour l\'instant.</div>';
-        html+='<section class="quai"><h2>'+nq+'</h2><div class="rive">Rive '+(Q==="N"?"nord":"sud")+' · minutes, Δ = prévu − nominal</div>'
-            +'<div class="situations">'+pills+'</div><div class="depuis">'+depuis+'</div>'
-            +'<h3>Prochains changements de situation</h3>'+prochains
-            +'<h3>Derniers changements mesurés</h3>'+mesures+'</section>';
+        let etat="", grand="—", cpt="", sec="", suiv="";
+        if(panne){ etat="Arrêt en cours : pas de prévision"; }
+        else if(deps.length){
+            const d=deps[0];
+            grand=formatHM(d.t); cpt=horsService?"Reprise du service"+jourTag(d.t,now):dans(d.t,now).replace("maintenant","imminent");
+            if(s===0) etat="Bac à quai ici"+((d.t-now)<60000?" · départ imminent":"");
+            else if(s===1) etat="Bac parti vers "+no+(arr?", de retour ici vers "+formatHM(arr.t):"");
+            else if(s===2) etat="Bac à "+no+(arr?", arrive ici vers "+formatHM(arr.t):"");
+            else if(s===3) etat="Bac en approche"+(arr?", arrive vers "+formatHM(arr.t):"");
+            if(d.nominal!=null) sec='officiel '+formatHM(d.nominal)+' · <span class="'+(d.mode==="rotation"?"":classeDelta(d.delta))+'">'+fmtDelta(d.delta)+' min</span>';
+            if(deps[1]) suiv="Puis "+formatHM(deps[1].t)+(mode.mode==="rotation"?" (rotation)":"");
+        }
+        html+='<section class="quai"><div class="nom">'+NOM_QUAI[Q]+'<span class="rive">rive '+(Q==="N"?"nord":"sud")+'</span></div>'
+            +'<div class="lbl">Prochain départ</div><div class="grand">'+grand+'</div><div class="cpt2">'+cpt+'</div>'
+            +'<div class="etat">'+etat+'</div><div class="sec">'+sec+'</div>'+(suiv?'<div class="suivant">'+suiv+'</div>':'')+'</section>';
     });
     $("quais").innerHTML=html;
+    $("chaine").innerHTML = panne ? '<div class="vide">Prévisions suspendues pendant l\'arrêt.</div>' :
+        '<table><tr><th>Heure</th><th>Changement</th><th>Officiel</th><th>Δ</th></tr>'+pr.evenements.slice(0,6).map(e=>
+        '<tr><td>'+formatHM(e.t)+'</td><td>'+NOM_EV(e)+'</td><td>'+(e.nominal==null?"–":formatHM(e.nominal))+'</td><td class="'+(e.mode==="rotation"?"":classeDelta(e.delta))+'">'+fmtDelta(e.delta)+'</td></tr>').join("")+'</table>';
+    const mes=[];
+    for(let i=evs.length-1;i>=0&&mes.length<8;i--){ const nom=nominalMesure(evs,i); mes.push({e:evs[i],nom,d:nom==null?null:(evs[i].t-nom)/60000}); }
+    $("mesures").innerHTML = mes.length ? '<table><tr><th>Heure</th><th>Changement</th><th>Officiel</th><th>Δ</th></tr>'+mes.map(m=>
+        '<tr'+(m.e.seed?' class="seed"':'')+'><td>'+formatHMS(m.e.t)+(m.e.approx?' ~':'')+'</td><td>'+NOM_EV(m.e)+(m.e.seed?'<span class="cpt">relevé serveur · '+partiesParis(m.e.t).cle.slice(5).split("-").reverse().join("/")+'</span>':'')+'</td><td>'+cellNominal(m.nom)+'</td><td class="'+classeDelta(m.d)+'">'+fmtDelta(m.d)+'</td></tr>').join("")+'</table>'
+        : '<div class="vide">Aucun changement mesuré pour l\'instant.</div>';
 }
 
 rendre();
