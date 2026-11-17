@@ -9,7 +9,7 @@ pendant l'heure écoulée, puis une **estimation** de leur position maintenant e
    (latence habituelle 10 à 20 min) et affiche les 6 dernières.
 2. **Estimation** : la dernière image est déplacée du vent × durée écoulée (image → maintenant, puis → +10 min). Le vent vient d'Open-Meteo (modèles Météo-France),
    niveau au choix 850 / 700 / 500 hPa, interpolé à l'heure courante au centre de la carte. Le décalage est appliqué en demandant au WMS la même image avec une emprise (EPSG:3857) décalée.
-3. Fond de carte OpenStreetMap assombri par un filtre CSS (sans clé d'API ; CARTO en exige désormais une) : le mélange « screen » fait ressortir les nuages blancs de l'infrarouge.
+3. Rendu : un filtre SVG (`feColorMatrix`) transforme la luminosité de l'infrarouge en opacité d'un blanc (sol chaud transparent, nuages froids opaques), posé sur l'imagerie Esri (World Imagery), avec les noms de lieux Esri au-dessus des nuages. Repli sur OpenStreetMap si Esri ne répond pas.
 
 ## Limites
 - Aucun service public gratuit ne publie de prévision de nuages à 10 min : RainViewer a supprimé son satellite et ses prévisions gratuits au 1er janvier 2026.
@@ -21,4 +21,4 @@ pendant l'heure écoulée, puis une **estimation** de leur position maintenant e
 Test des fonctions pures (bloc `==CORE==` de la page) : `node tests/test_core.js`.
 
 ## Sources
-- EUMETSAT, EUMETView (images MTG). - Open-Meteo (CC BY 4.0). - © OpenStreetMap contributors.
+- EUMETSAT, EUMETView (images MTG). - Open-Meteo (CC BY 4.0). - Esri (World Imagery, Reference/World_Boundaries_and_Places) ; repli © OpenStreetMap contributors.
