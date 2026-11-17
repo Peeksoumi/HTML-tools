@@ -31,7 +31,7 @@ Les paramètres (décalages, séjours, fenêtres) sont appris sur les mêmes don
 il y aura plus de jours de semaine, de vendredis et de vacances.
 
 ## Limites
-La page suspend ses prévisions après 10 min sans nouvelle position AIS. Les causes d'un retard (autre bateau, changement de sens de la marée, vent) ne sont pas détectées en direct ; le serveur les enregistre
+Un bandeau rouge « Connexion perdue » apparaît dès que le serveur de positions ne répond plus (avec l'ancienneté de la dernière mise à jour), et un autre après 3 min sans nouvelle position. La page suspend ses prévisions après 10 min sans nouvelle position AIS. Les causes d'un retard (autre bateau, changement de sens de la marée, vent) ne sont pas détectées en direct ; le serveur les enregistre
 (navires voisins, marée, météo) pour une version ultérieure. Heures mesurées à ± 1 min. Calibrage sur 5 jours.
 
 ## Développement
