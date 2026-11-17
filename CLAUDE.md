@@ -32,6 +32,27 @@ un bouton pour télécharger le fichier HTML et l'utiliser hors du site, à côt
 - Ne pas mettre ce bouton si l'outil dépend d'un serveur ou d'un service distant.
 - À vérifier avant chaque commit : `grep -c "download=" <dossier>/index.html` doit donner au moins 1 pour les outils autonomes.
 
+## Règle obligatoire : section « Fonctionnement et sources » en bas de CHAQUE page d'outil
+Toute page d'outil (un dossier = une page ; la page d'accueil en est exemptée) se termine par une section visible, synthétique et structurée,
+qui explique comment l'outil produit son résultat et d'où viennent les données. Format fixe, trois sous-titres, quelques puces courtes (≤ 2 lignes chacune) :
+
+```html
+<div class="fonct" id="fonctionnement">
+  <h2>Fonctionnement et sources</h2>
+  <h3>Fonctionnement</h3><ul><li><b>Étape</b> : méthode, formule ou modèle utilisé…</li></ul>
+  <h3>Sources de données</h3><ul><li><b>Source</b> : ce qu'elle apporte (licence si connue)…</li></ul>
+  <h3>Limites</h3><ul><li>Précision, hypothèses, cas non gérés…</li></ul>
+</div>
+```
+
+- Fonctionnement : la méthode de calcul / le modèle, les hypothèses, et ce qui reste dans le navigateur ou part vers un serveur.
+- Sources de données : chaque service ou jeu de données interrogé (nom, usage, licence) ; pour un outil sans donnée externe, écrire « Aucune donnée externe » et citer les bibliothèques chargées.
+- Limites : précision réaliste et cas où l'outil se trompe.
+- La section doit rester vraie : la mettre à jour dès que la méthode ou une source change (ne pas la laisser dériver du `README.md`).
+- Pages générées (`src/template.html` + `build.py`) : modifier le gabarit puis relancer `build.py`, jamais `index.html` seul.
+- Un seul bloc par page : pas de second « méthode / sources » (ex. `<details>`) qui ferait doublon.
+- À vérifier avant chaque commit, pour chaque page créée ou modifiée : `grep -c 'id="fonctionnement"' <dossier>/index.html` doit donner 1.
+
 ## Conventions
 - Un dossier par outil, avec `index.html` autonome (CSS/JS inlinés), un `README.md`, et un test si possible.
 - Ne pas ajouter de dépendance externe sans nécessité ; rien n'est envoyé à un serveur tiers sans le dire dans la page.

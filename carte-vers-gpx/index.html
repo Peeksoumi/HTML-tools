@@ -57,6 +57,11 @@
     #viewerWrap { height:60vh; flex:none; }
     aside { width:100%; border-left:0; }
   }
+  .fonct { margin-top:24px; padding:14px 16px; border:1px solid var(--line); border-radius:12px; background:var(--card); color:var(--ink); text-align:left; font-size:.88rem; line-height:1.45; }
+  .fonct h2 { font-size:1rem; margin:0 0 4px; }
+  .fonct h3 { font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; color:var(--mute); margin:12px 0 4px; }
+  .fonct ul { margin:0; padding-left:18px; } .fonct li { margin:2px 0; }
+  aside .fonct { margin:0 0 10px; font-size:12.5px; }
 </style>
 </head>
 <body>
@@ -167,6 +172,12 @@
       </div>
       <div id="outInfo" class="stat"></div>
     </section>
+    <div class="fonct" id="fonctionnement">
+  <h2>Fonctionnement et sources</h2>
+  <h3>Fonctionnement</h3><ul><li><b>Tracé</b> : masque de la couleur choisie (détection auto ou pipette), squelette, puis chaînage des pixels en une ligne ; une boucle dont les bouts se touchent est fermée.</li><li><b>Calage</b> : pixels → coordonnées à partir de 1 point (grille km LV95 ou barre d'échelle, carte supposée orientée au nord) ou de 2 points ou plus.</li><li><b>Export</b> : GPX, éventuellement coupé en étapes. Tout le calcul se fait dans ton navigateur ; la carte n'est jamais envoyée.</li></ul>
+  <h3>Sources de données</h3><ul><li><b>Recherche de lieu</b> : OpenStreetMap (Nominatim), Open-Meteo (géocodage) et swisstopo, interrogés en parallèle.</li><li><b>Altitudes</b> : service de profil d'altitude de swisstopo (modèle de terrain), Suisse uniquement.</li></ul>
+  <h3>Limites</h3><ul><li>Précision typique : 10 à 50 m selon l'échelle de la carte.</li><li>Altitudes disponibles seulement pour les points situés en Suisse.</li></ul>
+</div>
     <div class="small" style="padding:0 4px 20px">Tout se fait dans ton navigateur : la carte n'est envoyée nulle part. Seules la recherche de lieu (OpenStreetMap, Open-Meteo, swisstopo) et les altitudes (swisstopo) interrogent un service externe. Précision typique : 10–50 m selon l'échelle de la carte.<br>Une idée, un bug ? <a href="https://github.com/Peeksoumi/HTML-tools/issues" target="_blank" rel="noopener">Ouvre une « issue » sur GitHub</a>.</div>
   </aside>
 </main>
