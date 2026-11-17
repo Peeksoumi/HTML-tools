@@ -21,7 +21,7 @@
   #heure { font-weight:600; min-width:15em; }
   #heure.est { color:#dc6803; }
   #map { height:calc(100vh - 250px); min-height:360px; border-radius:12px; border:1px solid var(--bd); background:#111; }
-  .fond { filter:invert(1) hue-rotate(180deg) brightness(.8) contrast(.9) grayscale(.4); } /* OSM en mode sombre, sans clé d'API */
+  .fond { filter:invert(1) hue-rotate(180deg) brightness(1.8) contrast(1.15) saturate(.7); } /* OSM en mode sombre, sans clé d'API */
   .nuage { mix-blend-mode:screen; }
   #msg { margin:.5rem 0; color:var(--mut); min-height:1.3em; font-size:.92rem; }
   #msg.err { color:var(--ko); }
@@ -116,7 +116,7 @@ function buildFrames(L0, now) {
 if (typeof document !== 'undefined') {
   const $ = id => document.getElementById(id);
   const hhmm = ms => new Date(ms).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-  const OP = 0.9;
+  const OP = 0.8;
   const P = ll => L.CRS.EPSG3857.project(ll);
 
   const map = L.map('map', { center: [47.2, -1.6], zoom: 7 });
