@@ -12,12 +12,13 @@ import os
 import urllib.request
 
 STATION = "M530001010"  # La Loire à Montjean-sur-Loire
-URL = ("https://hubeau.eaufrance.fr/api/v1/hydrometrie/observations_tr"
-       "?code_entite={st}&grandeur_hydro=Q&size={n}&sort=desc&fields=date_obs,resultat_obs")
+URL = ("https://hubeau.eaufrance.fr/api/v2/hydrometrie/observations_tr"
+       "?code_entite={st}&grandeur_hydro=Q&size={n}&sort=desc&format=json")  # v2 : même API que le collecteur Lola du serveur
 
 
 def fetch(n):
-    with urllib.request.urlopen(URL.format(st=STATION, n=n), timeout=30) as r:
+    req = urllib.request.Request(URL.format(st=STATION, n=n), headers={"User-Agent": "courant-loire-collecteur", "Accept": "application/json"})
+    with urllib.request.urlopen(req, timeout=30) as r:
         return json.load(r)
 
 
