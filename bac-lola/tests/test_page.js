@@ -4,13 +4,13 @@ const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
 const m=html.match(/<script>([\s\S]*)<\/script>/); if(!m) throw new Error("script introuvable");
 const els={};
 const doc={getElementById:id=>els[id]||(els[id]={innerHTML:"",className:"",textContent:""})};
-let intervals=[];
+let intervals=[], reseauHs=false;
 // Positions simulées (publiées par le serveur) : bac à quai Basse-Indre puis traversée vers Indret
 const t0=Date.parse("2026-11-17T08:00:00Z");
 const pts=[[47.19744,-1.67439,0.1],[47.19744,-1.67439,0.1],[47.19744,-1.67439,0.2],[47.1969,-1.6731,3],[47.1962,-1.6724,3.2],[47.1956,-1.6728,2],[47.19534,-1.6743,0.1],[47.19534,-1.6743,0.1]];
 const samples=pts.map((r,i)=>[t0+i*60000,r[0],r[1],r[2],null]);
 const ctx={document:doc,
-  fetch:async()=>({ok:true,json:async()=>({maj:t0,n:samples.length,samples})}),
+  fetch:async()=>{ if(reseauHs) throw new Error("réseau coupé"); return {ok:true,json:async()=>({maj:t0,n:samples.length,samples})}; },
   setInterval:(f,ms)=>intervals.push([f,ms]),Intl,Date,Math,JSON,console,parseFloat,isFinite,Number,Set,Array,Object,String};
 vm.createContext(ctx);
 let horloge=t0+8*60000; const RD=Date; ctx.Date=class extends RD{constructor(...a){super(...(a.length?a:[horloge]))} static now(){return horloge}; static UTC(...a){return RD.UTC(...a)}; static parse(s){return RD.parse(s)}};
@@ -25,5 +25,13 @@ vm.runInContext(m[1]+"\nthis.__t={rendre,lirePosition,journal:()=>journal};",ctx
   ok(/Derniers changements mesurés/.test(html)&&/Arrivée à|Départ de/.test(els.mesures.innerHTML),"derniers changements mesurés (les deux quais ensemble)");
   ok(/class="mode"/.test(b),"bandeau de mode");
   ok(ctx.__t.journal().length>=3,"événements détectés en direct : "+ctx.__t.journal().map(e=>e.type+e.q).join(","));
+  ok(!/class="alerte"/.test(b),"pas d'alerte quand la connexion fonctionne");
+  reseauHs=true; await ctx.__t.lirePosition();
+  ok(/class="alerte"[^>]*>⚠ Connexion perdue/.test(els.bandeau.innerHTML),"connexion coupée : alerte « Connexion perdue » affichée");
+  ok(/dernière mise à jour il y a/.test(els.bandeau.innerHTML),"l'alerte indique l'ancienneté de la dernière mise à jour");
+  reseauHs=false; await ctx.__t.lirePosition();
+  ok(!/Connexion perdue/.test(els.bandeau.innerHTML),"connexion rétablie : alerte retirée");
+  horloge+=5*60000; ctx.__t.rendre();
+  ok(/Aucune nouvelle position du bac depuis 5 min|Aucune nouvelle position du bac depuis 6 min/.test(els.bandeau.innerHTML),"position figée > 3 min : alerte de retard");
   console.log(b.replace(/<[^>]+>/g," ").replace(/\s+/g," "));
 })();

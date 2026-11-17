@@ -28,6 +28,7 @@ h1{font-size:26px;margin:0;font-weight:600}
 .m-perturbation{border-left-color:var(--orange)}.m-perturbation .mode{color:var(--orange)}
 .m-arret{border-left-color:var(--gris)}.m-arret .mode{color:var(--gris)}
 .led{width:7px;height:7px;display:inline-block;border-radius:50%;background:var(--vert);box-shadow:0 0 4px var(--vert);margin-right:6px}
+.alerte{background:var(--rouge);color:#fff;border-radius:6px;padding:6px 10px;margin-top:8px;font-size:14px;font-weight:600}
 .led.off{background:var(--rouge);box-shadow:0 0 4px var(--rouge)}
 #quais{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .quai{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 12px;min-width:0;text-align:center}
@@ -92,7 +93,7 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
   <ul>
     <li>Calibrage sur 5 jours seulement, dont 2 jours de semaine : décalages et fenêtres de rotation provisoires, vendredi et vacances non étudiés.</li>
     <li>Les causes d'un retard (autre bateau, changement de sens de la marée, vent) ne sont pas détectées en direct ; le serveur les enregistre pour une version ultérieure.</li>
-    <li>Les sources AIS publiques se rafraîchissent environ chaque minute, avec ~1 min de retard : heures mesurées à ± 1 min, prévisions en retard d'autant. Au-delà de 10 min sans nouvelle position, les prévisions sont suspendues.</li>
+    <li>Les sources AIS publiques se rafraîchissent environ chaque minute, avec ~1 min de retard : heures mesurées à ± 1 min, prévisions en retard d'autant. Si la connexion au serveur est perdue ou si aucune position n'arrive depuis 3 min, un bandeau rouge l'indique. Au-delà de 10 min sans nouvelle position, les prévisions sont suspendues.</li>
     <li>Manœuvres hors service (positionnement de début ou de fin de journée) non prévues ; un arrêt est déclaré après 30 min sans mouvement en période de service.</li>
   </ul>
 </div>
@@ -459,7 +460,7 @@ const SEUIL_HORS_ZONE=0.0008; // écart au chenal (unités lat/lon) au-delà duq
 const URL_POSITIONS = "https://peeksoumi.com/lola-live/positions.json";
 const $=id=>document.getElementById(id);
 
-let journal=[], detecteur=null, dernierTs=0, derniereMarche=0, vitesse=null, derniereMesure=null, lecturesOk=false, prec=null;
+let journal=[], detecteur=null, dernierTs=0, derniereMarche=0, vitesse=null, derniereMesure=null, lecturesOk=false, dernierSucces=0, prec=null;
 
 function vitesseDeplacement(a,b){ // nœuds, entre deux positions [ts,lat,lon] (quand la source ne donne pas la vitesse)
     const dt=(b[0]-a[0])/1000; if(dt<=0) return 0;
@@ -487,7 +488,7 @@ async function lirePosition(){
         const d=await rep.json();
         if(!detecteur){ journal=[]; detecteur=creerDetecteur(null,e=>{ journal.push(e); }); } // première lecture : rejeu des 12 h
         d.samples.filter(s=>s[0]>dernierTs).forEach(traiter);
-        lecturesOk=true;
+        lecturesOk=true; dernierSucces=Date.now();
     }catch(e){ lecturesOk=false; }
     rendre();
 }
@@ -521,7 +522,11 @@ function rendre(){
                                  : '<span class="led off"></span>'+(lecturesOk?'Aucune position reçue':'En attente de la position du bac…');
     if(indispo){ mode.mode="arret"; mode.raison=derniereMesure?"Position AIS indisponible":"En attente de la position…"; mode.detail=derniereMesure?"Dernière position il y a "+Math.round(age/60000)+" min":""; }
     b.className="m-"+mode.mode;
-    b.innerHTML='<div class="mode">'+mode.raison+'</div><div class="detail">'+mode.detail+'</div><div class="live">'+live+'</div>';
+    const dur=ms=>ms<90000?Math.round(ms/1000)+' s':Math.round(ms/60000)+' min';
+    let alerte="";
+    if(!lecturesOk) alerte='⚠ Connexion perdue avec le serveur de positions'+(dernierSucces?' — dernière mise à jour il y a '+dur(now-dernierSucces):' — aucune donnée reçue')+'. Nouvelle tentative toutes les 10 s.';
+    else if(age!==null && age>3*60000 && !indispo) alerte='⚠ Aucune nouvelle position du bac depuis '+dur(age)+' : source AIS en retard ou bac hors de portée.';
+    b.innerHTML='<div class="mode">'+mode.raison+'</div><div class="detail">'+mode.detail+'</div><div class="live">'+live+'</div>'+(alerte?'<div class="alerte" role="alert">'+alerte+'</div>':'');
     const panne=indispo || (mode.mode==="arret" && mode.raison.indexOf("Arrêt")===0);
     const horsService=mode.mode==="arret" && !panne;
     let html="";
