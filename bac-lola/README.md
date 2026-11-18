@@ -31,7 +31,7 @@ Les paramètres (décalages, séjours, fenêtres) sont appris sur les mêmes don
 il y aura plus de jours de semaine, de vendredis et de vacances.
 
 ## Visuel
-Un bateau se déplace entre Indret et Basse-Indre selon la dernière position AIS (progression le long du chenal) ; le sens vient du déplacement récent.
+Un bateau se déplace entre Indret et Basse-Indre selon la dernière position AIS (progression le long du chenal) ; la situation (4 cas : à quai Indret, à quai Basse-Indre, en route vers l'un ou l'autre) vient du dernier changement détecté, comme les cartes de quai, avec une flèche de direction.
 
 ## Limites
 Un bandeau rouge « Connexion perdue » apparaît dès que le serveur de positions ne répond plus (avec l'ancienneté de la dernière mise à jour), et un autre après 3 min sans nouvelle position. La page suspend ses prévisions après 10 min sans nouvelle position AIS. Les causes d'un retard (autre bateau, changement de sens de la marée, vent) ne sont pas détectées en direct ; le serveur les enregistre
