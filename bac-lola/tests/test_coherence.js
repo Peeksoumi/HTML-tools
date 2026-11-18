@@ -24,6 +24,9 @@ for(let n=3;n<=pts.length;n++){
       if(aq){ const ici=(q.match(/Bac à quai ici/g)||[]).length; ok=ici===1 && q.indexOf(aq[1])<q.indexOf("Bac à quai ici")+400; vus.quai=1; }
       else if(rt){ ok=/Bac parti vers/.test(q) && /Bac en approche/.test(q) && !/Bac à quai ici/.test(q); vus.transit=1; }
       else ok=/en attente|indisponible|ancienne/.test(c+q);
+      const sur=(els.quais.innerHTML.match(/class="quai (ici|approche)"/g)||[]).length; if(!/ancienne|attente/.test(c)&&sur!==1) ok=false; // une seule carte en surbrillance
+      if(aq&&!new RegExp('class="quai ici"><div class="badge">[^<]*</div><div class="nom">'+aq[1]).test(els.quais.innerHTML)) ok=false; // et c'est celle du quai où se trouve le bac
+      if(rt&&!new RegExp('class="quai approche"><div class="badge">[^<]*</div><div class="nom">'+rt[1]).test(els.quais.innerHTML)) ok=false;
       if(!ok){ bad++; console.error("INCOHÉRENT n="+n+" dt="+dt+" :",c,"|",q.slice(0,300)); }
     });
   }

@@ -49,6 +49,13 @@ h1{font-size:26px;margin:0;font-weight:600}
 .led.off{background:var(--rouge);box-shadow:0 0 4px var(--rouge)}
 #quais{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .quai{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 12px;min-width:0;text-align:center}
+.quai.ici{border-color:var(--vert);background:#0c1411;box-shadow:0 0 0 1px var(--vert),0 0 14px rgba(79,174,131,.25)}
+.quai.approche{border-color:var(--orange);background:#15110b;box-shadow:0 0 0 1px var(--orange),0 0 14px rgba(217,165,92,.22)}
+.quai .badge{font-family:var(--mono);font-size:11px;letter-spacing:.06em;min-height:15px;margin:-4px 0 4px;text-transform:uppercase}
+.quai.ici .badge{color:var(--vert)}.quai.approche .badge{color:var(--orange)}
+.voie .nomq.ici{color:var(--vert);font-weight:700}
+.voie .pilier.ici{background:var(--vert);width:5px}
+tr.next td{background:var(--soft)}
 .quai .nom{font-size:17px;font-weight:600}
 .quai .rive{display:block;font-family:var(--mono);font-size:11px;color:var(--faint);font-weight:400}
 .quai .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-top:12px}
@@ -576,16 +583,19 @@ function rendre(){
     const BATEAU='<svg viewBox="0 0 44 36" width="44" height="36"><path d="M4 22h36l-5 9H9z" fill="#d9635f"/><rect x="8" y="14" width="28" height="8" rx="1" fill="#e8edf0"/><rect x="14" y="7" width="16" height="7" rx="1" fill="#e8edf0"/><rect x="26" y="1" width="4" height="7" fill="#d9635f"/><g fill="#4f8fbd"><rect x="11" y="16.5" width="3" height="3"/><rect x="17" y="16.5" width="3" height="3"/><rect x="23" y="16.5" width="3" height="3"/><rect x="29" y="16.5" width="3" height="3"/></g></svg>';
     // Visuel : dérivé de la MÊME situation que les cartes (dernier événement), jamais de la vitesse brute
     const der=evs.length?evs[evs.length-1]:null;
+    let focus=null; // quai mis en surbrillance, partout : celui où se trouve le bac, ou celui vers lequel il va
     if(der){
         const aQuai=der.type==="arr", Q=der.q, vers=aQuai?null:autre(der.q), cible=aQuai?Q:vers;
         const prochain=pr.evenements.find(x=>aQuai?(x.type==="dep"&&x.q===Q):(x.type==="arr"&&x.q===vers));
         const p=aQuai?(Q==="S"?0.04:0.96):Math.min(0.92,Math.max(0.08,pBac===null?0.5:pBac));
         const cote=(aQuai?autre(Q):vers)==="N"?1:-1;
-        let h='<div class="voie"><div class="eau"></div><div class="pilier" style="left:0"></div><div class="pilier" style="right:0"></div>';
+        if(!indispo) focus={q:cible,kind:aQuai?"ici":"approche"};
+        const ici=q=>(focus&&focus.kind==="ici"&&focus.q===q)?' ici':'';
+        let h='<div class="voie"><div class="eau"></div><div class="pilier'+ici("S")+'" style="left:0"></div><div class="pilier'+ici("N")+'" style="right:0"></div>';
         if(!aQuai) h+= vers==="N" ? '<div class="reste" style="left:'+(p*100).toFixed(1)+'%;right:14px"></div><div class="pointe n"></div>'
                                   : '<div class="reste" style="left:14px;right:'+((1-p)*100).toFixed(1)+'%"></div><div class="pointe s"></div>';
         h+='<div class="bateau'+(indispo||!lecturesOk?' vieux':'')+'" style="left:'+(p*100).toFixed(1)+'%"><div style="transform:scaleX('+cote+')">'+BATEAU+'</div></div>'
-          +'<div class="nomq'+(!aQuai&&vers==="S"?' dest':'')+'" style="left:0">Indret</div><div class="nomq'+(!aQuai&&vers==="N"?' dest':'')+'" style="right:0">Basse-Indre</div></div>';
+          +'<div class="nomq'+(!aQuai&&vers==="S"?' dest':'')+ici("S")+'" style="left:0">Indret</div><div class="nomq'+(!aQuai&&vers==="N"?' dest':'')+ici("N")+'" style="right:0">Basse-Indre</div></div>';
         let t,sous="";
         if(aQuai){ t="À quai à "+NOM_QUAI[Q]; if(prochain&&!indispo) sous=(prochain.t-now<60000?"Départ imminent":"Départ prévu vers "+formatHM(prochain.t)); }
         else { t=(vers==="N"?"En route vers "+NOM_QUAI[vers]+" ➜":"⬅ En route vers "+NOM_QUAI[vers]); if(prochain&&!indispo) sous="Arrivée prévue vers "+formatHM(prochain.t); }
@@ -612,14 +622,16 @@ function rendre(){
             if(d.nominal!=null) sec='officiel '+formatHM(d.nominal)+' · <span class="'+(d.mode==="rotation"?"":classeDelta(d.delta))+'">'+fmtDelta(d.delta)+' min</span>';
             if(deps[1]) suiv="Puis "+formatHM(deps[1].t)+(mode.mode==="rotation"?" (rotation)":"");
         }
-        html+='<section class="quai"><div class="nom">'+NOM_QUAI[Q]+'<span class="rive">rive '+(Q==="N"?"nord":"sud")+'</span></div>'
+        const cls=(!panne&&focus&&focus.q===Q)?' '+focus.kind:"";
+        const badge=cls?(focus.kind==="ici"?"● Bac à quai":"➜ Bac en approche"):"";
+        html+='<section class="quai'+cls+'"><div class="badge">'+badge+'</div><div class="nom">'+NOM_QUAI[Q]+'<span class="rive">rive '+(Q==="N"?"nord":"sud")+'</span></div>'
             +'<div class="lbl">Prochain départ</div><div class="grand">'+grand+'</div><div class="cpt2">'+cpt+'</div>'
             +'<div class="etat">'+etat+'</div><div class="sec">'+sec+'</div>'+(suiv?'<div class="suivant">'+suiv+'</div>':'')+'</section>';
     });
     $("quais").innerHTML=html;
     $("chaine").innerHTML = panne ? '<div class="vide">Prévisions suspendues : '+(indispo?"position AIS indisponible":"arrêt en cours")+'.</div>' :
-        '<table><tr><th>Heure</th><th>Changement</th><th>Officiel</th><th>Δ</th></tr>'+pr.evenements.slice(0,6).map(e=>
-        '<tr><td>'+formatHM(e.t)+'</td><td>'+NOM_EV(e)+'</td><td>'+(e.nominal==null?"–":formatHM(e.nominal))+'</td><td class="'+(e.mode==="rotation"?"":classeDelta(e.delta))+'">'+fmtDelta(e.delta)+'</td></tr>').join("")+'</table>';
+        '<table><tr><th>Heure</th><th>Changement</th><th>Officiel</th><th>Δ</th></tr>'+pr.evenements.slice(0,6).map((e,i)=>
+        '<tr'+(i===0?' class="next"':'')+'><td>'+formatHM(e.t)+'</td><td>'+NOM_EV(e)+'</td><td>'+(e.nominal==null?"–":formatHM(e.nominal))+'</td><td class="'+(e.mode==="rotation"?"":classeDelta(e.delta))+'">'+fmtDelta(e.delta)+'</td></tr>').join("")+'</table>';
     const mes=[];
     for(let i=evs.length-1;i>=0&&mes.length<8;i--){ const nom=nominalMesure(evs,i); mes.push({e:evs[i],nom,d:nom==null?null:(evs[i].t-nom)/60000}); }
     $("mesures").innerHTML = mes.length ? '<table><tr><th>Heure</th><th>Changement</th><th>Officiel</th><th>Δ</th></tr>'+mes.map(m=>
