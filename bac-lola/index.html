@@ -107,7 +107,7 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
   <h2>Fonctionnement et sources</h2>
   <h3>Fonctionnement</h3>
   <ul>
-    <li><b>Détection</b> : à l'ouverture, la page rejoue les 12 dernières heures de positions AIS de Lola (projetées sur le chenal) puis suit les nouvelles ; arrivée et départ à un quai sont confirmés par deux positions cohérentes (lieu et vitesse). Tout le calcul reste dans le navigateur.</li>
+    <li><b>Détection</b> : à l'ouverture, la page reçoit les 10 dernières positions AIS de Lola (≈ 10 min, projetées sur le chenal) puis suit les nouvelles ; arrivée et départ à un quai sont confirmés par deux positions cohérentes (lieu et vitesse). Tout le calcul reste dans le navigateur.</li>
     <li><b>Nominal</b> : grille GTFS, un départ toutes les 20 min par quai (semaine : Basse-Indre 05:30→22:10, Indret 05:40→22:20 ; week-end et fériés : 06:30→21:30 et 06:40→21:20). Arrivée nominale = départ nominal + 3 min.</li>
     <li><b>Lecture</b> : chaque quai affiche son prochain départ prévu et la situation du bac (à quai ici, en traversée vers l'autre quai, à l'autre quai, en traversée vers ici) ; l'enchaînement complet des changements est listé une seule fois, une ligne par traversée, départ et arrivée ensemble, chacun dans la colonne de son quai (Indret à gauche, Basse-Indre à droite, comme le schéma) ; l'horaire officiel et l'écart Δ restent sur les cartes.</li>
     <li><b>Modes</b> : <i>rotation continue</i> si les départs consécutifs sont espacés de ≤ 8,5 min ; <i>retard / perturbation</i> si l'écart médian à la grille dépasse 4,5 min ; <i>arrêt</i> hors service ou sans mouvement depuis 30 min.</li>
@@ -118,15 +118,15 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
   <h3>Sources de données</h3>
   <ul>
     <li><b>GTFS « Horaires des bacs de Loire en Loire-Atlantique »</b> (Département de Loire-Atlantique, data.gouv.fr, Licence Ouverte) : créneaux nominaux et jours fériés.</li>
-    <li><b>Position AIS de Lola</b> (MMSI 227158520) : AISVesselTracker, repli Shiptrail, relevée toutes les 10 s par le serveur du site et publiées en JSON (12 dernières heures, peeksoumi.com) ; un des deux appels réseau de la page (avec Open-Meteo), rien n'y est envoyé.</li>
+    <li><b>Position AIS de Lola</b> (MMSI 227158520) : AISVesselTracker, repli Shiptrail (les navigateurs n'y ont pas accès directement : elles refusent les appels d'une autre page). Un relais sans mémoire sur peeksoumi.com les interroge et ne garde que les 10 dernières positions en mémoire vive : aucune base de données, aucun enregistrement, la page ne lit jamais les relevés d'entraînement ; un des deux appels réseau de la page (avec Open-Meteo), rien n'y est envoyé.</li>
     <li><b>Open-Meteo</b> (open-meteo.com, CC BY 4.0) : météo actuelle (température, ciel, vent) aux coordonnées des bacs, rafraîchie toutes les 10 min ; la page envoie seulement ces coordonnées fixes, rien de personnel.</li>
     <li><b>Calibrage</b> : relevés enregistrés par le serveur du 13 au 18/11/2026 : ils ne servent qu'à fixer les paramètres du modèle hors ligne, la page ne les lit jamais.</li>
   </ul>
   <h3>Limites</h3>
   <ul>
     <li>Calibrage sur 6 jours seulement, dont 3 jours de semaine : décalages et fenêtres de rotation provisoires, vendredi et vacances non étudiés.</li>
-    <li>Les causes d'un retard (autre bateau, changement de sens de la marée, vent) ne sont pas détectées en direct ; le serveur les enregistre pour une version ultérieure.</li>
-    <li>Les sources AIS publiques se rafraîchissent environ chaque minute, avec ~1 min de retard : heures mesurées à ± 1 min, prévisions en retard d'autant. Si la connexion au serveur est perdue ou si aucune position n'arrive depuis 3 min, un bandeau rouge l'indique. Au-delà de 10 min sans nouvelle position, les prévisions sont suspendues.</li>
+    <li>Les causes d'un retard (autre bateau, changement de sens de la marée, vent) ne sont pas détectées en direct ; ils sont enregistrés à part pour une version ultérieure.</li>
+    <li>À l'ouverture de la page, il faut 1 à 2 min pour confirmer le sens de traversée (10 positions seulement, pas d'historique). Les sources AIS publiques se rafraîchissent environ chaque minute, avec ~1 min de retard : heures mesurées à ± 1 min, prévisions en retard d'autant. Si la connexion au serveur est perdue ou si aucune position n'arrive depuis 3 min, un bandeau rouge l'indique. Au-delà de 10 min sans nouvelle position, les prévisions sont suspendues.</li>
     <li>Manœuvres hors service (positionnement de début ou de fin de journée) non prévues ; un arrêt est déclaré après 30 min sans mouvement en période de service.</li>
   </ul>
 </div>
@@ -489,8 +489,8 @@ const SEUIL_HORS_ZONE=0.0008; // écart au chenal (unités lat/lon) au-delà duq
 // ====================================================================
 //  INTERFACE
 // ====================================================================
-// Positions AIS de Lola : relevés du serveur du site (AISVesselTracker, repli Shiptrail), publiés en JSON (12 dernières heures).
-const URL_POSITIONS = "https://peeksoumi.com/lola-live/positions.json";
+// Positions AIS de Lola : relais sans mémoire (10 dernières positions en RAM, AISVesselTracker puis Shiptrail), jamais les relevés enregistrés.
+const URL_POSITIONS = "https://peeksoumi.com/lola-direct/positions";
 const URL_METEO = "https://api.open-meteo.com/v1/forecast?latitude=47.196&longitude=-1.674&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m&wind_speed_unit=kmh&timezone=Europe%2FParis";
 const $=id=>document.getElementById(id);
 function iconeMeteo(c,jour){ // codes WMO → [pictogramme, libellé]
@@ -544,7 +544,7 @@ async function lirePosition(){
         const rep=await fetch(URL_POSITIONS,{cache:"no-store"});
         if(!rep.ok) throw new Error();
         const d=await rep.json();
-        if(!detecteur){ journal=[]; detecteur=creerDetecteur(null,e=>{ journal.push(e); }); } // première lecture : rejeu des 12 h
+        if(!detecteur){ journal=[]; detecteur=creerDetecteur(null,e=>{ journal.push(e); }); } // première lecture : rejeu des 10 dernières positions
         d.samples.filter(s=>s[0]>dernierTs).forEach(traiter);
         lecturesOk=true; dernierSucces=Date.now();
     }catch(e){ lecturesOk=false; }
