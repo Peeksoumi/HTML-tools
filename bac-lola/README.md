@@ -33,6 +33,9 @@ il y aura plus de jours de semaine, de vendredis et de vacances.
 ## Météo
 Petit pictogramme en en-tête : température, ciel et vent actuels aux bacs, lus sur Open-Meteo (coordonnées fixes, rafraîchi toutes les 10 min ; masqué si indisponible).
 
+## Surbrillance
+Un seul quai est mis en évidence, partout à la fois (schéma, carte, première ligne de l'enchaînement) : en vert le quai où se trouve le bac, en orange le quai vers lequel il navigue. Rien n'est surligné si la position est trop ancienne.
+
 ## Visuel
 Un bateau se déplace entre Indret et Basse-Indre selon la dernière position AIS (progression le long du chenal) ; la situation (4 cas : à quai Indret, à quai Basse-Indre, en route vers l'un ou l'autre) vient du dernier changement détecté, comme les cartes de quai, avec une flèche de direction.
 
