@@ -595,7 +595,7 @@ function rendre(){
     const panne=indispo || (mode.mode==="arret" && mode.raison.indexOf("Arrêt")===0);
     const horsService=mode.mode==="arret" && !panne;
     let html="";
-    ["N","S"].forEach(Q=>{
+    ["S","N"].forEach(Q=>{ // même ordre que le visuel : Indret à gauche, Basse-Indre à droite
         const O=autre(Q), no=NOM_QUAI[O];
         const deps=pr.evenements.filter(x=>x.type==="dep"&&x.q===Q);
         const arr=pr.evenements.find(x=>x.type==="arr"&&x.q===Q);
