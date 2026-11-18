@@ -22,7 +22,7 @@ vm.runInContext(m[1]+"\nthis.__t={rendre,lirePosition,lireMeteo,journal:()=>jour
   ok(/Basse-Indre/.test(h)&&/Indret/.test(h),"deux sections quai");
   ok((h.match(/Prochain départ/g)||[]).length===2,"prochain départ affiché pour chaque quai");
   ok(/Enchaînement prévu/.test(html),"enchaînement prévu (les deux quais ensemble)");
-  ok(/Derniers changements mesurés/.test(html)&&/Arrivée à|Départ de/.test(els.mesures.innerHTML),"derniers changements mesurés (les deux quais ensemble)");
+  ok(/Derniers changements mesurés/.test(html)&&/Arrivée|Départ/.test(els.mesures.innerHTML)&&/Indret<\/th><th>Basse-Indre/.test(els.mesures.innerHTML),"derniers changements mesurés (les deux quais ensemble)");
   ok(/class="mode"/.test(b),"bandeau de mode");
   ok(ctx.__t.journal().length>=3,"événements détectés en direct : "+ctx.__t.journal().map(e=>e.type+e.q).join(","));
   ok(/class="bateau/.test(els.carte.innerHTML)&&/Indret|Basse-Indre/.test(els.carte.innerHTML),"visuel : bateau positionné entre les deux quais ("+els.carte.innerHTML.replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim()+")");

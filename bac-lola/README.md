@@ -2,7 +2,7 @@
 
 Page autonome (un seul `index.html`) : deux colonnes côte à côte, une par quai (Basse-Indre, Indret), avec en grand l'heure du **prochain départ**
 prévu depuis ce quai et la situation du bac (à quai ici → en traversée vers l'autre quai → à l'autre quai → en traversée vers ici). En dessous, une seule
-liste de l'enchaînement prévu des changements (horaire officiel et écart Δ en information secondaire) et les derniers changements réellement mesurés. Un bandeau indique le mode du service :
+liste de l'enchaînement prévu des changements (en deux colonnes, Indret à gauche et Basse-Indre à droite ; l'horaire officiel et l'écart Δ restent sur les cartes de quai) et les derniers changements réellement mesurés. Un bandeau indique le mode du service :
 **normal**, **rotation continue**, **retard / perturbation** ou **arrêt** (nuit, panne).
 
 ## Méthode (modèle hybride)
