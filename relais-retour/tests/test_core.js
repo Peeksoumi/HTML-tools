@@ -2,8 +2,8 @@
 const fs = require('fs'), path = require('path'), vm = require('vm'), assert = require('assert');
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 const src = html.match(/<script id="core">([\s\S]*?)<\/script>/)[1];
-const ctx = {}; vm.createContext(ctx);
-vm.runInContext(src + '\nthis.api={RESEAUX,reseauDe,typeDe,normaliser,construireRequete,distanceM,parseHoraires,statutHoraires,semaineTexte,lienItineraire,lienFiche};', ctx);
+const ctx = { URL }; vm.createContext(ctx);
+vm.runInContext(src + '\nthis.api={RESEAUX,reseauDe,typeDe,normaliser,construireRequete,distanceM,parseHoraires,statutHoraires,semaineTexte,lienItineraire,lienFiche,urlApi,normaliserApi,fusionner};', ctx);
 const a = ctx.api;
 
 // Réseaux et types
@@ -69,4 +69,33 @@ const p = { lat: 47.2, lon: -1.5, nom: 'Tabac du Port', adresse: '4 rue X, 44000
 assert.strictEqual(a.lienItineraire(p, 'walking', null), 'https://www.google.com/maps/dir/?api=1&destination=47.200000,-1.500000&travelmode=walking');
 assert.ok(a.lienItineraire(p, 'driving', { lat: 47.1, lon: -1.4 }).endsWith('&origin=47.100000,-1.400000'));
 assert.ok(a.lienFiche(p).startsWith('https://www.google.com/maps/search/?api=1&query=Tabac%20du%20Port'));
+// API relais : URL, contrat JSON, valeurs hostiles
+assert.strictEqual(a.urlApi('https://x.fr/api/relais?k=1', 47.2, -1.5, 3000), 'https://x.fr/api/relais?k=1&lat=47.200000&lon=-1.500000&rayon=3000');
+assert.throws(() => a.urlApi('javascript:alert(1)', 1, 1, 1));
+assert.throws(() => a.urlApi('pas une url', 1, 1, 1));
+const api = a.normaliserApi({ points: [
+  { id: 'MR1', lat: '47.2', lon: -1.5, nom: 'Boulangerie', reseau: 'mondial', type: 'locker', horaires: 'Mo-Fr 08:00-19:00', adresse: '1 rue A' },
+  { id: 2, lat: 47.2001, lon: -1.5, reseau: '__proto__', type: 'constructor' },
+  { id: 3, lat: null, lon: 1 }, { id: 4, lat: 'abc', lon: 1 }, { id: 5, lat: 95, lon: 1 }, null,
+] }, 'api');
+assert.deepStrictEqual([...api.map(p => p.id)], ['api/MR1', 'api/2']);
+assert.strictEqual(api[0].reseau, 'mondial'); assert.strictEqual(api[0].type, 'locker'); assert.strictEqual(api[0].lat, 47.2);
+assert.strictEqual(api[1].reseau, 'autre'); assert.strictEqual(api[1].type, 'commerce');
+assert.deepStrictEqual([...a.normaliserApi([{ lat: 1, lon: 2 }], 'api').map(p => p.id)], ['api/0']);
+assert.strictEqual(a.normaliserApi('n’importe quoi', 'api').length, 0);
+
+// Fusion : l'API l'emporte ; réseaux ou types différents ne sont pas regroupés
+const osm = a.normaliser([
+  { type: 'node', id: 9, lat: 47.20001, lon: -1.5, tags: { brand: 'Mondial Relay', name: 'Boulangerie OSM' } },
+  { type: 'node', id: 10, lat: 47.20002, lon: -1.5, tags: { amenity: 'parcel_locker', brand: 'Mondial Relay' } },
+  { type: 'node', id: 11, lat: 47.20003, lon: -1.5, tags: { brand: 'Relais Colis', name: 'Autre réseau' } },
+]);
+const f = a.fusionner([api, osm]);
+assert.deepStrictEqual([...f.map(p => p.id)], ['api/MR1', 'api/2', 'node/9', 'node/11']);
+assert.deepStrictEqual([...f[0].sources], ['api', 'osm']);
+assert.strictEqual(f[0].nom, 'Boulangerie');
+const g = a.fusionner([[{ id: 'a', lat: 1, lon: 1, reseau: 'mondial', type: 'commerce', horaires: '', adresse: '', sources: ['api'] }],
+                       [{ id: 'b', lat: 1, lon: 1, reseau: 'mondial', type: 'commerce', horaires: 'Mo 09:00-10:00', adresse: 'x', sources: ['osm'] }]]);
+assert.strictEqual(g.length, 1); assert.strictEqual(g[0].horaires, 'Mo 09:00-10:00'); assert.strictEqual(g[0].adresse, 'x');
+
 console.log('OK : tous les tests de relais-retour passent');
