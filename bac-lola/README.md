@@ -13,19 +13,23 @@ liste de l'enchaînement prévu des changements (une ligne par traversée, dépa
    (projection sur le chenal ; arrivée / départ confirmés par 2 positions), puis suit les nouvelles positions toutes les 10 s.
 3. **Modes** : rotation continue si les départs consécutifs sont espacés de ≤ 8,5 min ; perturbation si l'écart médian à la grille > 4,5 min ;
    arrêt hors service ou sans mouvement depuis 30 min.
-4. **Prévision** : simulation du cycle. Grille : créneau + décalage appris (BI +2,3 min, Indret +2,0 min, réajusté sur les 5 derniers départs),
-   avec rattrapage immédiat si le bac a moins de 6 min de retard. Rotation : arrivée + 3,6 min. Fenêtres de pointe de semaine (06:55–09:30, 16:10–19:45)
+4. **Prévision** : simulation du cycle. Grille : créneau + décalage appris (semaine +1,3 min, week-end +1,7 min, réajusté sur les 5 derniers départs),
+   avec rattrapage immédiat si le bac a moins de 6 min de retard. Rotation : arrivée + 3,6 min. Fenêtres de pointe de semaine (06:55–09:30, 16:00–19:15)
    pour anticiper l'entrée / la sortie de rotation.
 
 ## Calibrage et validation
-Relevés enregistrés par le serveur du 13 au 17/11/2026 (≈ 7 000 positions, 700 événements, 98 départs évaluables). Rejeu : à chaque arrivée on prévoit
-le départ suivant.
+Relevés enregistrés par le serveur du 13 au 18/11/2026 (≈ 7 800 positions, ≈ 1 000 événements, 490 départs évaluables). Rejeu : à chaque arrivée on prévoit
+le départ suivant. Ces données servent uniquement à fixer les paramètres hors ligne ; la page ne les lit jamais.
 
 | Modèle | Erreur médiane | ≤ 2 min | Rotation (erreur moyenne) |
 |---|---|---|---|
-| Grille officielle seule | 2,4 min | 23 % | 7,7 min |
-| Grille + décalage | 0,5 min | 69 % | 8,7 min |
-| **Hybride (cette page)** | **0,5 min** | **92 %** | **1,1 min** |
+| Grille officielle seule | 1,8 min | 57 % | 8,4 min |
+| Grille + décalage | 0,7 min | 74 % | 9,4 min |
+| **Hybride (cette page)** | **0,6 min** | **93 %** | **1,5 min** |
+
+Analyse du 18/11 : le seuil de trou entre deux positions passe de 60 s à 120 s (la source rafraîchit toutes les ~50 s, 61 % des changements étaient
+à tort jugés « approximatifs » et écartés du calibrage) ; traversée et décalage dépendent du type de service ; fin de pointe du soir ramenée à 19:15.
+Vent, marée, pluie, niveau de la mer et navires voisins n'expliquent ni la durée de traversée ni l'erreur de prévision (corrélations < 0,2) : non retenus.
 
 Les paramètres (décalages, séjours, fenêtres) sont appris sur les mêmes données que le test : c'est une première estimation, à refaire quand
 il y aura plus de jours de semaine, de vendredis et de vacances.
@@ -41,7 +45,7 @@ Un bateau se déplace entre Indret et Basse-Indre selon la dernière position AI
 
 ## Limites
 Un bandeau rouge « Connexion perdue » apparaît dès que le serveur de positions ne répond plus (avec l'ancienneté de la dernière mise à jour), et un autre après 3 min sans nouvelle position. La page suspend ses prévisions après 10 min sans nouvelle position AIS. Les causes d'un retard (autre bateau, changement de sens de la marée, vent) ne sont pas détectées en direct ; le serveur les enregistre
-(navires voisins, marée, météo) pour une version ultérieure. Heures mesurées à ± 1 min. Calibrage sur 5 jours.
+(navires voisins, marée, météo) pour une version ultérieure. Heures mesurées à ± 1 min. Calibrage sur 6 jours.
 
 ## Développement
 Moteur, géométrie du chenal et interface sont inlinés dans `index.html` (blocs de script successifs).
