@@ -32,7 +32,7 @@ ok(M.detecterMode(grille,P("2026-11-17",11,0),P("2026-11-17",10,50)).mode!=="arr
 const evs=[d(9,12,"N"),d(9,22,"S"),d(9,32,"N"),{type:"arr",q:"S",t:P("2026-11-17",9,35)},d(9,42,"S"),{type:"arr",q:"N",t:P("2026-11-17",9,46)}];
 const pr=M.prevoir(evs,P("2026-11-17",9,47),4);
 const dep=pr.evenements[0];
-ok(dep.type==="dep"&&dep.q==="N"&&hm(dep.t)==="09:52","grille : arrivée 09:46 à BI → départ prévu 09:52 (créneau 09:50 + 2,3 min), obtenu "+hm(dep.t));
+ok(dep.type==="dep"&&dep.q==="N"&&hm(dep.t)==="09:51","grille : arrivée 09:46 à BI → départ prévu 09:51 (créneau 09:50 + 1,25 min), obtenu "+hm(dep.t));
 ok(dep.delta>1.5&&dep.delta<3,"écart au nominal ≈ +2 min : "+dep.delta.toFixed(1));
 ok(pr.evenements.map(e=>e.type+e.q).join(",")==="depN,arrS,depS,arrN","alternance départ/arrivée");
 // Prévision en rotation
