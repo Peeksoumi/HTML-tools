@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relais de retour colis</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --txt:#1c2330; --mut:#667085; --ok:#12a150; --ko:#d92d20; --warn:#dc6803; --pri:#2563eb; --bd:#e4e7ec; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#10141b; --card:#1a202b; --txt:#e8ecf3; --mut:#98a2b3; --bd:#2b3442; } }
+  * { box-sizing:border-box; }
+  body { margin:0; font:16px/1.45 system-ui,sans-serif; background:var(--bg); color:var(--txt); }
+  main { max-width:960px; margin:0 auto; padding:12px; }
+  .top { display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; }
+  .top a { font-size:.85rem; color:var(--txt); text-decoration:none; border:1px solid var(--bd); background:var(--card); border-radius:8px; padding:5px 10px; }
+  h1 { font-size:1.35rem; margin:.5rem 0 .2rem; }
+  .lead { color:var(--mut); margin:0 0 .7rem; font-size:.92rem; }
+  .card { background:var(--card); border:1px solid var(--bd); border-radius:12px; padding:12px; margin-bottom:10px; }
+  form { display:flex; flex-wrap:wrap; gap:8px; }
+  input[type=search], select, button { font:inherit; padding:9px 11px; border-radius:9px; border:1px solid var(--bd); background:var(--card); color:var(--txt); }
+  input[type=search] { flex:1 1 240px; }
+  button { cursor:pointer; background:var(--pri); color:#fff; border:0; }
+  button.sec { background:var(--card); color:var(--txt); border:1px solid var(--bd); }
+  .filtres { display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:10px; font-size:.9rem; }
+  .filtres h3 { width:100%; margin:4px 0 0; font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--mut); }
+  .filtres label { display:inline-flex; align-items:center; gap:5px; cursor:pointer; }
+  .pt { width:10px; height:10px; border-radius:50%; display:inline-block; }
+  #msg { margin:.5rem 0; color:var(--mut); min-height:1.3em; font-size:.92rem; }
+  #msg.err { color:var(--ko); }
+  #fraicheur { color:var(--mut); font-size:.8rem; margin:0 0 8px; }
+  #map { height:360px; border-radius:12px; border:1px solid var(--bd); }
+  .mapbar { display:flex; flex-wrap:wrap; gap:8px; margin:8px 0; align-items:center; }
+  ul.liste { list-style:none; padding:0; margin:0; display:grid; gap:8px; }
+  .liste li { background:var(--card); border:1px solid var(--bd); border-radius:10px; padding:10px 12px; }
+  .liste li.sel { border-color:var(--pri); }
+  .l1 { display:flex; justify-content:space-between; gap:10px; align-items:baseline; }
+  .l1 b { font-size:1rem; }
+  .dist { white-space:nowrap; font-weight:600; }
+  .adr { color:var(--mut); font-size:.88rem; }
+  .badge { display:inline-block; font-size:.72rem; border:1px solid var(--bd); border-radius:99px; padding:0 7px; margin-right:4px; color:var(--mut); }
+  .badge.res { color:#fff; border:0; }
+  .ok { color:var(--ok); } .ko { color:var(--ko); } .w { color:var(--warn); }
+  .actions { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .actions a { font-size:.88rem; text-decoration:none; border-radius:8px; padding:6px 10px; border:1px solid var(--bd); color:var(--txt); }
+  .actions a.go { background:var(--pri); color:#fff; border-color:var(--pri); }
+  details.h { margin-top:6px; font-size:.86rem; }
+  details.h summary { cursor:pointer; color:var(--mut); }
+  details.h table { border-collapse:collapse; margin-top:4px; }
+  details.h td { padding:1px 10px 1px 0; }
+  .hide { display:none; }
+  .fonct { margin-top:24px; padding:14px 16px; border:1px solid var(--bd); border-radius:12px; background:var(--card); color:var(--txt); text-align:left; font-size:.88rem; line-height:1.45; }
+  .fonct h2 { font-size:1rem; margin:0 0 4px; }
+  .fonct h3 { font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; color:var(--mut); margin:12px 0 4px; }
+  .fonct ul { margin:0; padding-left:18px; } .fonct li { margin:2px 0; }
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <a href="https://github.com/Peeksoumi/HTML-tools/issues/new?title=%5Brelais-retour%5D%20&amp;body=Outil%20concern%C3%A9%20%3A%20relais-retour%20(http%3A%2F%2F141.227.151.70%3A8080%2Frelais-retour%2F)%0A%0A**Ma%20suggestion%20ou%20le%20bug%20rencontr%C3%A9%20%3A**%0A%0A" target="_blank" rel="noopener">💡 Proposer une amélioration</a>
+    <a href="index.html" download="relais-retour.html" title="Enregistrer la page (connexion internet requise : carte Leaflet, données OpenStreetMap, recherche d'adresse)">⬇️ Télécharger la page</a>
+  </div>
+  <h1>📦 Où rapporter mon colis ?</h1>
+  <p class="lead">Points Mondial Relay (commerces et lockers) et autres réseaux de dépôt autour de toi, avec horaires et itinéraire.</p>
+
+  <div class="card">
+    <form id="f">
+      <input type="search" id="q" placeholder="Ville, adresse… ou « 47.2184, -1.5536 »" autocomplete="off">
+      <select id="rayon" title="Rayon de recherche">
+        <option value="1000">1 km</option><option value="3000" selected>3 km</option>
+        <option value="5000">5 km</option><option value="10000">10 km</option>
+      </select>
+      <button type="submit">Chercher</button>
+      <button type="button" class="sec" id="geo">📍 Ma position</button>
+    </form>
+    <div class="filtres">
+      <h3>Réseau du bordereau de retour</h3>
+      <span id="fres"></span>
+      <h3>Type de point</h3>
+      <span id="ftype"></span>
+      <h3>Affichage</h3>
+      <label><input type="checkbox" id="fouvert"> Ouvert maintenant uniquement</label>
+      <label>Itinéraire :
+        <select id="mode"><option value="walking">à pied</option><option value="driving">en voiture</option><option value="transit">en transports</option><option value="bicycling">à vélo</option></select>
+      </label>
+    </div>
+  </div>
+
+  <div id="msg"></div>
+  <div id="fraicheur"></div>
+  <div id="map"></div>
+  <div class="mapbar">
+    <button type="button" class="sec" id="ici">🔍 Chercher au centre de la carte</button>
+    <button type="button" class="sec" id="refresh" title="Ignorer le cache et recharger la base OpenStreetMap">🔄 Actualiser les données</button>
+    <span id="nb" style="color:var(--mut);font-size:.9rem"></span>
+  </div>
+  <ul class="liste" id="liste"></ul>
+
+  <div class="fonct" id="fonctionnement">
+    <h2>Fonctionnement et sources</h2>
+    <h3>Fonctionnement</h3><ul>
+      <li><b>Recherche</b> : à chaque recherche, la page interroge OpenStreetMap autour de la position (rayon au choix) et classe les points par réseau puis par type.</li>
+      <li><b>Réseau</b> : déduit des étiquettes OSM (marque, opérateur, nom). <b>Type</b> : locker = <code>amenity=parcel_locker</code> ; bureau de poste = <code>amenity=post_office</code> ; sinon point relais en commerce.</li>
+      <li><b>Mise à jour</b> : la base OSM est modifiée en continu ; la page recharge les données à chaque nouvelle zone et garde 24 h de cache dans ton navigateur (bouton « Actualiser » pour forcer).</li>
+      <li><b>Horaires</b> : lus dans la balise <code>opening_hours</code> d'OSM et comparés à l'heure de Paris ; le bouton « Horaires » ouvre la fiche Google Maps du lieu pour recouper.</li>
+      <li><b>Confidentialité</b> : ta position et ta recherche sont envoyées aux services listés ci-dessous ; rien n'est envoyé à un serveur du site.</li>
+    </ul>
+    <h3>Sources de données</h3><ul>
+      <li><b>OpenStreetMap via Overpass API</b> : emplacement, réseau, adresse, horaires des points (ODbL, © contributeurs OpenStreetMap).</li>
+      <li><b>Nominatim</b> : transformation d'une ville ou adresse en coordonnées.</li>
+      <li><b>Leaflet + tuiles OpenStreetMap</b> : affichage de la carte (chargé depuis unpkg.com).</li>
+      <li><b>Google Maps</b> (liens uniquement) : itinéraire et fiche du lieu, ouverts sur ton action ; aucune clé ni donnée Google n'est lue par la page.</li>
+    </ul>
+    <h3>Limites</h3><ul>
+      <li>Mondial Relay ne publie pas la liste de son réseau (son API répond à une recherche à la fois, avec identifiants client) : seuls les points <b>saisis dans OSM</b> apparaissent, donc la liste est incomplète.</li>
+      <li>Les tailles de colis acceptées, la disponibilité d'un locker et les fermetures exceptionnelles ne sont pas connues ; vérifie sur ton bordereau ou la fiche Google Maps.</li>
+      <li>Horaires OSM saisis par des bénévoles : parfois absents ou périmés. Jours fériés et vacances (<code>PH</code>, <code>SH</code>) ignorés ; heure de Paris supposée.</li>
+    </ul>
+  </div>
+</main>
+
+<script id="core">
+// ---- Logique pure (testée dans relais-retour/tests/test_core.js) ----
+const RESEAUX = {
+  mondial:    { nom: 'Mondial Relay',        couleur: '#d9261c', re: /mondial\s*-?\s*relay|mondialrelay/i },
+  relaiscolis:{ nom: 'Relais Colis',         couleur: '#0a7d3b', re: /relais\s*-?\s*colis/i },
+  pickup:     { nom: 'Pickup / Chronopost',  couleur: '#c26a00', re: /pick\s*-?\s*up|chrono\s*-?\s*relais|chronopost/i },
+  colissimo:  { nom: 'La Poste / Colissimo', couleur: '#1f4e9c', re: /colissimo|la\s*poste/i },
+  ups:        { nom: 'UPS Access Point',     couleur: '#6b4a1b', re: /(^|[^a-z])ups([^a-z]|$)/i },
+  dpd:        { nom: 'DPD',                  couleur: '#b4175f', re: /(^|[^a-z])dpd([^a-z]|$)/i },
+  vinted:     { nom: 'Vinted Go',            couleur: '#067f87', re: /vinted/i },
+  autre:      { nom: 'Autres réseaux',       couleur: '#667085', re: null },
+};
+const TYPES = {
+  commerce: 'Point Relais (commerce)',
+  locker: 'Locker (consigne automatique)',
+  poste: 'Bureau de poste',
+};
+const REGEX_OVERPASS = 'mondial ?-?relay|mondialrelay|relais ?-?colis|pick ?-?up|chrono ?-?relais|chronopost|colissimo|vinted|(^|[^a-z])(ups|dpd)([^a-z]|$)';
+
+function construireRequete(lat, lon, rayon) {
+  const a = `(around:${Math.round(rayon)},${lat.toFixed(5)},${lon.toFixed(5)})`;
+  const par = ['brand', 'operator', 'post_office:brand', 'name']
+    .map(k => `nwr${a}["${k}"~"${REGEX_OVERPASS}",i]["amenity"!="post_box"];`).join('');
+  return `[out:json][timeout:25];(${par}nwr${a}["amenity"="parcel_locker"];nwr${a}["amenity"="post_office"];nwr${a}["post_office"="post_partner"];);out center tags;`;
+}
+
+function reseauDe(t) {
+  const texte = [t.brand, t.operator, t.name, t['post_office:brand'], t['post_office:service_provider']].filter(Boolean).join(' | ');
+  for (const k of ['mondial', 'relaiscolis', 'pickup', 'vinted', 'colissimo', 'ups', 'dpd']) {
+    if (RESEAUX[k].re.test(texte)) return k;
+  }
+  if (t.amenity === 'post_office' && !texte) return 'colissimo';
+  return 'autre';
+}
+
+function typeDe(t) {
+  if (t.amenity === 'parcel_locker') return 'locker';
+  if (t.amenity === 'post_office') return 'poste';
+  return 'commerce';
+}
+
+function normaliser(elements) {
+  const out = [];
+  for (const e of elements || []) {
+    const t = e.tags || {};
+    if (t.amenity === 'post_box') continue;
+    const lat = e.lat ?? (e.center && e.center.lat), lon = e.lon ?? (e.center && e.center.lon);
+    if (typeof lat !== 'number' || typeof lon !== 'number') continue;
+    const reseau = reseauDe(t), type = typeDe(t);
+    // Un « autre » sans locker ni point postal partenaire n'est pas un point de dépôt
+    if (reseau === 'autre' && type === 'commerce' && t.post_office !== 'post_partner') continue;
+    const rue = [t['addr:housenumber'], t['addr:street']].filter(Boolean).join(' ');
+    const ville = [t['addr:postcode'], t['addr:city']].filter(Boolean).join(' ');
+    out.push({
+      id: `${e.type}/${e.id}`, lat, lon, reseau, type,
+      nom: t.name || t.brand || t.operator || RESEAUX[reseau].nom,
+      adresse: [rue, ville].filter(Boolean).join(', '),
+      horaires: t.opening_hours || '',
+    });
+  }
+  return out;
+}
+
+function distanceM(lat1, lon1, lat2, lon2) {
+  const r = Math.PI / 180, R = 6371000;
+  const dLat = (lat2 - lat1) * r, dLon = (lon2 - lon1) * r;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * r) * Math.cos(lat2 * r) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+// --- opening_hours (sous-ensemble courant) ---
+const J = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+const JOURS_FR = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
+const hm = s => { const [h, m] = s.split(':').map(Number); return h * 60 + m; };
+
+function parseHoraires(s) {
+  if (!s) return null;
+  s = s.trim();
+  if (/^24\/7$/.test(s)) return Array.from({ length: 7 }, () => [[0, 1440]]);
+  const sem = Array.from({ length: 7 }, () => null);
+  const debord = Array.from({ length: 7 }, () => []);
+  for (const brut of s.split(';')) {
+    const r = brut.trim(); if (!r) continue;
+    const m = r.match(/^([A-Za-z,\- ]*?)\s*((?:\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}[\s,]*)+|off|closed)$/i);
+    if (!m) return null;
+    const jours = new Set();
+    let seulementFerie = false;
+    const sel = m[1].trim();
+    if (!sel) J.forEach((_, i) => jours.add(i));
+    else {
+      let ferie = 0, tot = 0;
+      for (const tok of sel.split(',').map(x => x.trim()).filter(Boolean)) {
+        tot++;
+        if (/^(PH|SH)$/i.test(tok)) { ferie++; continue; }
+        const mm = tok.match(/^([A-Za-z]{2})(?:\s*-\s*([A-Za-z]{2}))?$/);
+        if (!mm) return null;
+        const a = J.findIndex(x => x.toLowerCase() === mm[1].toLowerCase());
+        const b = mm[2] ? J.findIndex(x => x.toLowerCase() === mm[2].toLowerCase()) : a;
+        if (a < 0 || b < 0) return null;
+        for (let i = a; ; i = (i + 1) % 7) { jours.add(i); if (i === b) break; }
+      }
+      seulementFerie = ferie === tot;
+    }
+    if (seulementFerie) continue;
+    const plages = [];
+    if (!/^(off|closed)$/i.test(m[2])) {
+      for (const p of m[2].split(',').map(x => x.trim()).filter(Boolean)) {
+        const [d, f] = p.split('-').map(x => x.trim());
+        const a = hm(d), b = hm(f);
+        if (!(a >= 0 && a <= 1440 && b >= 0 && b <= 1440)) return null;
+        plages.push(b > a ? [a, b] : [a, 1440, b]);
+      }
+    }
+    for (const i of jours) {
+      sem[i] = plages.map(p => [p[0], p[1]]);
+      debord[(i + 1) % 7] = debord[(i + 1) % 7].concat(plages.filter(p => p.length === 3).map(p => [0, p[2]]));
+    }
+  }
+  return sem.map((p, i) => (p || []).concat(debord[i]));
+}
+
+function parisMaintenant(date) {
+  const p = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Paris', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+    .formatToParts(date).reduce((o, x) => (o[x.type] = x.value, o), {});
+  return { jour: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].indexOf(p.weekday), min: Number(p.hour) * 60 + Number(p.minute) };
+}
+const fmtHeure = m => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}h${String(m % 60).padStart(2, '0')}`;
+
+// Retourne { etat: 'ouvert'|'ferme'|'inconnu', texte }
+function statutHoraires(brut, date = new Date()) {
+  const sem = parseHoraires(brut);
+  if (!sem) return { etat: 'inconnu', texte: brut ? 'Horaires non lisibles' : 'Horaires non renseignés' };
+  const { jour, min } = parisMaintenant(date);
+  const cur = sem[jour].find(([a, b]) => min >= a && min < b);
+  if (cur) return { etat: 'ouvert', texte: cur[1] >= 1440 ? 'Ouvert (jusqu’à minuit)' : `Ouvert jusqu’à ${fmtHeure(cur[1])}` };
+  for (let d = 0; d < 8; d++) {
+    const j = (jour + d) % 7;
+    const a = sem[j].map(p => p[0]).filter(x => d > 0 || x > min).sort((x, y) => x - y)[0];
+    if (a !== undefined) {
+      const q = d === 0 ? '' : d === 1 ? 'demain ' : JOURS_FR[j] + ' ';
+      return { etat: 'ferme', texte: `Fermé, ouvre ${q}à ${fmtHeure(a)}` };
+    }
+  }
+  return { etat: 'ferme', texte: 'Fermé' };
+}
+
+function semaineTexte(brut) {
+  const sem = parseHoraires(brut);
+  if (!sem) return null;
+  return sem.map((pl, i) => [JOURS_FR[i], pl.length ? pl.slice().sort((a, b) => a[0] - b[0]).map(([a, b]) => `${fmtHeure(a)}–${b >= 1440 ? '24h00' : fmtHeure(b)}`).join(', ') : 'fermé']);
+}
+
+function lienItineraire(p, mode, origine) {
+  let u = `https://www.google.com/maps/dir/?api=1&destination=${p.lat.toFixed(6)},${p.lon.toFixed(6)}&travelmode=${mode}`;
+  if (origine) u += `&origin=${origine.lat.toFixed(6)},${origine.lon.toFixed(6)}`;
+  return u;
+}
+function lienFiche(p) {
+  return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(`${p.nom} ${p.adresse || p.lat.toFixed(5) + ',' + p.lon.toFixed(5)}`);
+}
+</script>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script id="app">
+// ---- Interface ----
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
+const TTL_CACHE = 24 * 3600 * 1000;
+const etat = { centre: null, gps: false, points: [], meta: null, map: null, couche: null, marqueurs: {} };
+
+function msg(t, err) { $('msg').textContent = t || ''; $('msg').className = err ? 'err' : ''; }
+
+function initFiltres() {
+  const saved = (() => { try { return JSON.parse(localStorage.getItem('relais-retour:filtres')) || {}; } catch (e) { return {}; } })();
+  const cases = (obj, nom, def) => Object.keys(obj).map(k => {
+    const on = (saved[nom] || def)[k] ?? (def[k] || false);
+    const pastille = nom === 'res' ? `<span class="pt" style="background:${RESEAUX[k].couleur}"></span>` : '';
+    return `<label><input type="checkbox" data-${nom}="${k}" ${on ? 'checked' : ''}>${pastille}${esc(nom === 'res' ? RESEAUX[k].nom : TYPES[k])}</label>`;
+  }).join('');
+  $('fres').innerHTML = cases(RESEAUX, 'res', { mondial: true });
+  $('ftype').innerHTML = cases(TYPES, 'type', { commerce: true, locker: true, poste: true });
+  document.querySelectorAll('.filtres input, #mode').forEach(el => el.addEventListener('change', () => { sauverFiltres(); afficher(); }));
+}
+function lireFiltres() {
+  const get = nom => { const o = {}; document.querySelectorAll(`[data-${nom}]`).forEach(el => o[el.dataset[nom]] = el.checked); return o; };
+  return { res: get('res'), type: get('type'), ouvert: $('fouvert').checked, mode: $('mode').value };
+}
+function sauverFiltres() { try { const f = lireFiltres(); localStorage.setItem('relais-retour:filtres', JSON.stringify({ res: f.res, type: f.type })); } catch (e) {} }
+
+function initCarte() {
+  if (typeof L === 'undefined') { msg('Carte indisponible (Leaflet non chargé) : la liste reste utilisable.', true); return; }
+  etat.map = L.map('map').setView([46.6, 2.5], 6);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(etat.map);
+  etat.couche = L.layerGroup().addTo(etat.map);
+}
+
+async function geocoder(texte) {
+  const m = texte.match(/^\s*(-?\d+(?:[.,]\d+)?)\s*[,; ]\s*(-?\d+(?:[.,]\d+)?)\s*$/);
+  if (m) return { lat: parseFloat(m[1].replace(',', '.')), lon: parseFloat(m[2].replace(',', '.')) };
+  const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=fr&accept-language=fr&q=' + encodeURIComponent(texte));
+  if (!r.ok) throw new Error('recherche d’adresse indisponible');
+  const j = await r.json();
+  if (!j.length) throw new Error('adresse introuvable');
+  return { lat: parseFloat(j[0].lat), lon: parseFloat(j[0].lon) };
+}
+
+// La requête part d'un centre arrondi à 0,01° (≈ 1 km) avec une marge de 1,5 km : deux recherches voisines partagent le même cache.
+async function chargerDonnees(lat, lon, rayon, forcer) {
+  const qlat = Math.round(lat * 100) / 100, qlon = Math.round(lon * 100) / 100;
+  const cle = `relais-retour:${qlat},${qlon},${rayon}`;
+  if (!forcer) {
+    try {
+      const c = JSON.parse(localStorage.getItem(cle));
+      if (c && Date.now() - c.t < TTL_CACHE) return { ...c, cache: true };
+    } catch (e) {}
+  }
+  const corps = 'data=' + encodeURIComponent(construireRequete(qlat, qlon, rayon + 1500));
+  let derniere;
+  for (const url of OVERPASS) {
+    try {
+      const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 30000);
+      const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: corps, signal: ctl.signal });
+      clearTimeout(to);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const j = await r.json();
+      const res = { t: Date.now(), osm: j.osm3s && j.osm3s.timestamp_osm_base, elements: j.elements || [] };
+      try { localStorage.setItem(cle, JSON.stringify(res)); } catch (e) {}
+      return { ...res, cache: false };
+    } catch (e) { derniere = e; }
+  }
+  throw new Error('serveur OpenStreetMap indisponible (' + (derniere && derniere.message) + ')');
+}
+
+async function chercher(centre, gps, forcer) {
+  const rayon = Number($('rayon').value);
+  etat.centre = centre; etat.gps = gps;
+  if (etat.map) etat.map.setView([centre.lat, centre.lon], rayon <= 1000 ? 15 : rayon <= 3000 ? 14 : rayon <= 5000 ? 13 : 12);
+  msg('Recherche des points autour de la position…');
+  try {
+    const d = await chargerDonnees(centre.lat, centre.lon, rayon, forcer);
+    etat.meta = d;
+    etat.points = normaliser(d.elements).map(p => ({ ...p, dist: distanceM(centre.lat, centre.lon, p.lat, p.lon) }))
+      .filter(p => p.dist <= rayon).sort((a, b) => a.dist - b.dist);
+    msg('');
+    afficher();
+  } catch (e) { msg('Erreur : ' + e.message, true); }
+}
+
+function afficher() {
+  const f = lireFiltres();
+  const maintenant = new Date();
+  let pts = etat.points.filter(p => f.res[p.reseau] && f.type[p.type]).map(p => ({ ...p, st: statutHoraires(p.horaires, maintenant) }));
+  if (f.ouvert) pts = pts.filter(p => p.st.etat === 'ouvert');
+  const meta = etat.meta;
+  if (meta) {
+    const age = Math.round((Date.now() - meta.t) / 60000);
+    const osm = meta.osm ? new Date(meta.osm).toLocaleString('fr-FR', { timeZone: 'Europe/Paris', dateStyle: 'short', timeStyle: 'short' }) : '?';
+    $('fraicheur').textContent = `Base OpenStreetMap du ${osm} · récupérée il y a ${age < 1 ? 'moins d’1' : age} min${meta.cache ? ' (cache local)' : ''}.`;
+  }
+  $('nb').textContent = etat.meta ? `${pts.length} point${pts.length > 1 ? 's' : ''} affiché${pts.length > 1 ? 's' : ''} sur ${etat.points.length} trouvé${etat.points.length > 1 ? 's' : ''}` : '';
+  const aff = pts.slice(0, 100);
+  const origine = etat.gps ? null : etat.centre;
+  $('liste').innerHTML = aff.map(p => {
+    const R = RESEAUX[p.reseau], sem = semaineTexte(p.horaires);
+    const cl = p.st.etat === 'ouvert' ? 'ok' : p.st.etat === 'ferme' ? 'ko' : 'w';
+    const dist = p.dist < 1000 ? Math.round(p.dist) + ' m' : (p.dist / 1000).toFixed(1).replace('.', ',') + ' km';
+    return `<li data-id="${esc(p.id)}">
+      <div class="l1"><b>${esc(p.nom)}</b><span class="dist">${dist}</span></div>
+      <div><span class="badge res" style="background:${R.couleur}">${esc(R.nom)}</span><span class="badge">${esc(TYPES[p.type])}</span></div>
+      <div class="adr">${esc(p.adresse || 'Adresse non renseignée')}</div>
+      <div class="${cl}">${esc(p.st.texte)}</div>
+      ${sem ? `<details class="h"><summary>Horaires de la semaine</summary><table>${sem.map(([j, h]) => `<tr><td>${j}</td><td>${esc(h)}</td></tr>`).join('')}</table></details>` : (p.horaires ? `<div class="adr">OSM : ${esc(p.horaires)}</div>` : '')}
+      <div class="actions">
+        <a class="go" href="${esc(lienItineraire(p, f.mode, origine))}" target="_blank" rel="noopener">🧭 Itinéraire Google Maps</a>
+        <a href="${esc(lienFiche(p))}" target="_blank" rel="noopener">🕒 Horaires (Google Maps)</a>
+      </div></li>`;
+  }).join('') || (etat.meta ? '<li>Aucun point pour ces filtres. Élargis le rayon ou coche d’autres réseaux/types (la base OSM est incomplète).</li>' : '');
+  if (pts.length > 100) $('liste').insertAdjacentHTML('beforeend', '<li>Seuls les 100 points les plus proches sont listés.</li>');
+  dessiner(aff, f, origine);
+}
+
+function dessiner(pts, f, origine) {
+  if (!etat.map) return;
+  etat.couche.clearLayers(); etat.marqueurs = {};
+  if (etat.centre) L.circleMarker([etat.centre.lat, etat.centre.lon], { radius: 7, color: '#fff', weight: 2, fillColor: '#111', fillOpacity: 1 }).bindTooltip('Centre de la recherche').addTo(etat.couche);
+  for (const p of pts) {
+    const R = RESEAUX[p.reseau];
+    const m = L.circleMarker([p.lat, p.lon], { radius: 9, color: '#fff', weight: 2, fillColor: R.couleur, fillOpacity: .95 })
+      .bindPopup(`<b>${esc(p.nom)}</b><br>${esc(R.nom)} · ${esc(TYPES[p.type])}<br>${esc(p.st.texte)}<br><a href="${esc(lienItineraire(p, f.mode, origine))}" target="_blank" rel="noopener">🧭 Itinéraire</a>`)
+      .on('click', () => surligner(p.id)).addTo(etat.couche);
+    etat.marqueurs[p.id] = m;
+  }
+}
+function surligner(id) {
+  document.querySelectorAll('.liste li').forEach(li => li.classList.toggle('sel', li.dataset.id === id));
+  const li = document.querySelector(`.liste li[data-id="${CSS.escape(id)}"]`);
+  if (li) li.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+$('liste').addEventListener('click', e => {
+  const li = e.target.closest('li[data-id]'); if (!li || e.target.closest('a,summary')) return;
+  const m = etat.marqueurs[li.dataset.id];
+  if (m && etat.map) { etat.map.setView(m.getLatLng(), Math.max(etat.map.getZoom(), 16)); m.openPopup(); }
+  surligner(li.dataset.id);
+});
+
+$('f').addEventListener('submit', async e => {
+  e.preventDefault();
+  const q = $('q').value.trim(); if (!q) { msg('Saisis une ville, une adresse ou utilise « Ma position ».', true); return; }
+  try { msg('Recherche de l’adresse…'); await chercher(await geocoder(q), false, false); } catch (err) { msg('Erreur : ' + err.message, true); }
+});
+$('geo').addEventListener('click', () => {
+  if (!navigator.geolocation) { msg('Géolocalisation non disponible sur cet appareil.', true); return; }
+  msg('Localisation en cours…');
+  navigator.geolocation.getCurrentPosition(
+    pos => { $('q').value = ''; chercher({ lat: pos.coords.latitude, lon: pos.coords.longitude }, true, false); },
+    err => msg(err.code === 1 ? 'Position refusée : autorise la localisation ou saisis une adresse.' : 'Position introuvable : saisis une adresse.', true),
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+});
+$('ici').addEventListener('click', () => {
+  if (!etat.map) return; const c = etat.map.getCenter(); chercher({ lat: c.lat, lon: c.lng }, false, false);
+});
+$('refresh').addEventListener('click', () => {
+  if (!etat.centre) { msg('Lance d’abord une recherche.', true); return; } chercher(etat.centre, etat.gps, true);
+});
+
+initFiltres();
+initCarte();
+</script>
+</body>
+</html>
