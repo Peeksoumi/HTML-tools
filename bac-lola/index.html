@@ -71,7 +71,9 @@ th{font-weight:500;color:var(--faint);text-align:right;padding:6px 3px;border-bo
 td{text-align:right;padding:7px 3px;border-bottom:1px solid var(--soft);color:var(--faint);white-space:nowrap}
 tr:last-child td{border-bottom:none}
 th:first-child,td:first-child{text-align:left;white-space:nowrap;color:var(--text);font-size:13px}
-table.qq th:nth-child(n+2),table.qq td:nth-child(n+2){text-align:center;white-space:nowrap;color:var(--text);padding-left:3px;width:36%}
+table.qq th,table.qq td{text-align:center;white-space:nowrap;color:var(--text);padding-left:3px;width:50%;font-size:15px}
+table.qq td small{display:block;font-size:10px;color:var(--faint)}
+table.qq td.vide2{color:var(--faint)}
 table.qq td.dep{color:var(--orange)}table.qq td.arr{color:var(--vert)}
 th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--dim);padding-left:10px}
 .d-ok{color:var(--vert)}.d-moy{color:var(--orange)}.d-fort{color:var(--rouge)}.d-av{color:var(--bleu)}
@@ -106,7 +108,7 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
   <ul>
     <li><b>Détection</b> : à l'ouverture, la page rejoue les 12 dernières heures de positions AIS de Lola (projetées sur le chenal) puis suit les nouvelles ; arrivée et départ à un quai sont confirmés par deux positions cohérentes (lieu et vitesse). Tout le calcul reste dans le navigateur.</li>
     <li><b>Nominal</b> : grille GTFS, un départ toutes les 20 min par quai (semaine : Basse-Indre 05:30→22:10, Indret 05:40→22:20 ; week-end et fériés : 06:30→21:30 et 06:40→21:20). Arrivée nominale = départ nominal + 3 min.</li>
-    <li><b>Lecture</b> : chaque quai affiche son prochain départ prévu et la situation du bac (à quai ici, en traversée vers l'autre quai, à l'autre quai, en traversée vers ici) ; l'enchaînement complet des changements est listé une seule fois, en deux colonnes (Indret à gauche, Basse-Indre à droite, comme le schéma) ; l'horaire officiel et l'écart Δ restent sur les cartes.</li>
+    <li><b>Lecture</b> : chaque quai affiche son prochain départ prévu et la situation du bac (à quai ici, en traversée vers l'autre quai, à l'autre quai, en traversée vers ici) ; l'enchaînement complet des changements est listé une seule fois, une ligne par traversée, départ et arrivée ensemble, chacun dans la colonne de son quai (Indret à gauche, Basse-Indre à droite, comme le schéma) ; l'horaire officiel et l'écart Δ restent sur les cartes.</li>
     <li><b>Modes</b> : <i>rotation continue</i> si les départs consécutifs sont espacés de ≤ 8,5 min ; <i>retard / perturbation</i> si l'écart médian à la grille dépasse 4,5 min ; <i>arrêt</i> hors service ou sans mouvement depuis 30 min.</li>
     <li><b>Prévision hybride</b> : simulation du cycle départ → traversée (2,8 min) → arrivée → départ. En grille : créneau + décalage appris (+2,3 min Basse-Indre, +2,0 min Indret, réajusté sur les 5 derniers départs). En rotation : arrivée + 3,6 min de séjour. En semaine, les fenêtres de pointe observées (06:55–09:30, 16:10–19:45) anticipent l'entrée et la sortie de rotation.</li>
     <li><b>Validation</b> : rejeu sur 98 départs du 13 au 17/11/2026 : erreur médiane 0,5 min, 92 % à ±2 min (grille officielle seule : 23 %). En rotation continue, erreur moyenne 1,1 min contre 7,7 min pour la grille.</li>
@@ -551,12 +553,22 @@ async function lirePosition(){
 // --- affichage ---
 const fmtDelta=d=>d==null?"–":(d>=0?"+":"−")+Math.abs(d).toFixed(1).replace(".",",");
 function classeDelta(d){ if(d==null) return ""; if(d<-2) return "d-av"; if(d<=2.5) return "d-ok"; if(d<=5) return "d-moy"; return "d-fort"; }
-// Une ligne par changement, placé dans la colonne de son quai : Indret à gauche, Basse-Indre à droite (comme le schéma)
-const ENTETE_QQ='<table class="qq"><tr><th>Heure</th><th>Indret</th><th>Basse-Indre</th></tr>';
-function ligneQQ(e,heure,suffixe,cls){
-    const txt=e.type==="dep" ? (e.q==="S"?"Départ ➜":"⬅ Départ") : "Arrivée";
-    const cell=q=>e.q===q?'<td class="'+e.type+'">'+txt+'</td>':'<td></td>';
-    return '<tr'+(cls?' class="'+cls+'"':'')+'><td>'+heure+(suffixe||"")+'</td>'+cell("S")+cell("N")+'</tr>';
+// Une ligne par traversée : départ et arrivée sur la même ligne, dans la colonne de leur quai (Indret à gauche, Basse-Indre à droite, comme le schéma)
+const ENTETE_QQ='<table class="qq"><tr><th>Indret</th><th>Basse-Indre</th></tr>';
+function traversees(evs){ // événements chronologiques → [{de, dep, arr}] (dep ou arr peut manquer)
+    const rows=[];
+    evs.forEach(e=>{
+        if(e.type==="dep") rows.push({de:e.q,dep:e,arr:null});
+        else { const r=rows[rows.length-1]; if(r&&!r.arr&&r.de===autre(e.q)) r.arr=e; else rows.push({de:autre(e.q),dep:null,arr:e}); }
+    });
+    return rows;
+}
+function ligneTraversee(r,fmt,now,cls){
+    const t=(e,pre,post)=>e?'<span>'+pre+fmt(e.t)+(e.approx?' ~':'')+post+'</span>'+(jourTag(e.t,now)?'<small>'+jourTag(e.t,now).trim()+'</small>':''):'<span>…</span>';
+    const dep=t(r.dep,r.de==="N"?"⬅ ":"",r.de==="S"?" ➜":""), arr=t(r.arr,"","");
+    const gauche=r.de==="S"?['dep',dep]:['arr',arr], droite=r.de==="S"?['arr',arr]:['dep',dep];
+    const cell=c=>'<td class="'+((c[0]==="dep"?r.dep:r.arr)?c[0]:'vide2')+'">'+c[1]+'</td>';
+    return '<tr'+(cls?' class="'+cls+'"':'')+'>'+cell(gauche)+cell(droite)+'</tr>';
 }
 function dans(ms,now){ const m=Math.round((ms-now)/60000); return m<=0?"maintenant":"dans "+m+" min"; }
 
@@ -636,10 +648,11 @@ function rendre(){
             +'<div class="etat">'+etat+'</div><div class="sec">'+sec+'</div>'+(suiv?'<div class="suivant">'+suiv+'</div>':'')+'</section>';
     });
     $("quais").innerHTML=html;
+    const dernierDep=evs.filter(e=>e.type==="dep").pop();
     $("chaine").innerHTML = panne ? '<div class="vide">Prévisions suspendues : '+(indispo?"position AIS indisponible":"arrêt en cours")+'.</div>' :
-        ENTETE_QQ+pr.evenements.slice(0,6).map((e,i)=>ligneQQ(e,formatHM(e.t)+(jourTag(e.t,now)?'<span class="cpt">'+jourTag(e.t,now).trim()+'</span>':''),"",i===0?"next":"")).join("")+'</table>';
-    const mes=evs.slice(-8).reverse();
-    $("mesures").innerHTML = mes.length ? ENTETE_QQ+mes.map(e=>ligneQQ(e,formatHMS(e.t)+(e.approx?' ~':'')+(jourTag(e.t,now)?'<span class="cpt">'+partiesParis(e.t).cle.slice(5).split("-").reverse().join("/")+'</span>':''))).join("")+'</table>'
+        ENTETE_QQ+traversees((pr.evenements[0]&&pr.evenements[0].type==="arr"&&dernierDep&&dernierDep.q===autre(pr.evenements[0].q)?[dernierDep]:[]).concat(pr.evenements.slice(0,8))).slice(0,4).map((r,i)=>ligneTraversee(r,formatHM,now,i===0?"next":"")).join("")+'</table>';
+    const mes=traversees(evs.slice(-12)).reverse().slice(0,5);
+    $("mesures").innerHTML = mes.length ? ENTETE_QQ+mes.map(r=>ligneTraversee(r,formatHMS,now,"")).join("")+'</table>'
         : '<div class="vide">Aucun changement mesuré pour l\'instant.</div>';
 }
 
