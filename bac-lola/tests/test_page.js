@@ -25,6 +25,7 @@ vm.runInContext(m[1]+"\nthis.__t={rendre,lirePosition,journal:()=>journal};",ctx
   ok(/Derniers changements mesurés/.test(html)&&/Arrivée à|Départ de/.test(els.mesures.innerHTML),"derniers changements mesurés (les deux quais ensemble)");
   ok(/class="mode"/.test(b),"bandeau de mode");
   ok(ctx.__t.journal().length>=3,"événements détectés en direct : "+ctx.__t.journal().map(e=>e.type+e.q).join(","));
+  ok(/class="bateau/.test(els.carte.innerHTML)&&/Indret|Basse-Indre/.test(els.carte.innerHTML),"visuel : bateau positionné entre les deux quais ("+els.carte.innerHTML.replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim()+")");
   ok(!/class="alerte"/.test(b),"pas d'alerte quand la connexion fonctionne");
   reseauHs=true; await ctx.__t.lirePosition();
   ok(/class="alerte"[^>]*>⚠ Connexion perdue/.test(els.bandeau.innerHTML),"connexion coupée : alerte « Connexion perdue » affichée");

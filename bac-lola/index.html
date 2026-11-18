@@ -29,6 +29,14 @@ h1{font-size:26px;margin:0;font-weight:600}
 .m-arret{border-left-color:var(--gris)}.m-arret .mode{color:var(--gris)}
 .led{width:7px;height:7px;display:inline-block;border-radius:50%;background:var(--vert);box-shadow:0 0 4px var(--vert);margin-right:6px}
 .alerte{background:var(--rouge);color:#fff;border-radius:6px;padding:6px 10px;margin-top:8px;font-size:14px;font-weight:600}
+.voie{position:relative;height:74px;margin:2px 14px 0}
+.voie .eau{position:absolute;left:0;right:0;top:44px;height:3px;border-radius:2px;background:var(--bleu);opacity:.55}
+.voie .pilier{position:absolute;top:38px;width:3px;height:16px;background:var(--gris);border-radius:2px}
+.voie .nomq{position:absolute;top:56px;font-family:var(--mono);font-size:11px;color:var(--dim);white-space:nowrap}
+.bateau{position:absolute;top:2px;width:44px;margin-left:-22px;transition:left 1.2s linear;line-height:0}
+.bateau svg{transition:transform .3s}
+.bateau.vieux{opacity:.35}
+#carte .sens{font-family:var(--mono);font-size:13px;color:var(--dim);text-align:center;margin-top:2px}
 .led.off{background:var(--rouge);box-shadow:0 0 4px var(--rouge)}
 #quais{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .quai{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 12px;min-width:0;text-align:center}
@@ -68,6 +76,7 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
     </div>
 </header>
 <div id="bandeau" class="m-arret"><div class="mode">Chargement…</div><div class="detail"></div><div class="live"></div></div>
+<div id="carte" class="bloc"></div>
 <div id="quais"></div>
 <h2 class="t">Enchaînement prévu</h2><div class="bloc" id="chaine"></div>
 <h2 class="t">Derniers changements mesurés</h2><div class="bloc" id="mesures"></div>
@@ -82,6 +91,7 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
     <li><b>Modes</b> : <i>rotation continue</i> si les départs consécutifs sont espacés de ≤ 8,5 min ; <i>retard / perturbation</i> si l'écart médian à la grille dépasse 4,5 min ; <i>arrêt</i> hors service ou sans mouvement depuis 30 min.</li>
     <li><b>Prévision hybride</b> : simulation du cycle départ → traversée (2,8 min) → arrivée → départ. En grille : créneau + décalage appris (+2,3 min Basse-Indre, +2,0 min Indret, réajusté sur les 5 derniers départs). En rotation : arrivée + 3,6 min de séjour. En semaine, les fenêtres de pointe observées (06:55–09:30, 16:10–19:45) anticipent l'entrée et la sortie de rotation.</li>
     <li><b>Validation</b> : rejeu sur 98 départs du 13 au 17/11/2026 : erreur médiane 0,5 min, 92 % à ±2 min (grille officielle seule : 23 %). En rotation continue, erreur moyenne 1,1 min contre 7,7 min pour la grille.</li>
+    <li><b>Visuel</b> : un bateau est placé entre Indret et Basse-Indre selon la dernière position AIS projetée sur le chenal ; il se retourne selon le sens de déplacement (atténué si la position est ancienne).</li>
   </ul>
   <h3>Sources de données</h3>
   <ul>
@@ -460,7 +470,7 @@ const SEUIL_HORS_ZONE=0.0008; // écart au chenal (unités lat/lon) au-delà duq
 const URL_POSITIONS = "https://peeksoumi.com/lola-live/positions.json";
 const $=id=>document.getElementById(id);
 
-let journal=[], detecteur=null, dernierTs=0, derniereMarche=0, vitesse=null, derniereMesure=null, lecturesOk=false, dernierSucces=0, prec=null;
+let journal=[], detecteur=null, dernierTs=0, derniereMarche=0, vitesse=null, derniereMesure=null, lecturesOk=false, dernierSucces=0, prec=null, pBac=null, sensBac=null;
 
 function vitesseDeplacement(a,b){ // nœuds, entre deux positions [ts,lat,lon] (quand la source ne donne pas la vitesse)
     const dt=(b[0]-a[0])/1000; if(dt<=0) return 0;
@@ -472,6 +482,9 @@ function traiter(s){ // s = [ts (heure AIS, ms), lat, lon, vitesse|null, cap|nul
     const pos=positionSurTrace(s[1],s[2]);
     detecteur.pousser({t:s[0],p:Math.max(0,Math.min(1,pos.progression)),vitesse:v,hors:pos.ecart>SEUIL_HORS_ZONE});
     if(v>=V_MARCHE) derniereMarche=s[0];
+    const pn=Math.max(0,Math.min(1,pos.progression));
+    if(pBac!==null && Math.abs(pn-pBac)>0.004) sensBac=pn>pBac?"N":"S"; // N = vers Basse-Indre
+    pBac=pn;
     vitesse=v; derniereMesure=s[0]; dernierTs=s[0]; prec=s;
 }
 function evenementsEffectifs(now){
@@ -527,6 +540,15 @@ function rendre(){
     if(!lecturesOk) alerte='⚠ Connexion perdue avec le serveur de positions'+(dernierSucces?' — dernière mise à jour il y a '+dur(now-dernierSucces):' — aucune donnée reçue')+'. Nouvelle tentative toutes les 10 s.';
     else if(age!==null && age>3*60000 && !indispo) alerte='⚠ Aucune nouvelle position du bac depuis '+dur(age)+' : source AIS en retard ou bac hors de portée.';
     b.innerHTML='<div class="mode">'+mode.raison+'</div><div class="detail">'+mode.detail+'</div><div class="live">'+live+'</div>'+(alerte?'<div class="alerte" role="alert">'+alerte+'</div>':'');
+    const BATEAU='<svg viewBox="0 0 44 36" width="44" height="36"><path d="M4 22h36l-5 9H9z" fill="#d9635f"/><rect x="8" y="14" width="28" height="8" rx="1" fill="#e8edf0"/><rect x="14" y="7" width="16" height="7" rx="1" fill="#e8edf0"/><rect x="26" y="1" width="4" height="7" fill="#d9635f"/><g fill="#4f8fbd"><rect x="11" y="16.5" width="3" height="3"/><rect x="17" y="16.5" width="3" height="3"/><rect x="23" y="16.5" width="3" height="3"/><rect x="29" y="16.5" width="3" height="3"/></g></svg>';
+    if(pBac!==null){
+        const enMarche=sensBac && vitesse!=null && vitesse>=V_ARRET;
+        const sens=indispo?"Position trop ancienne":(enMarche?"En route vers "+NOM_QUAI[sensBac]+(sensBac==="N"?" →":" ←"):(pBac<=P_QUAI?"À quai à Indret":(pBac>=1-P_QUAI?"À quai à Basse-Indre":"Arrêté en pleine traversée")));
+        const cote=enMarche&&sensBac==="S"?-1:1;
+        $("carte").innerHTML='<div class="voie"><div class="eau"></div><div class="pilier" style="left:0"></div><div class="pilier" style="right:0"></div>'
+            +'<div class="bateau'+(indispo||!lecturesOk?' vieux':'')+'" style="left:'+(pBac*100).toFixed(1)+'%"><div style="transform:scaleX('+cote+')">'+BATEAU+'</div></div>'
+            +'<div class="nomq" style="left:0">Indret</div><div class="nomq" style="right:0">Basse-Indre</div></div><div class="sens">'+sens+'</div>';
+    } else $("carte").innerHTML='<div class="sens">Position du bac en attente…</div>';
     const panne=indispo || (mode.mode==="arret" && mode.raison.indexOf("Arrêt")===0);
     const horsService=mode.mode==="arret" && !panne;
     let html="";
