@@ -15,7 +15,7 @@ for(let n=3;n<=pts.length;n++){
     const els={}, doc={getElementById:id=>els[id]||(els[id]={innerHTML:"",className:"",textContent:""})};
     let horloge=samples[n-1][0]+dt; const RD=Date;
     const D=class extends RD{constructor(...a){super(...(a.length?a:[horloge]))} static now(){return horloge}; static UTC(...a){return RD.UTC(...a)}; static parse(s){return RD.parse(s)}};
-    const ctx={document:doc,fetch:async()=>({ok:true,json:async()=>({samples})}),setInterval(){},Intl,Date:D,Math,JSON,console,parseFloat,isFinite,Number,Set,Array,Object,String};
+    const ctx={document:doc,fetch:async(u)=>/open-meteo/.test(u)?{ok:false}:{ok:true,json:async()=>({samples})},setInterval(){},Intl,Date:D,Math,JSON,console,parseFloat,isFinite,Number,Set,Array,Object,String};
     vm.createContext(ctx); vm.runInContext(code+"\nthis.__t={lirePosition};",ctx);
     ctx.__t.lirePosition().then(()=>{
       const c=els.carte.innerHTML.replace(/<[^>]+>/g," ").replace(/\s+/g," "), q=els.quais.innerHTML.replace(/<[^>]+>/g," ").replace(/\s+/g," ");
