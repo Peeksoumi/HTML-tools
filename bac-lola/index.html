@@ -8,7 +8,7 @@
 :root{
     --bg:#000;--panel:#0a0f12;--panel2:#12181c;--inset:#070b0d;--border:#232d33;--soft:#171f24;
     --text:#e6ebed;--dim:#8a97a0;--faint:#5b6770;
-    --vert:#4fae83;--orange:#d9a55c;--rouge:#d9635f;--bleu:#4f8fbd;--gris:#7b868d;
+    --arr:#6fb4e6;--vert:#4fae83;--orange:#d9a55c;--rouge:#d9635f;--bleu:#4f8fbd;--gris:#7b868d;
     --mono:ui-monospace,'JetBrains Mono','Courier New',monospace;
     --sans:system-ui,'Space Grotesk',Arial,sans-serif;
 }
@@ -74,7 +74,8 @@ th:first-child,td:first-child{text-align:left;white-space:nowrap;color:var(--tex
 table.qq th,table.qq td{text-align:center;white-space:nowrap;color:var(--text);padding-left:3px;width:50%;font-size:15px}
 table.qq td small{display:block;font-size:10px;color:var(--faint)}
 table.qq td.vide2{color:var(--faint)}
-table.qq td.dep{color:var(--orange)}table.qq td.arr{color:#6fb4e6}
+table.qq td.dep{color:var(--orange)}.ta{color:var(--arr);font-weight:600}.td{color:var(--orange);font-weight:600}
+table.qq td.arr{color:var(--arr)}
 th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--dim);padding-left:10px}
 .d-ok{color:var(--vert)}.d-moy{color:var(--orange)}.d-fort{color:var(--rouge)}.d-av{color:var(--bleu)}
 .cpt{display:block;font-size:10px;color:var(--faint)}
@@ -101,7 +102,7 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
 <div id="quais"></div>
 <h2 class="t">Enchaînement prévu</h2><div class="bloc" id="chaine"></div>
 <h2 class="t">Derniers changements mesurés</h2><div class="bloc" id="mesures"></div>
-<div class="pied">Tableaux : orange = départ, bleu = arrivée · Prévisions à ± 2 min près dans 9 cas sur 10 · Δ des cartes = écart prévu − horaire officiel (minutes)</div>
+<div class="pied">Partout : orange = départ, bleu = arrivée · Prévisions à ± 2 min près dans 9 cas sur 10 · Δ des cartes = écart prévu − horaire officiel (minutes)</div>
 <div class="fonct" id="fonctionnement">
   <h2>Fonctionnement et sources</h2>
   <h3>Fonctionnement</h3>
@@ -616,8 +617,8 @@ function rendre(){
         h+='<div class="bateau'+(indispo||!lecturesOk?' vieux':'')+'" style="left:'+(p*100).toFixed(1)+'%"><div style="transform:scaleX('+cote+')">'+BATEAU+'</div></div>'
           +'<div class="nomq'+(!aQuai&&vers==="S"?' dest':'')+ici("S")+'" style="left:0">Indret</div><div class="nomq'+(!aQuai&&vers==="N"?' dest':'')+ici("N")+'" style="right:0">Basse-Indre</div></div>';
         let t,sous="";
-        if(aQuai){ t="À quai à "+NOM_QUAI[Q]; if(prochain&&!indispo) sous=(prochain.t-now<60000?"Départ imminent":"Départ prévu vers "+formatHM(prochain.t)); }
-        else { t=(vers==="N"?"En route vers "+NOM_QUAI[vers]+" ➜":"⬅ En route vers "+NOM_QUAI[vers]); if(prochain&&!indispo) sous="Arrivée prévue vers "+formatHM(prochain.t); }
+        if(aQuai){ t="À quai à "+NOM_QUAI[Q]; if(prochain&&!indispo) sous=(prochain.t-now<60000?'<span class="td">Départ imminent</span>':'Départ prévu vers <span class="td">'+formatHM(prochain.t)+'</span>'); }
+        else { t=(vers==="N"?"En route vers "+NOM_QUAI[vers]+" ➜":"⬅ En route vers "+NOM_QUAI[vers]); if(prochain&&!indispo) sous='Arrivée prévue vers <span class="ta">'+formatHM(prochain.t)+'</span>'; }
         if(indispo) sous="Position trop ancienne : situation à confirmer";
         $("carte").innerHTML=h+'<div class="sens">'+t+(sous?'<small>'+sous+'</small>':'')+'</div>';
     } else $("carte").innerHTML='<div class="sens">Situation du bac en attente…</div>';
@@ -634,10 +635,10 @@ function rendre(){
         else if(deps.length){
             const d=deps[0];
             grand=formatHM(d.t); cpt=horsService?"Reprise du service"+jourTag(d.t,now):dans(d.t,now).replace("maintenant","imminent");
-            if(s===0) etat="Bac à quai ici"+((d.t-now)<60000?" · départ imminent":"");
-            else if(s===1) etat="Bac parti vers "+no+(arr?", de retour ici vers "+formatHM(arr.t):"");
-            else if(s===2) etat="Bac à "+no+(arr?", arrive ici vers "+formatHM(arr.t):"");
-            else if(s===3) etat="Bac en approche"+(arr?", arrive vers "+formatHM(arr.t):"");
+            if(s===0) etat="Bac à quai ici"+((d.t-now)<60000?' · <span class="td">départ imminent</span>':"");
+            else if(s===1) etat="Bac parti vers "+no+(arr?', de retour ici vers <span class="ta">'+formatHM(arr.t)+'</span>':"");
+            else if(s===2) etat="Bac à "+no+(arr?', arrive ici vers <span class="ta">'+formatHM(arr.t)+'</span>':"");
+            else if(s===3) etat="Bac en approche"+(arr?', arrive vers <span class="ta">'+formatHM(arr.t)+'</span>':"");
             if(d.nominal!=null) sec='officiel '+formatHM(d.nominal)+' · <span class="'+(d.mode==="rotation"?"":classeDelta(d.delta))+'">'+fmtDelta(d.delta)+' min</span>';
             if(deps[1]) suiv="Puis "+formatHM(deps[1].t)+(mode.mode==="rotation"?" (rotation)":"");
         }
