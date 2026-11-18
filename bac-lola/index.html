@@ -19,6 +19,8 @@ header{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-con
 h1{font-size:26px;margin:0;font-weight:600}
 .liens{display:flex;gap:14px;font-size:13px}
 .liens a{color:var(--bleu);text-decoration:none}
+.meteo{font-size:13px;color:var(--dim);white-space:nowrap}
+.meteo b{font-size:18px;font-weight:400;margin-right:4px;vertical-align:-1px}
 .liens a:hover{text-decoration:underline}
 #bandeau{background:var(--panel);border:1px solid var(--border);border-left-width:6px;border-radius:10px;padding:12px 14px;margin-bottom:12px}
 #bandeau .mode{font-size:20px;font-weight:600}
@@ -81,6 +83,7 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
         <a href="https://github.com/Peeksoumi/HTML-tools/issues/new?title=%5Bbac-lola%5D%20&amp;body=Outil%20concern%C3%A9%20%3A%20bac-lola%0A%0A" target="_blank" rel="noopener">💡 Proposer une amélioration</a>
         <a href="index.html" download="bac-lola.html" title="Enregistrer la page (le calcul fonctionne hors ligne ; la position en direct du bac demande une connexion)">⬇️ Télécharger la page</a>
     </div>
+    <span id="meteo" class="meteo" title="Météo actuelle aux bacs (Open-Meteo)"></span>
 </header>
 <div id="bandeau" class="m-arret"><div class="mode">Chargement…</div><div class="detail"></div><div class="live"></div></div>
 <div id="carte" class="bloc"></div>
@@ -103,7 +106,8 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
   <h3>Sources de données</h3>
   <ul>
     <li><b>GTFS « Horaires des bacs de Loire en Loire-Atlantique »</b> (Département de Loire-Atlantique, data.gouv.fr, Licence Ouverte) : créneaux nominaux et jours fériés.</li>
-    <li><b>Position AIS de Lola</b> (MMSI 227158520) : AISVesselTracker, repli Shiptrail, relevée toutes les 10 s par le serveur du site et publiées en JSON (12 dernières heures, peeksoumi.com) ; seul appel réseau de la page, rien n'y est envoyé.</li>
+    <li><b>Position AIS de Lola</b> (MMSI 227158520) : AISVesselTracker, repli Shiptrail, relevée toutes les 10 s par le serveur du site et publiées en JSON (12 dernières heures, peeksoumi.com) ; un des deux appels réseau de la page (avec Open-Meteo), rien n'y est envoyé.</li>
+    <li><b>Open-Meteo</b> (open-meteo.com, CC BY 4.0) : météo actuelle (température, ciel, vent) aux coordonnées des bacs, rafraîchie toutes les 10 min ; la page envoie seulement ces coordonnées fixes, rien de personnel.</li>
     <li><b>Calibrage</b> : relevés du serveur du 13 au 17/11/2026 (paramètres du modèle).</li>
   </ul>
   <h3>Limites</h3>
@@ -475,7 +479,31 @@ const SEUIL_HORS_ZONE=0.0008; // écart au chenal (unités lat/lon) au-delà duq
 // ====================================================================
 // Positions AIS de Lola : relevés du serveur du site (AISVesselTracker, repli Shiptrail), publiés en JSON (12 dernières heures).
 const URL_POSITIONS = "https://peeksoumi.com/lola-live/positions.json";
+const URL_METEO = "https://api.open-meteo.com/v1/forecast?latitude=47.196&longitude=-1.674&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m&wind_speed_unit=kmh&timezone=Europe%2FParis";
 const $=id=>document.getElementById(id);
+function iconeMeteo(c,jour){ // codes WMO → [pictogramme, libellé]
+    if(c===0) return jour?["☀️","Ciel dégagé"]:["🌙","Ciel dégagé"];
+    if(c===1||c===2) return jour?["🌤️","Peu nuageux"]:["☁️","Peu nuageux"];
+    if(c===3) return ["☁️","Couvert"];
+    if(c===45||c===48) return ["🌫️","Brouillard"];
+    if(c>=51&&c<=57) return ["🌦️","Bruine"];
+    if(c>=61&&c<=67||c>=80&&c<=82) return ["🌧️","Pluie"];
+    if(c>=71&&c<=77||c===85||c===86) return ["❄️","Neige"];
+    if(c>=95) return ["⛈️","Orage"];
+    return ["🌡️","Météo"];
+}
+const PTS_CARDINAUX=["N","NE","E","SE","S","SO","O","NO"];
+async function lireMeteo(){
+    try{
+        const rep=await fetch(URL_METEO); if(!rep.ok) throw new Error();
+        const c=(await rep.json()).current; if(!c||typeof c.temperature_2m!=="number") throw new Error();
+        const h=parseInt(String(c.time||"").slice(11,13),10), jour=isNaN(h)||(h>=7&&h<19);
+        const [ico,lib]=iconeMeteo(c.weather_code,jour);
+        const vent=Math.round(c.wind_speed_10m)+" km/h"+(typeof c.wind_direction_10m==="number"?" "+PTS_CARDINAUX[Math.round(c.wind_direction_10m/45)%8]:"");
+        $("meteo").innerHTML='<b>'+ico+'</b>'+Math.round(c.temperature_2m)+' °C · '+lib+' · vent '+vent;
+        $("meteo").title="Météo actuelle aux bacs (Open-Meteo), relevé de "+String(c.time).slice(11,16);
+    }catch(e){ $("meteo").textContent=""; }
+}
 
 let journal=[], detecteur=null, dernierTs=0, derniereMarche=0, vitesse=null, derniereMesure=null, lecturesOk=false, dernierSucces=0, prec=null, pBac=null;
 
@@ -601,6 +629,8 @@ function rendre(){
 
 rendre();
 lirePosition();
+lireMeteo();
+setInterval(lireMeteo,600000);
 setInterval(lirePosition,10000);
 setInterval(rendre,1000);
 </script>
