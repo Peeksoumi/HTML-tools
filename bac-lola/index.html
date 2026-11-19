@@ -116,8 +116,8 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
   <h2>Fonctionnement et sources</h2>
   <h3>Fonctionnement</h3>
   <ul>
-    <li><b>Détection</b> : la page lit la dernière heure de positions AIS de Lola (projetées sur le chenal) dans la copie publique GitHub du relais, toutes les 30 s (voir sources). arrivée et départ à un quai sont confirmés par deux positions cohérentes (lieu et vitesse). Tout le calcul reste dans le navigateur.</li>
-    <li><b>Entre deux mises à jour</b> : la copie GitHub est mise à jour à chaque nouvelle position (une toutes les quelques secondes en traversée si aisstream capte l'estuaire, une toutes les 3-5 min à quai ; le relais republie aussi chaque minute sans nouvelle position, et la page affiche un avertissement et repasse en hypothèse s'il se tait plus de 3 min) ; tant que la position est fraîche (moins de 1 min en mouvement, moins de 4 min à quai), la situation affichée est une <b>mesure</b> (point vert plein) et le modèle ne la contredit jamais. Au-delà, c'est une <b>hypothèse</b> : le modèle déroule les départs et arrivées prévus déjà passés, et la situation, le bateau (position interpolée) et le mode sont signalés en gris pointillé (« supposé », « dernier état connu »). Les heures prévues sont soulignées en pointillé. Les tableaux « changements mesurés » ne montrent que des mesures ; chaque mise à jour recale l'hypothèse.</li>
+    <li><b>Détection</b> : la page lit la dernière heure de positions AIS de Lola (projetées sur le chenal) dans la copie publique GitHub du relais, toutes les 75 s par l'API GitHub (repli toutes les 30 s sur raw.githubusercontent.com, dont le cache retarde de plusieurs minutes ; voir sources). arrivée et départ à un quai sont confirmés par deux positions cohérentes (lieu et vitesse). Tout le calcul reste dans le navigateur.</li>
+    <li><b>Entre deux mises à jour</b> : la copie GitHub est mise à jour à chaque nouvelle position (une toutes les quelques secondes en traversée si aisstream capte l'estuaire, une toutes les 3-5 min à quai ; le relais republie aussi chaque minute sans nouvelle position, et la page affiche un avertissement et repasse en hypothèse s'il se tait plus de 4 min (8 min en repli sur raw)) ; tant que la position est fraîche (moins de 1 min en mouvement, moins de 4 min à quai), la situation affichée est une <b>mesure</b> (point vert plein) et le modèle ne la contredit jamais. Au-delà, c'est une <b>hypothèse</b> : le modèle déroule les départs et arrivées prévus déjà passés, et la situation, le bateau (position interpolée) et le mode sont signalés en gris pointillé (« supposé », « dernier état connu »). Les heures prévues sont soulignées en pointillé. Les tableaux « changements mesurés » ne montrent que des mesures ; chaque mise à jour recale l'hypothèse.</li>
     <li><b>Nominal</b> : grille GTFS, un départ toutes les 20 min par quai (semaine : Basse-Indre 05:30→22:10, Indret 05:40→22:20 ; week-end et fériés : 06:30→21:30 et 06:40→21:20). Arrivée nominale = départ nominal + 3 min.</li>
     <li><b>Lecture</b> : chaque quai affiche son prochain départ prévu et la situation du bac (à quai ici, en traversée vers l'autre quai, à l'autre quai, en traversée vers ici) ; l'enchaînement complet des changements est listé une seule fois, une ligne par traversée, départ et arrivée ensemble, chacun dans la colonne de son quai (Indret à gauche, Basse-Indre à droite, comme le schéma) ; l'horaire officiel et l'écart Δ restent sur les cartes.</li>
     <li><b>Modes</b> : <i>rotation continue</i> si les départs consécutifs sont espacés de ≤ 8,5 min ; <i>retard / perturbation</i> si l'écart médian à la grille dépasse 4,5 min ; <i>arrêt</i> hors service ou sans mouvement depuis 30 min.</li>
@@ -129,6 +129,7 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
   <ul>
     <li><b>GTFS « Horaires des bacs de Loire en Loire-Atlantique »</b> (Département de Loire-Atlantique, data.gouv.fr, Licence Ouverte) : créneaux nominaux et jours fériés.</li>
     <li><b>Position AIS de Lola</b> (MMSI 227158520) : aisstream.io (flux AIS de récepteurs de bénévoles), avec repli sur AISVesselTracker puis Shiptrail si aisstream est muet depuis 20 s en mouvement ou 75 s à quai (ces services refusent les appels d'une page web). Un script du dépôt (<i>bac-lola/relais</i>), exécuté sur le serveur du site, garde la connexion à aisstream, interroge les secours au besoin et garde 1 h en mémoire vive. Le relais publie la dernière heure de positions dans la copie publique <b>GitHub</b> <i>Peeksoumi/lola-relais</i> dès qu'une nouvelle position arrive (au plus toutes les 15 s, un seul commit, sans historique) ; la page ne lit que cette copie, c'est la source qui cale le modèle. Aucune base de données, la page ne lit jamais les relevés d'entraînement ; c'est l'un des deux appels réseau de la page (avec Open-Meteo), rien n'y est envoyé.</li>
+    <li><b>API GitHub</b> (api.github.com) : lecture de positions.json du dépôt lola-relais, sans cache CDN ; limite de 60 requêtes/h par IP, d'où une lecture toutes les 75 s et le repli automatique sur raw.githubusercontent.com (cache de ~5 min) pendant 10 min si elle refuse.</li>
     <li><b>Google Maps</b> : le bouton « Itinéraire » de chaque quai ouvre simplement un lien google.com/maps (destination = accès au quai, voiture) ; la page n'envoie rien à Google tant que vous ne cliquez pas.</li>
     <li><b>Open-Meteo</b> (open-meteo.com, CC BY 4.0) : météo actuelle (température, ciel, vent) aux coordonnées des bacs, rafraîchie toutes les 10 min ; la page envoie seulement ces coordonnées fixes, rien de personnel.</li>
     <li><b>Calibrage</b> : relevés enregistrés par le serveur du 13 au 18/11/2026 : ils ne servent qu'à fixer les paramètres du modèle hors ligne, la page ne les lit jamais.</li>
@@ -503,10 +504,14 @@ const SEUIL_HORS_ZONE=0.0008; // écart au chenal (unités lat/lon) au-delà duq
 // Positions AIS de Lola, deux lectures simultanées d'un même relais (script bac-lola/relais, jamais les relevés enregistrés) :
 //  - copie publique du dépôt lola-relais, publiée par le relais à chaque nouvelle position (≥ 15 s d'intervalle) et au moins 1 fois/min : seule source de la page, elle cale le modèle.
 const URL_GITHUB = "https://raw.githubusercontent.com/Peeksoumi/lola-relais/main/positions.json";
+// Lecture principale : API GitHub (sans cache CDN : position vue 1 à 2 min après sa publication). raw.githubusercontent.com garde une copie ~5 min (mesuré) : simple repli.
+// L'API non authentifiée est limitée à 60 requêtes/h par IP (les réponses 304 comptent aussi) : une lecture toutes les 75 s (~48/h), et repli sur raw pendant 10 min si elle refuse.
+const URL_API = "https://api.github.com/repos/Peeksoumi/lola-relais/contents/positions.json";
+const ENTETES_API = {Accept:"application/vnd.github.raw"}, PAS_API = 75000, PAUSE_API = 600000;
 // Deux seuils selon la dernière vitesse connue : à quai l'AIS n'émet qu'une position toutes les 3 à 5 min ; en mouvement, toutes les quelques secondes.
 // frais : la position est une mesure ; au-delà, la situation n'est plus qu'une hypothèse du modèle. alerte : bandeau rouge.
-const SEUILS={quai:{frais:4*60000,alerte:5*60000}, marche:{frais:60000,alerte:60000}}, AGE_INDISPO=10*60000, RELAIS_MUET=3*60000;
-let dernierGithub=0, majRelais=0;
+const SEUILS={quai:{frais:4*60000,alerte:5*60000}, marche:{frais:60000,alerte:60000}}, AGE_INDISPO=10*60000, RELAIS_MUET=4*60000, RELAIS_MUET_RAW=8*60000; // via l'API : battement 1/min + lecture 75 s ; via le cache raw (~5 min de retard) : seuil plus large
+let dernierGithub=0, majRelais=0, apiPause=0, viaApi=false;
 const URL_METEO = "https://api.open-meteo.com/v1/forecast?latitude=47.196&longitude=-1.674&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m&wind_speed_unit=kmh&timezone=Europe%2FParis";
 const $=id=>document.getElementById(id);
 function iconeMeteo(c,jour){ // codes WMO → [pictogramme, libellé]
@@ -567,18 +572,21 @@ function avecEstimes(evs,now){
     }
     return out;
 }
-async function lireSource(url){
-    const rep=await fetch(url,{cache:"no-store"}); if(!rep.ok) throw new Error();
+async function lireSource(url,entetes){
+    const rep=await fetch(url,{cache:"no-store",headers:entetes}); if(!rep.ok) throw new Error();
     const d=await rep.json(); if(!d||!Array.isArray(d.samples)) throw new Error();
     majRelais=d.maj||0; // heure de la dernière publication du relais (battement de cœur, au moins 1/min)
     return d.samples;
 }
 async function lirePosition(){
     const maintenant=Date.now();
-    // une lecture toutes les 30 s (le détecteur ne traite que les positions plus récentes que celles déjà vues)
+    // une lecture toutes les 75 s via l'API (30 s en repli sur raw) (le détecteur ne traite que les positions plus récentes que celles déjà vues)
     let git;
-    if(maintenant-dernierGithub>=30000){
-        git=await lireSource(URL_GITHUB+"?t="+Math.floor(maintenant/30000)).catch(()=>null); // ?t= : contourne le cache du CDN GitHub
+    const apiDispo=maintenant>apiPause;
+    if(maintenant-dernierGithub>=(apiDispo?PAS_API:30000)){
+        viaApi=false;
+        if(apiDispo){ git=await lireSource(URL_API,ENTETES_API).catch(()=>null); if(git) viaApi=true; else apiPause=maintenant+PAUSE_API; } // quota ou erreur : repli sur raw
+        if(!git) git=await lireSource(URL_GITHUB+"?t="+Math.floor(maintenant/30000)).catch(()=>null); // repli : copie du CDN, plusieurs minutes de retard
         if(git){ dernierGithub=maintenant; githubOk=true; } else githubOk=false;
     }
     const tout=(git||[]).sort((a,b)=>a[0]-b[0]);
@@ -633,7 +641,7 @@ function rendre(){
     const age=derniereMesure?now-derniereMesure:null;
     const enMarche=vitesse!=null&&vitesse>=V_MARCHE, SE=enMarche?SEUILS.marche:SEUILS.quai;
     const enService=dansService(now); // hors service (nuit), une position ancienne est normale : le bac n'émet plus
-    const relaisMuet=majRelais>0 && now-majRelais>RELAIS_MUET && enService; // le relais publie au moins 1 fois/min : sinon il est arrêté
+    const relaisMuet=majRelais>0 && now-majRelais>(viaApi?RELAIS_MUET:RELAIS_MUET_RAW) && enService; // le relais publie au moins 1 fois/min : sinon il est arrêté
     const indispo=age===null || (age>AGE_INDISPO && enService);
     // Origine de la situation affichée : « mesure » (position AIS fraîche), « hypothese » (position ancienne : le modèle déduit), « indisponible », « aucune »
     const etatMes = age===null ? "aucune" : indispo ? "indisponible" : (lecturesOk&&!relaisMuet&&age<SE.frais ? "mesure" : "hypothese");
