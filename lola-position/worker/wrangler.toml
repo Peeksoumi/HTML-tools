@@ -1,0 +1,11 @@
+name = "lola-ais"
+main = "lola-worker.js"
+compatibility_date = "2025-01-01"
+
+[[durable_objects.bindings]]
+name = "LOLA_AIS"
+class_name = "LolaAIS"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["LolaAIS"]
