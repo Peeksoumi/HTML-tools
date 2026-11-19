@@ -119,7 +119,7 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
   <h3>Sources de données</h3>
   <ul>
     <li><b>GTFS « Horaires des bacs de Loire en Loire-Atlantique »</b> (Département de Loire-Atlantique, data.gouv.fr, Licence Ouverte) : créneaux nominaux et jours fériés.</li>
-    <li><b>Position AIS de Lola</b> (MMSI 227158520) : AISVesselTracker, repli Shiptrail (leurs serveurs refusent les appels d'une page web). Un script du dépôt (<i>bac-lola/relais</i>), exécuté sur le serveur du site, les interroge chaque minute et garde 1 h en mémoire vive. La page le lit de deux façons à la fois : en <b>direct</b> (peeksoumi.com, positions d'au plus ~2 min) et via la copie publique <b>GitHub</b> <i>Peeksoumi/lola-relais</i> (publiée toutes les 5 min, un seul commit, sans historique), qui resynchronise le modèle si le direct ne répond pas. Les positions sont fusionnées par heure. Aucune base de données, la page ne lit jamais les relevés d'entraînement ; ce sont deux des trois appels réseau de la page (avec Open-Meteo), rien n'y est envoyé.</li>
+    <li><b>Position AIS de Lola</b> (MMSI 227158520) : aisstream.io (flux AIS de récepteurs de bénévoles), avec repli sur AISVesselTracker puis Shiptrail si aisstream est muet depuis 4 min (ces services refusent les appels d'une page web). Un script du dépôt (<i>bac-lola/relais</i>), exécuté sur le serveur du site, garde la connexion à aisstream, interroge les secours au besoin et garde 1 h en mémoire vive. La page le lit de deux façons à la fois : en <b>direct</b> (peeksoumi.com, positions d'au plus ~2 min) et via la copie publique <b>GitHub</b> <i>Peeksoumi/lola-relais</i> (publiée à chaque changement de position, au plus toutes les 15 s, un seul commit, sans historique), qui resynchronise le modèle si le direct ne répond pas. Les positions sont fusionnées par heure. Aucune base de données, la page ne lit jamais les relevés d'entraînement ; ce sont deux des trois appels réseau de la page (avec Open-Meteo), rien n'y est envoyé.</li>
     <li><b>Open-Meteo</b> (open-meteo.com, CC BY 4.0) : météo actuelle (température, ciel, vent) aux coordonnées des bacs, rafraîchie toutes les 10 min ; la page envoie seulement ces coordonnées fixes, rien de personnel.</li>
     <li><b>Calibrage</b> : relevés enregistrés par le serveur du 13 au 18/11/2026 : ils ne servent qu'à fixer les paramètres du modèle hors ligne, la page ne les lit jamais.</li>
   </ul>
@@ -491,12 +491,12 @@ const SEUIL_HORS_ZONE=0.0008; // écart au chenal (unités lat/lon) au-delà duq
 //  INTERFACE
 // ====================================================================
 // Positions AIS de Lola, deux lectures simultanées d'un même relais (script bac-lola/relais, jamais les relevés enregistrés) :
-//  - « direct » : le relais lui-même (mémoire vive, 1 h, remis à jour chaque minute) ; les sources AIS refusant les navigateurs, c'est le seul accès au direct ;
-//  - « GitHub » : copie publique du dépôt lola-relais, publiée toutes les 5 min ; sert à resynchroniser le modèle quand le direct ne répond pas.
+//  - « direct » : le relais lui-même (mémoire vive, 1 h, remis à jour à chaque nouvelle position) ; les sources AIS refusant les navigateurs, c'est le seul accès au direct ;
+//  - « GitHub » : copie publique du dépôt lola-relais, publiée à chaque changement de position (≥ 15 s d'intervalle) ; sert à resynchroniser le modèle quand le direct ne répond pas.
 const URL_DIRECT = "https://peeksoumi.com/lola-direct/positions";
 const URL_GITHUB = "https://raw.githubusercontent.com/Peeksoumi/lola-relais/main/positions.json";
 const AGE_ALERTE_DIRECT=3*60000, AGE_INDISPO_DIRECT=10*60000;   // direct disponible : positions d'au plus ~1-2 min
-const AGE_ALERTE_GITHUB=12*60000, AGE_INDISPO_GITHUB=20*60000;  // GitHub seul : positions d'au plus ~6 min (publication toutes les 5 min + cache)
+const AGE_ALERTE_GITHUB=12*60000, AGE_INDISPO_GITHUB=20*60000;  // GitHub seul : positions d'au plus ~6 min (publication à chaque changement, ≥ 15 s d'intervalle + cache)
 let dernierDirect=0, dernierGithub=0;
 const URL_METEO = "https://api.open-meteo.com/v1/forecast?latitude=47.196&longitude=-1.674&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m&wind_speed_unit=kmh&timezone=Europe%2FParis";
 const $=id=>document.getElementById(id);
@@ -653,7 +653,7 @@ function rendre(){
         if(aQuai){ t="À quai à "+NOM_QUAI[Q]; if(prochain&&!indispo) sous=(prochain.t-now<60000?'<span class="td">Départ imminent</span>':'Départ prévu vers <span class="td">'+formatHM(prochain.t)+'</span>'); }
         else { t=(vers==="N"?"En route vers "+NOM_QUAI[vers]+" ➜":"⬅ En route vers "+NOM_QUAI[vers]); if(prochain&&!indispo) sous='Arrivée prévue vers <span class="ta">'+formatHM(prochain.t)+'</span>'; }
         if(indispo) sous="Position trop ancienne : situation à confirmer";
-        else if(estime||age>90000) sous+=(sous?' · ':'')+'<i>estimé par le modèle'+(direct?'':' (relais GitHub : mis à jour toutes les 5 min)')+'</i>';
+        else if(estime||age>90000) sous+=(sous?' · ':'')+'<i>estimé par le modèle'+(direct?'':' (relais GitHub : mis à jour à chaque changement de position)')+'</i>';
         $("carte").innerHTML=h+'<div class="sens">'+t+(sous?'<small>'+sous+'</small>':'')+'</div>';
     } else $("carte").innerHTML='<div class="sens">Situation du bac en attente…</div>';
     const panne=indispo || (mode.mode==="arret" && mode.raison.indexOf("Arrêt")===0);
