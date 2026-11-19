@@ -162,5 +162,14 @@ class TestRelais(unittest.TestCase):
         self.assertTrue(R.nouveau.is_set())
 
 
+    def test_cle_vide_desactive_aisstream(self):
+        import os, tempfile
+        d = tempfile.mkdtemp()
+        open(os.path.join(d, "aisstream_key"), "w").write("\n")
+        os.environ["CREDENTIALS_DIRECTORY"] = d
+        R.boucle_aisstream()    # doit rendre la main tout de suite, sans se connecter
+        self.assertIn("désactivé", R.etat["ais"])
+
+
 if __name__ == "__main__":
     unittest.main()
