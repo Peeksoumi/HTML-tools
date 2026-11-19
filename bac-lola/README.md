@@ -19,6 +19,13 @@ liste de l'enchaînement prévu des changements (une ligne par traversée, dépa
    avec rattrapage immédiat si le bac a moins de 6 min de retard. Rotation : arrivée + 3,6 min. Fenêtres de pointe de semaine (06:55–09:30, 16:00–19:15)
    pour anticiper l'entrée / la sortie de rotation.
 
+## Changement de courant (situation de perturbation anticipée)
+Le courant de la Loire s'inverse (flot ⇄ jusant) deux fois par marée. La page le calcule seule d'après la date : marée harmonique + tables de renverses du Port
+(moteur de `courant-loire`, inliné par `python3 inject_courant.py`, enveloppe dans `src/courant-wrapper.js`), débit supposé 260 m³/s, **+ 20 min** de correction mesurée sur le bac.
+- **Mesure de référence** : 12 renverses du 13 au 19/11/2026 repérées par la trajectoire du bac (passe ≈ 170 m à l'est de la droite entre les quais au flot, 40–80 m à l'ouest au jusant ; corrélation −0,71 avec la pente du niveau à Nantes). Les tables brutes avancent de 20 min (médiane) ; avec la correction, erreur moyenne ≈ 15 min (validation en laissant une mesure de côté), pire cas 51 min sur 12 (18/11), fenêtre affichée ± 20 min.
+- **Affichage** : bandeau violet (à venir 90 min avant, en cours dans la fenêtre, installé 45 min après) ; lignes de l'enchaînement surlignées si un horaire tombe dans la fenêtre. Les horaires prévus ne sont **pas** modifiés : sur 397 départs, aucun écart significatif près des renverses (22 % d'écarts > 4 min à ± 30 min, 19 % ailleurs).
+- **Suite** : rejouer ce test quand il y aura des vives-eaux et plus de renverses mesurées, puis décider d'un décalage des départs.
+
 ## Calibrage et validation
 Relevés enregistrés par le serveur du 13 au 18/11/2026 (≈ 7 800 positions, ≈ 1 000 événements, 490 départs évaluables). Rejeu : à chaque arrivée on prévoit
 le départ suivant. Ces données servent uniquement à fixer les paramètres hors ligne ; la page ne les lit jamais.
@@ -46,9 +53,9 @@ Un seul quai est mis en évidence, partout à la fois (schéma, carte, première
 Un bateau se déplace entre Indret et Basse-Indre selon la dernière position AIS (progression le long du chenal) ; la situation (4 cas : à quai Indret, à quai Basse-Indre, en route vers l'un ou l'autre) vient du dernier changement détecté, comme les cartes de quai, avec une flèche de direction.
 
 ## Limites
-Un bandeau rouge « Connexion perdue » apparaît dès que le serveur de positions ne répond plus (avec l'ancienneté de la dernière mise à jour), et un autre après 3 min sans nouvelle position. La page suspend ses prévisions après 10 min sans nouvelle position AIS. Les causes d'un retard (autre bateau, changement de sens de la marée, vent) ne sont pas détectées en direct ; le serveur les enregistre
+Un bandeau rouge « Connexion perdue » apparaît dès que le serveur de positions ne répond plus (avec l'ancienneté de la dernière mise à jour), et un autre après 3 min sans nouvelle position. La page suspend ses prévisions après 10 min sans nouvelle position AIS. Les causes d'un retard (autre bateau, vent) ne sont pas détectées en direct ; le changement de courant est anticipé par le calcul mais son effet n'est pas encore mesuré ; le serveur les enregistre
 (navires voisins, marée, météo) pour une version ultérieure. Heures mesurées à ± 1 min. Calibrage sur 6 jours.
 
 ## Développement
-Moteur, géométrie du chenal et interface sont inlinés dans `index.html` (blocs de script successifs).
+Moteur, géométrie du chenal et interface sont inlinés dans `index.html` (un seul bloc `<script>`). Le calcul du courant est généré : modifier `src/courant-wrapper.js` ou `courant-loire/src`, puis `python3 inject_courant.py`. Test : `node tests/test_courant.js`.
 Tests : `node tests/test_moteur.js` (grille, modes, prévision), `node tests/test_page.js` (page avec faux DOM, événements détectés en direct).
