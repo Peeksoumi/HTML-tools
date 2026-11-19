@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lola · position AIS en direct</title>
+<style>
+:root{
+    --bg:#000;--panel:#0a0f12;--panel2:#12181c;--inset:#070b0d;--border:#232d33;--soft:#171f24;
+    --text:#e6ebed;--dim:#8a97a0;--faint:#5b6770;
+    --vert:#4fae83;--orange:#d9a55c;--rouge:#d9635f;--bleu:#4f8fbd;--bleu-clair:#7cb3d6;
+    --mono:ui-monospace,'JetBrains Mono','Courier New',monospace;
+    --sans:system-ui,'Space Grotesk',Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);padding:max(12px,env(safe-area-inset-top)) 10px 24px}
+#app{max-width:520px;margin:0 auto}
+header{margin:4px 4px 10px}
+.haut{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-content:space-between}
+h1{font-size:26px;margin:0;font-weight:600}
+.liens{display:flex;gap:14px;font-size:13px}
+.liens a{color:var(--bleu);text-decoration:none}
+.liens a:hover{text-decoration:underline}
+.sub{font-size:14px;color:var(--dim);margin-top:2px}
+#statut{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--border);border-left-width:6px;border-radius:10px;padding:12px 14px;margin-bottom:12px;font-family:var(--mono);font-size:14px;color:var(--dim)}
+#statut.ok{border-left-color:var(--vert);color:var(--vert)}
+#statut.warn{border-left-color:var(--orange);color:var(--orange)}
+#statut.bad{border-left-color:var(--rouge);color:var(--rouge)}
+#statutTexte{flex:1}
+#horloge{color:var(--faint);font-size:13px}
+#cadre{background:radial-gradient(ellipse at 40% 50%,rgba(79,143,189,.06),transparent 70%),var(--inset);border:1px solid var(--border);border-radius:10px}
+#carte{display:block;width:100%;height:300px}
+#legende{display:flex;flex-wrap:wrap;gap:4px 14px;padding:6px 6px 10px;font-family:var(--mono);font-size:12px;color:var(--faint)}
+#proche{padding:4px 6px 12px;font-family:var(--mono);font-size:15px;color:var(--orange)}
+#mesures{display:grid;grid-template-columns:1fr 1fr;gap:12px 10px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px}
+.m{display:flex;flex-direction:column}
+.m .l{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.m .v{font-family:var(--mono);font-size:21px}
+.m .v.pet{font-size:17px}
+#sources{margin:12px 4px 0;font-family:var(--mono);font-size:12px;line-height:1.6;color:var(--faint);white-space:pre-line}
+.fonct{margin:22px 4px 0;padding-top:14px;border-top:1px solid var(--border);font-size:13px;color:var(--dim);line-height:1.5}
+.fonct h2{font-size:17px;color:var(--text);margin:0 0 6px}
+.fonct h3{font-family:var(--sans);font-size:13px;letter-spacing:0;text-transform:none;color:var(--text);margin:12px 0 4px}
+.fonct ul{margin:0;padding-left:18px}.fonct li{margin:3px 0}
+</style>
+</head>
+<body>
+<div id="app">
+
+<header>
+  <div class="haut">
+    <h1>Lola · position AIS</h1>
+    <div class="liens"><a href="https://github.com/Peeksoumi/HTML-tools/issues/new?title=%5Blola-position%5D%20&amp;body=Outil%20concern%C3%A9%20%3A%20lola-position%0A%0A" target="_blank" rel="noopener">💡 Proposer une amélioration</a></div>
+  </div>
+  <div class="sub">Bac de Loire Indret ⇄ Basse-Indre · MMSI 227158520</div>
+</header>
+
+<div id="statut"><span id="statutTexte">Connexion…</span><span id="horloge">--:--:--</span></div>
+
+<div id="cadre"><canvas id="carte"></canvas></div>
+<div id="legende"><span>● relevé AIS</span><span>◯ estimation</span><span>— tracé aller</span><span>┄ tracé retour</span></div>
+<div id="proche">—</div>
+
+<div id="mesures">
+  <div class="m"><span class="l">Latitude</span><span class="v" id="vLat">—</span></div>
+  <div class="m"><span class="l">Longitude</span><span class="v" id="vLon">—</span></div>
+  <div class="m"><span class="l">Vitesse</span><span class="v" id="vVit">—</span></div>
+  <div class="m"><span class="l">Cap</span><span class="v" id="vCap">—</span></div>
+  <div class="m"><span class="l">Heure du relevé</span><span class="v pet" id="vHeure">—</span></div>
+  <div class="m"><span class="l">Âge du relevé</span><span class="v pet" id="vAge">—</span></div>
+</div>
+<div id="sources"></div>
+
+<div class="fonct" id="fonctionnement">
+  <h2>Fonctionnement et sources</h2>
+  <h3>Fonctionnement</h3>
+  <ul>
+    <li><b>Lecture</b> : trois sources sont interrogées en parallèle (worker AIS toutes les 5 s, relais du site toutes les 15 s, copie GitHub toutes les 60 s seulement si les deux autres sont muettes) ; la page garde le relevé à l'heure AIS la plus récente.</li>
+    <li><b>Temps réel</b> : entre deux relevés, la position est estimée en ligne droite d'après la vitesse et le cap (60 s au plus), puis lissée à l'arrivée du relevé suivant. Point plein = relevé, anneau = estimation.</li>
+    <li><b>Calcul</b> : tout se fait dans le navigateur, la page ne fait que lire les sources et n'y envoie rien.</li>
+  </ul>
+  <h3>Sources de données</h3>
+  <ul>
+    <li><b>Worker AIS</b> (dossier <i>lola-position/worker</i>) : flux temps réel d'aisstream.io (récepteurs de bénévoles, gratuit sur clé), filtré sur le MMSI 227158520.</li>
+    <li><b>Relais du site</b> (<i>peeksoumi.com/lola-direct</i>) : AISVesselTracker, Shiptrail en secours, remis à jour chaque minute (voir <i>bac-lola/relais</i>).</li>
+    <li><b>Copie GitHub</b> <i>Peeksoumi/lola-relais</i> : même relais, publié toutes les 5 min.</li>
+    <li><b>Tracé du chenal</b> : GTFS officiel « Bacs de Loire en Loire-Atlantique » (aller) ; le retour est son symétrique par rapport à l'axe nord-sud.</li>
+  </ul>
+  <h3>Limites</h3>
+  <ul>
+    <li>La page ne peut pas être plus fraîche que ses sources : à quai, un bac n'émet qu'un relevé toutes les ~3 min.</li>
+    <li>Le worker AIS ne répond que s'il est déployé et si un récepteur capte l'estuaire ; sinon le relais prend le relais, avec ~1 min de retard.</li>
+    <li>L'estimation est rectiligne : fausse dans les virages et à l'accostage. L'âge se calcule avec l'horloge de l'appareil.</li>
+  </ul>
+</div>
+
+</div>
+
+<script>
+// Sources de position (le plus récent des relevés gagne) :
+//  - worker AIS (aisstream.io, dossier worker/) : temps réel, JSON {releve:{lat,lon,vitesseNoeuds,capDegres,heureUtc}} ;
+//  - relais du site (dépôt bac-lola/relais) : {samples:[[heure AIS en ms, lat, lon, vitesse|null, cap|null], ...]}, 1 h ;
+//  - copie GitHub du même relais, publiée toutes les 5 min : secours.
+const URL_WORKER = "https://lola-ais.swortom44.workers.dev/?format=json";
+const URL_DIRECT = "https://peeksoumi.com/lola-direct/positions";
+const URL_GITHUB = "https://raw.githubusercontent.com/Peeksoumi/lola-relais/main/positions.json";
+const DELAI_MAX_MS = 6000;
+const EXTRAPOLATION_MAX_S = 60;
+const LISSAGE_MS = 700;
+const AGE_OK_S = 120, AGE_ALERTE_S = 600;
+
+// Tracé aller (GTFS officiel), Indret -> Basse-Indre
+const TRACE_ALLER = [
+  {lat:47.19583,lon:-1.67574},{lat:47.195988,lon:-1.6759925},{lat:47.19613,lon:-1.6761373},
+  {lat:47.19642,lon:-1.6763519},{lat:47.19673,lon:-1.6764485},{lat:47.19703,lon:-1.6764216},
+  {lat:47.19724,lon:-1.6762393},{lat:47.197395,lon:-1.6759496},{lat:47.197483,lon:-1.6755311},
+  {lat:47.19751,lon:-1.6751771},{lat:47.19744,lon:-1.67439}
+];
+// Tracé retour (symétrique du tracé aller par rapport à l'axe nord-sud du chenal)
+const TRACE_RETOUR = [
+  {lat:47.195334,lon:-1.6743426},{lat:47.195283,lon:-1.6740076},{lat:47.195283,lon:-1.6737533},
+  {lat:47.195329,lon:-1.6732804},{lat:47.195452,lon:-1.6728507},{lat:47.195639,lon:-1.6725036},
+  {lat:47.195860,lon:-1.6723539},{lat:47.196110,lon:-1.6723320},{lat:47.196394,lon:-1.6724646},
+  {lat:47.196607,lon:-1.6726341},{lat:47.197006,lon:-1.6731680}
+];
+const ZONES = [
+  {lat:47.19583, lon:-1.67574,  nom:"Indret"},
+  {lat:47.197278,lon:-1.676169, nom:"Milieu Loire"},
+  {lat:47.19744, lon:-1.67439,  nom:"Basse-Indre"}
+];
+
+const $ = id => document.getElementById(id);
+const COS_REF = Math.cos(47.1965*Math.PI/180);
+const plan = (lat,lon) => ({x:lon*COS_REF, y:lat});
+const fmtParis = new Intl.DateTimeFormat("fr-FR",{timeZone:"Europe/Paris",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false});
+
+function fmtDuree(s){
+  s = Math.max(0,Math.round(s));
+  return s<60 ? s+" s" : Math.floor(s/60)+" min "+String(s%60).padStart(2,"0")+" s";
+}
+
+// ---------- Lecture des sources ----------
+function releveOk(t,lat,lon){
+  return Number.isFinite(t) && Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat)<=90 && Math.abs(lon)<=180;
+}
+const nombreOuNull = v => Number.isFinite(v) ? v : null;
+
+// Relais du site et copie GitHub : on retient l'échantillon à l'heure AIS la plus récente
+function releveDeEchantillons(d){
+  if(!d || !Array.isArray(d.samples)) throw new Error("format inattendu");
+  let meilleur = null;
+  d.samples.forEach(function(s){
+    if(Array.isArray(s) && releveOk(s[0],s[1],s[2]) && (!meilleur || s[0]>meilleur[0])) meilleur = s;
+  });
+  return meilleur ? {t:meilleur[0], lat:meilleur[1], lon:meilleur[2], vit:nombreOuNull(meilleur[3]), cap:nombreOuNull(meilleur[4])} : null;
+}
+
+// Worker aisstream : relevé nul tant que rien n'a été reçu
+function releveDuWorker(d,s){
+  s.info = d && d.connexion ? "connexion : "+d.connexion+(d.erreur?", "+d.erreur:"") : "";
+  const r = d && d.releve;
+  if(!r) return null;
+  const t = Date.parse(r.heureUtc);
+  if(!releveOk(t,r.lat,r.lon)) throw new Error("relevé illisible");
+  return {t:t, lat:r.lat, lon:r.lon, vit:nombreOuNull(r.vitesseNoeuds), cap:nombreOuNull(r.capDegres)};
+}
+
+const sources = {
+  worker:{nom:"Worker AIS",    periode:5000,  url:()=>URL_WORKER, lire:releveDuWorker},
+  direct:{nom:"Relais du site",periode:15000, url:()=>URL_DIRECT, lire:releveDeEchantillons},
+  github:{nom:"Copie GitHub",  periode:60000, url:()=>URL_GITHUB+"?t="+Math.floor(Date.now()/30000), lire:releveDeEchantillons}
+};
+Object.keys(sources).forEach(function(c){
+  Object.assign(sources[c],{ok:null, fix:null, erreur:"", info:"", enCours:false, erreurs:0, derniere:0});
+});
+
+const etat = {fix:null, source:null, sentier:[], affiche:null, depart:null, departT:0};
+
+async function interroger(cle){
+  const s = sources[cle];
+  if(s.enCours) return;
+  s.enCours = true;
+  const ctrl = new AbortController();
+  const garde = setTimeout(function(){ ctrl.abort(); }, DELAI_MAX_MS);
+  try{
+    const r = await fetch(s.url(), {cache:"no-store", signal:ctrl.signal});
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    let d;
+    try{ d = await r.json(); }catch(e){ throw new Error("réponse illisible"); }
+    s.fix = s.lire(d,s);
+    s.ok = true; s.erreur = ""; s.erreurs = 0;
+  }catch(e){
+    s.ok = false; s.erreurs++;
+    s.erreur = e.name==="AbortError" ? "délai dépassé" : (e.message || "erreur");
+  }finally{
+    clearTimeout(garde);
+    s.enCours = false;
+    s.derniere = Date.now();
+  }
+  retenir();
+}
+
+// La copie GitHub n'est utile que si ni le worker ni le relais n'ont donné de relevé récent
+function githubUtile(){
+  const recent = c => sources[c].fix && Date.now()-sources[c].fix.t < 120000;
+  return !(recent("worker") || recent("direct"));
+}
+
+function declencher(cle){
+  const s = sources[cle];
+  if(cle==="github" && !githubUtile()) return;
+  // source en panne répétée : on espace les essais plutôt que de la solliciter en boucle
+  if(s.erreurs>=3 && Date.now()-s.derniere < s.periode*6) return;
+  interroger(cle);
+}
+
+// ---------- Choix du relevé ----------
+function choisirReleve(src){
+  let meilleur = null, cleMeilleure = null;
+  ["worker","direct","github"].forEach(function(c){
+    const f = src[c].fix;
+    if(f && (!meilleur || f.t>meilleur.t)){ meilleur = f; cleMeilleure = c; }
+  });
+  return meilleur ? {fix:meilleur, source:cleMeilleure} : null;
+}
+
+function retenir(){
+  const c = choisirReleve(sources);
+  if(!c) return;
+  const f = etat.fix;
+  if(f && c.fix.t<f.t) return;   // jamais de retour en arrière
+  etat.source = c.source;
+  if(f && f.t===c.fix.t && f.lat===c.fix.lat && f.lon===c.fix.lon){ etat.fix = c.fix; return; }
+  etat.depart = etat.affiche ? {lat:etat.affiche.lat, lon:etat.affiche.lon} : null;
+  etat.departT = Date.now();
+  const dernier = etat.sentier[etat.sentier.length-1];
+  if(!dernier || dernier.lat!==c.fix.lat || dernier.lon!==c.fix.lon){
+    etat.sentier.push({lat:c.fix.lat, lon:c.fix.lon});
+    if(etat.sentier.length>40) etat.sentier.shift();
+  }
+  etat.fix = c.fix;
+}
+
+// ---------- Estimation entre deux relevés ----------
+const ageS = now => etat.fix ? Math.max(0,(now-etat.fix.t)/1000) : 0;
+
+function extrapoler(f,age){
+  if(f.vit===null || f.cap===null || f.vit<0.3 || age<=0) return {lat:f.lat, lon:f.lon, extrapole:false};
+  const t = Math.min(age,EXTRAPOLATION_MAX_S);
+  const d = f.vit*0.514444*t, r = f.cap*Math.PI/180;
+  const lat = f.lat + d*Math.cos(r)/111320;
+  const lon = f.lon + d*Math.sin(r)/(111320*Math.cos(lat*Math.PI/180));
+  return {lat:lat, lon:lon, extrapole:true};
+}
+
+function positionAffichee(now){
+  if(!etat.fix) return null;
+  const c = extrapoler(etat.fix, ageS(now));
+  if(etat.depart){
+    let k = Math.min(1,(now-etat.departT)/LISSAGE_MS);
+    k = k*k*(3-2*k);
+    return {lat:etat.depart.lat+(c.lat-etat.depart.lat)*k, lon:etat.depart.lon+(c.lon-etat.depart.lon)*k, extrapole:c.extrapole};
+  }
+  return c;
+}
+
+// ---------- Carte ----------
+const cvs = $("carte"), ctx = cvs.getContext("2d");
+let W=0, H=0, echelle=1, ox=0, oy=0;
+const pts = TRACE_ALLER.concat(TRACE_RETOUR, ZONES).map(p=>plan(p.lat,p.lon));
+const minX=Math.min(...pts.map(p=>p.x)), maxX=Math.max(...pts.map(p=>p.x));
+const minY=Math.min(...pts.map(p=>p.y)), maxY=Math.max(...pts.map(p=>p.y));
+
+function ajuster(){
+  const r = cvs.getBoundingClientRect();
+  const dpr = (typeof window!=="undefined" && window.devicePixelRatio) || 1;
+  W = r.width; H = r.height;
+  cvs.width = Math.round(W*dpr); cvs.height = Math.round(H*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const pad = 30, bw = maxX-minX, bh = maxY-minY;
+  echelle = Math.min((W-2*pad)/bw,(H-2*pad)/bh);
+  ox = (W-bw*echelle)/2; oy = (H-bh*echelle)/2;
+}
+function ecran(lat,lon){
+  const p = plan(lat,lon);
+  return {x:ox+(p.x-minX)*echelle, y:oy+(maxY-p.y)*echelle};
+}
+function tracer(trace,couleur,tirets,epaisseur){
+  ctx.beginPath();
+  trace.forEach(function(p,i){ const e=ecran(p.lat,p.lon); if(i) ctx.lineTo(e.x,e.y); else ctx.moveTo(e.x,e.y); });
+  ctx.setLineDash(tirets); ctx.strokeStyle=couleur; ctx.lineWidth=epaisseur; ctx.lineJoin="round"; ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function dessiner(now){
+  ctx.clearRect(0,0,W,H);
+  tracer(TRACE_RETOUR,"rgba(124,179,214,.5)",[4,5],2);
+  tracer(TRACE_ALLER,"rgba(79,143,189,.9)",[],2.5);
+
+  ctx.font = "11px ui-monospace,Menlo,Consolas,monospace";
+  ctx.textBaseline = "middle";
+  ZONES.forEach(function(z){
+    const e = ecran(z.lat,z.lon);
+    ctx.beginPath(); ctx.arc(e.x,e.y,4,0,Math.PI*2);
+    ctx.fillStyle="#070b0d"; ctx.fill(); ctx.strokeStyle="#4e5a62"; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle="#6b7881"; ctx.textAlign="left"; ctx.fillText(z.nom,e.x+9,e.y-11);
+  });
+
+  etat.sentier.forEach(function(p,i){
+    const e = ecran(p.lat,p.lon);
+    ctx.beginPath(); ctx.arc(e.x,e.y,2,0,Math.PI*2);
+    ctx.fillStyle = "rgba(217,165,92,"+(0.15+0.5*(i+1)/etat.sentier.length)+")"; ctx.fill();
+  });
+
+  const f = etat.fix, a = etat.affiche;
+  if(!f || !a) return;
+  const couleur = ageS(now)>AGE_ALERTE_S ? "#d9635f" : "#d9a55c";
+
+  const er = ecran(f.lat,f.lon), ea = ecran(a.lat,a.lon);
+  ctx.beginPath(); ctx.arc(er.x,er.y,4,0,Math.PI*2); ctx.fillStyle=couleur; ctx.fill();
+  if(a.extrapole){
+    ctx.beginPath(); ctx.moveTo(er.x,er.y); ctx.lineTo(ea.x,ea.y);
+    ctx.strokeStyle="rgba(217,165,92,.4)"; ctx.setLineDash([2,3]); ctx.lineWidth=1.5; ctx.stroke(); ctx.setLineDash([]);
+  }
+  const pulse = 1+0.25*Math.sin(now/300);
+  ctx.beginPath(); ctx.arc(ea.x,ea.y,9*pulse,0,Math.PI*2); ctx.strokeStyle=couleur; ctx.lineWidth=2; ctx.stroke();
+  ctx.beginPath(); ctx.arc(ea.x,ea.y,3,0,Math.PI*2); ctx.fillStyle=couleur; ctx.fill();
+
+  if(f.cap!==null && f.vit!==null && f.vit>=0.3){
+    const r = f.cap*Math.PI/180, dx=Math.sin(r), dy=-Math.cos(r);
+    const x2=ea.x+dx*26, y2=ea.y+dy*26;
+    ctx.beginPath(); ctx.moveTo(ea.x+dx*12,ea.y+dy*12); ctx.lineTo(x2,y2);
+    ctx.strokeStyle=couleur; ctx.lineWidth=2; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x2,y2);
+    ctx.lineTo(x2-dx*7+dy*4,y2-dy*7-dx*4); ctx.lineTo(x2-dx*7-dy*4,y2-dy*7+dx*4); ctx.closePath();
+    ctx.fillStyle=couleur; ctx.fill();
+  }
+}
+
+// ---------- Textes ----------
+function distanceM(lat1,lon1,lat2,lon2){
+  const dy=(lat2-lat1)*111320, dx=(lon2-lon1)*111320*Math.cos(lat1*Math.PI/180);
+  return Math.hypot(dx,dy);
+}
+
+function ligneSource(s,now){
+  if(s.ok===null) return "… "+s.nom+" : en attente";
+  if(s.ok===false) return "✗ "+s.nom+" : "+s.erreur;
+  if(!s.fix) return "◌ "+s.nom+" : aucun relevé"+(s.info?" ("+s.info+")":"");
+  return "● "+s.nom+" : relevé il y a "+fmtDuree((now-s.fix.t)/1000);
+}
+
+function statut(now){
+  const f = etat.fix, toutes = Object.keys(sources).map(c=>sources[c]);
+  const toutesKo = toutes.every(s=>s.ok===false);
+  if(!f) return toutesKo ? ["bad","Connexion perdue avec les trois sources"] : ["","Connexion…"];
+  const age = ageS(now);
+  if(toutesKo) return ["bad","Connexion perdue · dernier relevé il y a "+fmtDuree(age)];
+  if(age<AGE_OK_S) return ["ok","En direct · "+sources[etat.source].nom];
+  if(age<AGE_ALERTE_S) return ["warn","Dernier relevé il y a "+fmtDuree(age)];
+  return ["bad","Aucun relevé depuis "+fmtDuree(age)+" (bac à quai ou sources en retard)"];
+}
+
+function majTextes(now){
+  $("horloge").textContent = fmtParis.format(new Date(now));
+  const st = statut(now);
+  $("statut").className = st[0];
+  $("statutTexte").textContent = st[1];
+
+  const f = etat.fix, a = etat.affiche;
+  if(f){
+    $("vLat").textContent = f.lat.toFixed(5)+"°";
+    $("vLon").textContent = f.lon.toFixed(5)+"°";
+    $("vVit").textContent = f.vit!==null ? f.vit.toFixed(1)+" nds" : "—";
+    $("vCap").textContent = f.cap!==null ? Math.round(f.cap)+"°" : "—";
+    $("vHeure").textContent = fmtParis.format(new Date(f.t));
+    $("vAge").textContent = fmtDuree(ageS(now));
+  }
+  if(a){
+    let proche = null, dmin = Infinity;
+    ZONES.forEach(function(z){ const d=distanceM(a.lat,a.lon,z.lat,z.lon); if(d<dmin){ dmin=d; proche=z; } });
+    $("proche").textContent = "Plus proche : "+proche.nom+" (≈ "+Math.round(dmin)+" m)"+(a.extrapole?" · position estimée":"");
+  }
+  $("sources").textContent = Object.keys(sources).map(c=>ligneSource(sources[c],now)).join("\n");
+}
+
+// ---------- Boucle d'affichage ----------
+let dernierTexte = 0;
+function frame(){
+  const now = Date.now();
+  etat.affiche = positionAffichee(now);
+  dessiner(now);
+  if(now-dernierTexte>250){ dernierTexte = now; majTextes(now); }
+  requestAnimationFrame(frame);
+}
+
+// ---------- Démarrage ----------
+let verrou = null;
+async function ecranActif(){
+  if(!("wakeLock" in navigator)) return;
+  try{ verrou = await navigator.wakeLock.request("screen"); }catch(e){}
+}
+
+function toutLire(){ Object.keys(sources).forEach(declencher); }
+
+document.addEventListener("visibilitychange", function(){
+  if(document.visibilityState==="visible"){ ecranActif(); toutLire(); }
+});
+
+new ResizeObserver(ajuster).observe(cvs);
+ajuster();
+ecranActif();
+Object.keys(sources).forEach(function(c){ setInterval(function(){ declencher(c); }, sources[c].periode); });
+toutLire();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
