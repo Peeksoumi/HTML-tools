@@ -4,13 +4,13 @@ const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
 const m=html.match(/<script>([\s\S]*)<\/script>/); if(!m) throw new Error("script introuvable");
 const els={};
 const doc={getElementById:id=>els[id]||(els[id]={innerHTML:"",className:"",textContent:""})};
-let intervals=[], reseauHs=false, urls=[], majFige=0;
+let intervals=[], reseauHs=false, urls=[], majFige=0, apiRefuse=false;
 // Positions simulées (publiées par le serveur) : bac à quai Basse-Indre puis traversée vers Indret
 const t0=Date.parse("2026-11-17T08:00:00Z");
 const pts=[[47.19744,-1.67439,0.1],[47.19744,-1.67439,0.1],[47.19744,-1.67439,0.2],[47.1969,-1.6731,3],[47.1962,-1.6724,3.2],[47.1956,-1.6728,2],[47.19534,-1.6743,0.1],[47.19534,-1.6743,0.1]];
 let samples=pts.map((r,i)=>[t0+i*60000,r[0],r[1],r[2],null]);
 const ctx={document:doc,
-  fetch:async(u)=>{ urls.push(u); if(/open-meteo/.test(u)) return {ok:true,json:async()=>({current:{time:"2026-11-17T09:00",temperature_2m:9.6,weather_code:61,wind_speed_10m:18.2,wind_direction_10m:250}})}; if(reseauHs) throw new Error("réseau coupé"); return {ok:true,json:async()=>({maj:majFige||horloge,n:samples.length,samples})}; },
+  fetch:async(u)=>{ urls.push(u); if(/open-meteo/.test(u)) return {ok:true,json:async()=>({current:{time:"2026-11-17T09:00",temperature_2m:9.6,weather_code:61,wind_speed_10m:18.2,wind_direction_10m:250}})}; if(reseauHs) throw new Error("réseau coupé"); if(apiRefuse&&/api\.github\.com/.test(u)) return {ok:false,status:403}; return {ok:true,json:async()=>({maj:majFige||horloge,n:samples.length,samples})}; },
   setInterval:(f,ms)=>intervals.push([f,ms]),Intl,Date,Math,JSON,console,parseFloat,isFinite,Number,Set,Array,Object,String};
 vm.createContext(ctx);
 let horloge=t0+8*60000; const RD=Date; ctx.Date=class extends RD{constructor(...a){super(...(a.length?a:[horloge]))} static now(){return horloge}; static UTC(...a){return RD.UTC(...a)}; static parse(s){return RD.parse(s)}};
@@ -29,7 +29,7 @@ vm.runInContext(m[1]+"\nthis.__t={rendre,lirePosition,lireMeteo,journal:()=>jour
   await ctx.__t.lireMeteo(); ok(/10 °C · Pluie · vent 18 km\/h O/.test(els.meteo.innerHTML)&&/🌧️/.test(els.meteo.innerHTML),"météo affichée : "+els.meteo.innerHTML.replace(/<[^>]+>/g,""));
   ok(!/class="alerte"/.test(b),"pas d'alerte quand la connexion fonctionne");
   ok(/Relais GitHub · position AIS/.test(els.bandeau.innerHTML),"libellé « Relais GitHub »");
-  ok(urls.some(u=>/raw\.githubusercontent\.com\/Peeksoumi\/lola-relais\/main\/positions\.json\?t=/.test(u))&&!urls.some(u=>/lola-direct/.test(u)),"lecture du seul fichier GitHub (?t= anti-cache), plus de relais direct");
+  ok(urls.some(u=>/api\.github\.com\/repos\/Peeksoumi\/lola-relais\/contents\/positions\.json/.test(u))&&!urls.some(u=>/lola-direct/.test(u)),"lecture du seul fichier GitHub via l'API (sans cache CDN), plus de relais direct");
   ok(intervals.some(x=>x[1]===15000),"tick toutes les 15 s, lecture GitHub limitée à une toutes les 30 s");
   const nb=urls.filter(u=>/lola-relais/.test(u)).length;
   horloge+=10000; await ctx.__t.lirePosition();
@@ -43,10 +43,10 @@ vm.runInContext(m[1]+"\nthis.__t={rendre,lirePosition,lireMeteo,journal:()=>jour
   ok(/hypothèse du modèle/.test(els.carte.innerHTML)&&/\(supposé\)/.test(els.carte.innerHTML),"position ancienne : situation signalée « hypothèse du modèle » / « (supposé) »");
   ok(els.mesures.innerHTML.replace(/<small>.*?<\/small>/g,"")===mesAvant,"tableau des mesures : inchangé par les estimations");
   // GitHub injoignable
-  reseauHs=true; horloge+=40000; await ctx.__t.lirePosition();
+  reseauHs=true; horloge+=80000; await ctx.__t.lirePosition();
   ok(/class="alerte"[^>]*>⚠ Connexion perdue/.test(els.bandeau.innerHTML),"GitHub coupé : alerte « Connexion perdue »");
   ok(/dernière mise à jour il y a/.test(els.bandeau.innerHTML),"l'alerte indique l'ancienneté de la dernière mise à jour");
-  reseauHs=false; horloge+=40000; await ctx.__t.lirePosition();
+  reseauHs=false; horloge+=700000; await ctx.__t.lirePosition();
   ok(!/Connexion perdue/.test(els.bandeau.innerHTML),"connexion rétablie : alerte retirée");
   horloge+=20*60000; await ctx.__t.lirePosition();
   ok(/Position AIS indisponible/.test(els.bandeau.innerHTML)&&/Position trop ancienne/.test(els.carte.innerHTML),"position figée > 10 min : prévisions suspendues");
@@ -81,11 +81,18 @@ vm.runInContext(m[1]+"\nthis.__t={rendre,lirePosition,lireMeteo,journal:()=>jour
   horloge=J+720000+11*60000; await ctx.__t.lirePosition();
   ok(/Position AIS indisponible/.test(els.bandeau.innerHTML)&&/<span class="led off">/.test(els.bandeau.innerHTML),"en service, > 10 min : « indisponible », point rouge");
   ok((els.quais.innerHTML.match(/href="https:\/\/www\.google\.com\/maps\/dir\/\?api=1&amp;travelmode=driving&amp;destination=47\.19\d+,-1\.67\d+" target="_blank" rel="noopener">🧭 Itinéraire/g)||[]).length===2&&/destination=47\.1953/.test(els.quais.innerHTML)&&/destination=47\.1974/.test(els.quais.innerHTML),"un bouton « Itinéraire » Google Maps par quai (Indret au sud, Basse-Indre au nord)");
+  // quota de l'API GitHub épuisé (403) : repli immédiat sur raw, sans alerte de connexion
+  apiRefuse=true; horloge+=80000; urls.length=0; await ctx.__t.lirePosition();
+  ok(urls.some(u=>/api\.github\.com/.test(u))&&urls.some(u=>/raw\.githubusercontent\.com/.test(u))&&!/Connexion perdue/.test(els.bandeau.innerHTML),"API refusée : repli sur raw, pas d'alerte de connexion");
+  horloge+=40000; urls.length=0; await ctx.__t.lirePosition();
+  ok(!urls.some(u=>/api\.github\.com/.test(u))&&urls.some(u=>/raw\.githubusercontent\.com/.test(u)),"pendant la pause, l'API n'est pas réinterrogée (raw toutes les 30 s)");
+  apiRefuse=false; horloge+=11*60000; urls.length=0; await ctx.__t.lirePosition();
+  ok(urls.some(u=>/api\.github\.com/.test(u)),"après 10 min, l'API est réessayée");
   // relais arrêté (aucune publication depuis 4 min) alors que la position date de 2 min : « Relais muet », pas une simple hypothèse
-  horloge=J+720000+11*60000+31000; samples=[pos(horloge-J-120000,IND[0],IND[1],0.1)]; majFige=horloge-240000;
+  horloge+=80000; samples=[pos(horloge-J-120000,IND[0],IND[1],0.1)]; majFige=horloge-300000;
   await ctx.__t.lirePosition();
-  ok(/Le relais ne publie plus depuis 4 min/.test(els.bandeau.innerHTML)&&!/Position AIS indisponible/.test(els.bandeau.innerHTML)&&/<span class="led creux">/.test(els.bandeau.innerHTML),"relais sans publication depuis > 3 min : avertissement, situation en hypothèse (pas d'indisponibilité)");
-  majFige=0; horloge+=60000; await ctx.__t.lirePosition();
+  ok(/Le relais ne publie plus depuis 5 min/.test(els.bandeau.innerHTML)&&!/Position AIS indisponible/.test(els.bandeau.innerHTML)&&/<span class="led creux">/.test(els.bandeau.innerHTML),"relais sans publication depuis > 4 min : avertissement, situation en hypothèse (pas d'indisponibilité)");
+  majFige=0; horloge+=80000; await ctx.__t.lirePosition();
   ok(!/Le relais ne publie plus/.test(els.bandeau.innerHTML),"le relais republie : avertissement retiré");
   console.log(b.replace(/<[^>]+>/g," ").replace(/\s+/g," "));
 })();
