@@ -80,6 +80,7 @@ vm.runInContext(m[1]+"\nthis.__t={rendre,lirePosition,lireMeteo,journal:()=>jour
   // plus de 10 min en service : indisponible
   horloge=J+720000+11*60000; await ctx.__t.lirePosition();
   ok(/Position AIS indisponible/.test(els.bandeau.innerHTML)&&/<span class="led off">/.test(els.bandeau.innerHTML),"en service, > 10 min : « indisponible », point rouge");
+  ok((els.quais.innerHTML.match(/href="https:\/\/www\.google\.com\/maps\/dir\/\?api=1&amp;travelmode=driving&amp;destination=47\.19\d+,-1\.67\d+" target="_blank" rel="noopener">🧭 Itinéraire/g)||[]).length===2&&/destination=47\.1953/.test(els.quais.innerHTML)&&/destination=47\.1974/.test(els.quais.innerHTML),"un bouton « Itinéraire » Google Maps par quai (Indret au sud, Basse-Indre au nord)");
   // relais arrêté (aucune publication depuis 4 min) alors que la position date de 2 min : « Relais muet », pas une simple hypothèse
   horloge=J+720000+11*60000+31000; samples=[pos(horloge-J-120000,IND[0],IND[1],0.1)]; majFige=horloge-240000;
   await ctx.__t.lirePosition();

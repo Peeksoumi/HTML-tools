@@ -64,6 +64,8 @@ h1{font-size:26px;margin:0;font-weight:600}
 .voie .pilier.ici{background:var(--vert);width:5px}
 tr.next td{background:var(--soft)}
 .quai .nom{font-size:17px;font-weight:600}
+.quai .itin{display:inline-block;margin-top:10px;padding:5px 10px;border:1px solid var(--faint);border-radius:6px;font-size:13px;color:var(--text);text-decoration:none}
+.quai .itin:hover{border-color:var(--text)}
 .quai .rive{display:block;font-family:var(--mono);font-size:11px;color:var(--faint);font-weight:400}
 .quai .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-top:12px}
 .quai .grand{font-family:var(--mono);font-size:44px;line-height:1.1;color:var(--orange);margin-top:2px}
@@ -127,6 +129,7 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
   <ul>
     <li><b>GTFS « Horaires des bacs de Loire en Loire-Atlantique »</b> (Département de Loire-Atlantique, data.gouv.fr, Licence Ouverte) : créneaux nominaux et jours fériés.</li>
     <li><b>Position AIS de Lola</b> (MMSI 227158520) : aisstream.io (flux AIS de récepteurs de bénévoles), avec repli sur AISVesselTracker puis Shiptrail si aisstream est muet depuis 20 s en mouvement ou 75 s à quai (ces services refusent les appels d'une page web). Un script du dépôt (<i>bac-lola/relais</i>), exécuté sur le serveur du site, garde la connexion à aisstream, interroge les secours au besoin et garde 1 h en mémoire vive. Le relais publie la dernière heure de positions dans la copie publique <b>GitHub</b> <i>Peeksoumi/lola-relais</i> dès qu'une nouvelle position arrive (au plus toutes les 15 s, un seul commit, sans historique) ; la page ne lit que cette copie, c'est la source qui cale le modèle. Aucune base de données, la page ne lit jamais les relevés d'entraînement ; c'est l'un des deux appels réseau de la page (avec Open-Meteo), rien n'y est envoyé.</li>
+    <li><b>Google Maps</b> : le bouton « Itinéraire » de chaque quai ouvre simplement un lien google.com/maps (destination = accès au quai, voiture) ; la page n'envoie rien à Google tant que vous ne cliquez pas.</li>
     <li><b>Open-Meteo</b> (open-meteo.com, CC BY 4.0) : météo actuelle (température, ciel, vent) aux coordonnées des bacs, rafraîchie toutes les 10 min ; la page envoie seulement ces coordonnées fixes, rien de personnel.</li>
     <li><b>Calibrage</b> : relevés enregistrés par le serveur du 13 au 18/11/2026 : ils ne servent qu'à fixer les paramètres du modèle hors ligne, la page ne les lit jamais.</li>
   </ul>
@@ -592,6 +595,9 @@ async function lirePosition(){
 const fmtDelta=d=>d==null?"–":(d>=0?"+":"−")+Math.abs(d).toFixed(1).replace(".",",");
 function classeDelta(d){ if(d==null) return ""; if(d<-2) return "d-av"; if(d<=2.5) return "d-ok"; if(d<=5) return "d-moy"; return "d-fort"; }
 // Une ligne par traversée : départ et arrivée sur la même ligne, dans la colonne de leur quai (Indret à gauche, Basse-Indre à droite, comme le schéma)
+// Point d'accès à chaque quai (extrémité du tracé du chenal) : destination du lien « Itinéraire » (Google Maps, voiture)
+const ACCES_QUAI={S:"47.195334,-1.6743426", N:"47.19744,-1.67439"};
+const lienItineraire=q=>"https://www.google.com/maps/dir/?api=1&amp;travelmode=driving&amp;destination="+ACCES_QUAI[q];
 const ENTETE_QQ='<table class="qq"><tr><th>Indret</th><th>Basse-Indre</th></tr>';
 function traversees(evs){ // événements chronologiques → [{de, dep, arr}] (dep ou arr peut manquer)
     const rows=[];
@@ -699,7 +705,7 @@ function rendre(){
         const badge=cls?(focus.kind==="ici"?"● Bac à quai":focus.kind==="hypo"?(focus.aQuai?"~ à quai ?":"~ en approche ?"):"➜ Bac en approche"):"";
         html+='<section class="quai'+cls+'"><div class="badge">'+badge+'</div><div class="nom">'+NOM_QUAI[Q]+'<span class="rive">rive '+(Q==="N"?"nord":"sud")+'</span></div>'
             +'<div class="lbl">Prochain départ</div><div class="grand">'+grand+'</div><div class="cpt2">'+cpt+'</div>'
-            +'<div class="etat">'+etat+'</div><div class="sec">'+sec+'</div>'+(suiv?'<div class="suivant">'+suiv+'</div>':'')+'</section>';
+            +'<div class="etat">'+etat+'</div><div class="sec">'+sec+'</div>'+(suiv?'<div class="suivant">'+suiv+'</div>':'')+'<a class="itin" href="'+lienItineraire(Q)+'" target="_blank" rel="noopener">🧭 Itinéraire</a></section>';
     });
     $("quais").innerHTML=html;
     const dernierDep=evs.filter(e=>e.type==="dep").pop();
