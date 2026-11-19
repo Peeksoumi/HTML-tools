@@ -75,21 +75,19 @@ h1{font-size:26px;margin:0;font-weight:600}
   <h2>Fonctionnement et sources</h2>
   <h3>Fonctionnement</h3>
   <ul>
-    <li><b>Lecture</b> : trois sources sont interrogées en parallèle (worker AIS toutes les 5 s, relais du site toutes les 15 s, copie GitHub toutes les 60 s seulement si les deux autres sont muettes) ; la page garde le relevé à l'heure AIS la plus récente.</li>
+    <li><b>Lecture</b> : la page interroge le worker AIS toutes les 5 s et affiche son dernier relevé ; l'âge se calcule à partir de l'heure AIS du relevé.</li>
     <li><b>Temps réel</b> : entre deux relevés, la position est estimée en ligne droite d'après la vitesse et le cap (60 s au plus), puis lissée à l'arrivée du relevé suivant. Point plein = relevé, anneau = estimation.</li>
-    <li><b>Calcul</b> : tout se fait dans le navigateur, la page ne fait que lire les sources et n'y envoie rien.</li>
+    <li><b>Calcul</b> : tout se fait dans le navigateur ; la page ne fait que lire le worker et n'y envoie rien.</li>
   </ul>
   <h3>Sources de données</h3>
   <ul>
-    <li><b>Worker AIS</b> (dossier <i>lola-position/worker</i>) : flux temps réel d'aisstream.io (récepteurs de bénévoles, gratuit sur clé), filtré sur le MMSI 227158520.</li>
-    <li><b>Relais du site</b> (<i>peeksoumi.com/lola-direct</i>) : AISVesselTracker, Shiptrail en secours, remis à jour chaque minute (voir <i>bac-lola/relais</i>).</li>
-    <li><b>Copie GitHub</b> <i>Peeksoumi/lola-relais</i> : même relais, publié toutes les 5 min.</li>
+    <li><b>aisstream.io</b> : flux AIS temps réel de récepteurs de bénévoles (gratuit sur clé). Il refuse les navigateurs : la clé est un secret du worker (dossier <i>lola-position/worker</i>), qui garde la connexion et relaie le dernier relevé du MMSI 227158520.</li>
     <li><b>Tracé du chenal</b> : GTFS officiel « Bacs de Loire en Loire-Atlantique » (aller) ; le retour est son symétrique par rapport à l'axe nord-sud.</li>
   </ul>
   <h3>Limites</h3>
   <ul>
-    <li>La page ne peut pas être plus fraîche que ses sources : à quai, un bac n'émet qu'un relevé toutes les ~3 min.</li>
-    <li>Le worker AIS ne répond que s'il est déployé et si un récepteur capte l'estuaire ; sinon le relais prend le relais, avec ~1 min de retard.</li>
+    <li>Rien ne s'affiche tant que le worker n'est pas déployé et qu'un récepteur d'aisstream.io ne capte pas l'estuaire de la Loire.</li>
+    <li>À quai, un bac n'émet qu'un relevé toutes les ~3 min ; la page ne peut pas être plus fraîche que la source.</li>
     <li>L'estimation est rectiligne : fausse dans les virages et à l'accostage. L'âge se calcule avec l'horloge de l'appareil.</li>
   </ul>
 </div>
@@ -97,13 +95,11 @@ h1{font-size:26px;margin:0;font-weight:600}
 </div>
 
 <script>
-// Sources de position (le plus récent des relevés gagne) :
-//  - worker AIS (aisstream.io, dossier worker/) : temps réel, JSON {releve:{lat,lon,vitesseNoeuds,capDegres,heureUtc}} ;
-//  - relais du site (dépôt bac-lola/relais) : {samples:[[heure AIS en ms, lat, lon, vitesse|null, cap|null], ...]}, 1 h ;
-//  - copie GitHub du même relais, publiée toutes les 5 min : secours.
+// Source unique : le worker AIS (dossier worker/), qui lit aisstream.io avec la clé d'API (secret du worker).
+// aisstream.io refuse les connexions directes depuis un navigateur (la clé serait exposée) : la page ne lit que le worker.
+// JSON : {connexion, erreur, releve:{lat, lon, vitesseNoeuds, capDegres, heureUtc}}
 const URL_WORKER = "https://lola-ais.swortom44.workers.dev/?format=json";
-const URL_DIRECT = "https://peeksoumi.com/lola-direct/positions";
-const URL_GITHUB = "https://raw.githubusercontent.com/Peeksoumi/lola-relais/main/positions.json";
+const PERIODE_MS = 5000;
 const DELAI_MAX_MS = 6000;
 const EXTRAPOLATION_MAX_S = 60;
 const LISSAGE_MS = 700;
@@ -139,25 +135,18 @@ function fmtDuree(s){
   return s<60 ? s+" s" : Math.floor(s/60)+" min "+String(s%60).padStart(2,"0")+" s";
 }
 
-// ---------- Lecture des sources ----------
+// ---------- Lecture du worker ----------
 function releveOk(t,lat,lon){
   return Number.isFinite(t) && Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat)<=90 && Math.abs(lon)<=180;
 }
 const nombreOuNull = v => Number.isFinite(v) ? v : null;
 
-// Relais du site et copie GitHub : on retient l'échantillon à l'heure AIS la plus récente
-function releveDeEchantillons(d){
-  if(!d || !Array.isArray(d.samples)) throw new Error("format inattendu");
-  let meilleur = null;
-  d.samples.forEach(function(s){
-    if(Array.isArray(s) && releveOk(s[0],s[1],s[2]) && (!meilleur || s[0]>meilleur[0])) meilleur = s;
-  });
-  return meilleur ? {t:meilleur[0], lat:meilleur[1], lon:meilleur[2], vit:nombreOuNull(meilleur[3]), cap:nombreOuNull(meilleur[4])} : null;
-}
+const src = {ok:null, fix:null, erreur:"", info:"", enCours:false, erreurs:0, derniere:0};
+const etat = {fix:null, sentier:[], affiche:null, depart:null, departT:0};
 
-// Worker aisstream : relevé nul tant que rien n'a été reçu
-function releveDuWorker(d,s){
-  s.info = d && d.connexion ? "connexion : "+d.connexion+(d.erreur?", "+d.erreur:"") : "";
+// Relevé nul tant que le worker n'a rien reçu d'aisstream.io
+function releveDuWorker(d){
+  src.info = d && d.connexion ? "connexion : "+d.connexion+(d.erreur?", "+d.erreur:"") : "";
   const r = d && d.releve;
   if(!r) return null;
   const t = Date.parse(r.heureUtc);
@@ -165,80 +154,48 @@ function releveDuWorker(d,s){
   return {t:t, lat:r.lat, lon:r.lon, vit:nombreOuNull(r.vitesseNoeuds), cap:nombreOuNull(r.capDegres)};
 }
 
-const sources = {
-  worker:{nom:"Worker AIS",    periode:5000,  url:()=>URL_WORKER, lire:releveDuWorker},
-  direct:{nom:"Relais du site",periode:15000, url:()=>URL_DIRECT, lire:releveDeEchantillons},
-  github:{nom:"Copie GitHub",  periode:60000, url:()=>URL_GITHUB+"?t="+Math.floor(Date.now()/30000), lire:releveDeEchantillons}
-};
-Object.keys(sources).forEach(function(c){
-  Object.assign(sources[c],{ok:null, fix:null, erreur:"", info:"", enCours:false, erreurs:0, derniere:0});
-});
-
-const etat = {fix:null, source:null, sentier:[], affiche:null, depart:null, departT:0};
-
-async function interroger(cle){
-  const s = sources[cle];
-  if(s.enCours) return;
-  s.enCours = true;
+async function interroger(){
+  if(src.enCours) return;
+  src.enCours = true;
   const ctrl = new AbortController();
   const garde = setTimeout(function(){ ctrl.abort(); }, DELAI_MAX_MS);
   try{
-    const r = await fetch(s.url(), {cache:"no-store", signal:ctrl.signal});
+    const r = await fetch(URL_WORKER, {cache:"no-store", signal:ctrl.signal});
     if(!r.ok) throw new Error("HTTP "+r.status);
     let d;
     try{ d = await r.json(); }catch(e){ throw new Error("réponse illisible"); }
-    s.fix = s.lire(d,s);
-    s.ok = true; s.erreur = ""; s.erreurs = 0;
+    src.fix = releveDuWorker(d);
+    src.ok = true; src.erreur = ""; src.erreurs = 0;
   }catch(e){
-    s.ok = false; s.erreurs++;
-    s.erreur = e.name==="AbortError" ? "délai dépassé" : (e.message || "erreur");
+    src.ok = false; src.erreurs++;
+    src.erreur = e.name==="AbortError" ? "délai dépassé" : (e.message || "erreur");
   }finally{
     clearTimeout(garde);
-    s.enCours = false;
-    s.derniere = Date.now();
+    src.enCours = false;
+    src.derniere = Date.now();
   }
   retenir();
 }
 
-// La copie GitHub n'est utile que si ni le worker ni le relais n'ont donné de relevé récent
-function githubUtile(){
-  const recent = c => sources[c].fix && Date.now()-sources[c].fix.t < 120000;
-  return !(recent("worker") || recent("direct"));
-}
-
-function declencher(cle){
-  const s = sources[cle];
-  if(cle==="github" && !githubUtile()) return;
-  // source en panne répétée : on espace les essais plutôt que de la solliciter en boucle
-  if(s.erreurs>=3 && Date.now()-s.derniere < s.periode*6) return;
-  interroger(cle);
-}
-
-// ---------- Choix du relevé ----------
-function choisirReleve(src){
-  let meilleur = null, cleMeilleure = null;
-  ["worker","direct","github"].forEach(function(c){
-    const f = src[c].fix;
-    if(f && (!meilleur || f.t>meilleur.t)){ meilleur = f; cleMeilleure = c; }
-  });
-  return meilleur ? {fix:meilleur, source:cleMeilleure} : null;
+function declencher(){
+  // worker en panne répétée : on espace les essais plutôt que de le solliciter en boucle
+  if(src.erreurs>=3 && Date.now()-src.derniere < PERIODE_MS*6) return;
+  interroger();
 }
 
 function retenir(){
-  const c = choisirReleve(sources);
-  if(!c) return;
-  const f = etat.fix;
-  if(f && c.fix.t<f.t) return;   // jamais de retour en arrière
-  etat.source = c.source;
-  if(f && f.t===c.fix.t && f.lat===c.fix.lat && f.lon===c.fix.lon){ etat.fix = c.fix; return; }
+  const f = src.fix, cur = etat.fix;
+  if(!f) return;
+  if(cur && f.t<cur.t) return;   // jamais de retour en arrière
+  if(cur && cur.t===f.t && cur.lat===f.lat && cur.lon===f.lon){ etat.fix = f; return; }
   etat.depart = etat.affiche ? {lat:etat.affiche.lat, lon:etat.affiche.lon} : null;
   etat.departT = Date.now();
   const dernier = etat.sentier[etat.sentier.length-1];
-  if(!dernier || dernier.lat!==c.fix.lat || dernier.lon!==c.fix.lon){
-    etat.sentier.push({lat:c.fix.lat, lon:c.fix.lon});
+  if(!dernier || dernier.lat!==f.lat || dernier.lon!==f.lon){
+    etat.sentier.push({lat:f.lat, lon:f.lon});
     if(etat.sentier.length>40) etat.sentier.shift();
   }
-  etat.fix = c.fix;
+  etat.fix = f;
 }
 
 // ---------- Estimation entre deux relevés ----------
@@ -343,22 +300,26 @@ function distanceM(lat1,lon1,lat2,lon2){
   return Math.hypot(dx,dy);
 }
 
-function ligneSource(s,now){
-  if(s.ok===null) return "… "+s.nom+" : en attente";
-  if(s.ok===false) return "✗ "+s.nom+" : "+s.erreur;
-  if(!s.fix) return "◌ "+s.nom+" : aucun relevé"+(s.info?" ("+s.info+")":"");
-  return "● "+s.nom+" : relevé il y a "+fmtDuree((now-s.fix.t)/1000);
+function ligneSource(now){
+  const info = src.info ? " ("+src.info+")" : "";
+  if(src.ok===null) return "… Worker AIS : en attente";
+  if(src.ok===false) return "✗ Worker AIS : "+src.erreur;
+  if(!src.fix) return "◌ Worker AIS : aucun relevé"+info;
+  return "● Worker AIS : relevé il y a "+fmtDuree((now-src.fix.t)/1000)+info;
 }
 
 function statut(now){
-  const f = etat.fix, toutes = Object.keys(sources).map(c=>sources[c]);
-  const toutesKo = toutes.every(s=>s.ok===false);
-  if(!f) return toutesKo ? ["bad","Connexion perdue avec les trois sources"] : ["","Connexion…"];
+  const f = etat.fix;
+  if(!f){
+    if(src.ok===false) return ["bad","Worker AIS injoignable : "+src.erreur];
+    if(src.ok===true) return ["warn","En attente du premier relevé aisstream.io"+(src.info?" ("+src.info+")":"")];
+    return ["","Connexion…"];
+  }
   const age = ageS(now);
-  if(toutesKo) return ["bad","Connexion perdue · dernier relevé il y a "+fmtDuree(age)];
-  if(age<AGE_OK_S) return ["ok","En direct · "+sources[etat.source].nom];
+  if(src.ok===false && src.erreurs>=2) return ["bad","Worker AIS injoignable · dernier relevé il y a "+fmtDuree(age)];
+  if(age<AGE_OK_S) return ["ok","En direct · aisstream.io"];
   if(age<AGE_ALERTE_S) return ["warn","Dernier relevé il y a "+fmtDuree(age)];
-  return ["bad","Aucun relevé depuis "+fmtDuree(age)+" (bac à quai ou sources en retard)"];
+  return ["bad","Aucun relevé depuis "+fmtDuree(age)+" (bac à quai ou hors de portée des récepteurs)"];
 }
 
 function majTextes(now){
@@ -381,7 +342,7 @@ function majTextes(now){
     ZONES.forEach(function(z){ const d=distanceM(a.lat,a.lon,z.lat,z.lon); if(d<dmin){ dmin=d; proche=z; } });
     $("proche").textContent = "Plus proche : "+proche.nom+" (≈ "+Math.round(dmin)+" m)"+(a.extrapole?" · position estimée":"");
   }
-  $("sources").textContent = Object.keys(sources).map(c=>ligneSource(sources[c],now)).join("\n");
+  $("sources").textContent = ligneSource(now);
 }
 
 // ---------- Boucle d'affichage ----------
@@ -401,17 +362,15 @@ async function ecranActif(){
   try{ verrou = await navigator.wakeLock.request("screen"); }catch(e){}
 }
 
-function toutLire(){ Object.keys(sources).forEach(declencher); }
-
 document.addEventListener("visibilitychange", function(){
-  if(document.visibilityState==="visible"){ ecranActif(); toutLire(); }
+  if(document.visibilityState==="visible"){ ecranActif(); declencher(); }
 });
 
 new ResizeObserver(ajuster).observe(cvs);
 ajuster();
 ecranActif();
-Object.keys(sources).forEach(function(c){ setInterval(function(){ declencher(c); }, sources[c].periode); });
-toutLire();
+setInterval(declencher, PERIODE_MS);
+declencher();
 requestAnimationFrame(frame);
 </script>
 </body>
