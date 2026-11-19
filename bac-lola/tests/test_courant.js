@@ -38,16 +38,23 @@ assert.strictEqual(C.etatCourant(r.t - 10 * 60000).sens, r.type === 'flot' ? 'ju
 assert(C.renverseProche(r.t + 5 * 60000, now) && !C.renverseProche(r.t + 60 * 60000, now));
 console.log('ok - phases avant / en cours / après / calme et sens du courant');
 
-// 5. régimes de débit déduits de la date seule : petits débits juin → novembre, gros débits décembre → mai
-const reg = (iso) => C.renverses(Date.parse(iso)).filter((x) => Math.abs(x.t - Date.parse(iso)) < 12 * 3600e3).map((x) => x.regime);
-assert(reg('2026-07-15T12:00:00Z').every((x) => x === 'petits') && reg('2027-01-15T12:00:00Z').every((x) => x === 'gros'));
-assert(reg('2026-11-30T12:00:00Z').length && reg('2026-11-30T12:00:00Z').every((x) => x === 'petits'));
-assert(reg('2026-12-02T12:00:00Z').every((x) => x === 'gros') && reg('2027-05-31T00:00:00Z').every((x) => x === 'gros') && reg('2027-06-01T12:00:00Z').every((x) => x === 'petits'));
+// 5. équation : débit mensuel par la date, coefficient de marée, valeurs de référence
+const d0 = (iso) => C.debitDuMois(Date.parse(iso));
+assert(d0('2027-01-15T12:00:00Z') === 1450 && d0('2026-08-15T12:00:00Z') === 246 && d0('2026-11-30T12:00:00Z') === 775 && d0('2026-12-01T12:00:00Z') === 1160);
+const lag = C.lagRenverse;
+// Q = 308, C = 50 : flot 30,2 − 7,4 + 8,2 = 31,0 ; jusant 34,3 + 4,2 − 4,8 = 33,7
+assert(Math.abs(lag('flot', 308, 50) - 31.0) < 0.1 && Math.abs(lag('jusant', 308, 50) - 33.7) < 0.1);
+// plus le débit est fort, plus le flot est précoce et le jusant tardif ; plus le coefficient est fort, plus le flot est tardif et le jusant précoce
+assert(lag('flot', 1400, 70) < lag('flot', 300, 70) && lag('jusant', 1400, 70) > lag('jusant', 300, 70));
+assert(lag('flot', 600, 95) > lag('flot', 600, 45) && lag('jusant', 600, 95) < lag('jusant', 600, 45));
 for (const d of ['2027-01-15T12:00:00Z', '2027-07-15T12:00:00Z']) {
   const Lr = C.renverses(Date.parse(d));
   assert(Lr.length >= 6);
   for (let i = 1; i < Lr.length; i++) { assert(Lr[i].type !== Lr[i - 1].type); const h = (Lr[i].t - Lr[i - 1].t) / 3.6e6; assert(h > 3 && h < 10, d + ' intervalle ' + h.toFixed(1) + ' h'); }
+  assert(Lr.every((x) => x.Q === d0(d) && x.incert === (x.Q <= 1000 ? 20 : 30)));
 }
-const R = C.REGIMES;
-assert(R.petits.flot === 48 && R.petits.jusant === 48 && R.gros.flot === 28 && R.gros.jusant === 58 && R.gros.incert > R.petits.incert);
-console.log('ok - régimes : petits débits (juin → novembre) et gros débits (décembre → mai), incertitude élargie sans mesure');
+// 6. sens du courant à un instant donné
+const n6 = Date.parse('2026-11-19T12:00:00Z'), L6 = C.renverses(n6), r6 = L6.find((x) => x.t > n6);
+assert.strictEqual(C.sensA(r6.t + 20 * 60000, n6), r6.type);
+assert.strictEqual(C.sensA(r6.t - 20 * 60000, n6), r6.type === 'flot' ? 'jusant' : 'flot');
+console.log('ok - équation : débit mensuel par la date, coefficient, sens du courant');

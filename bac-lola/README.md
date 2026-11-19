@@ -20,20 +20,19 @@ liste de l'enchaînement prévu des changements (une ligne par traversée, dépa
    pour anticiper l'entrée / la sortie de rotation.
 
 ## Changement de courant (situation de perturbation anticipée)
-Le courant de la Loire s'inverse (flot ⇄ jusant) deux fois par marée. La page le calcule seule d'après la **date** : pleine mer / basse mer calculée à Lola
-(marée harmonique du moteur de `courant-loire`, inliné par `python3 inject_courant.py`, enveloppe dans `src/courant-wrapper.js`) **+ un retard qui dépend du régime de débit de la saison**.
-Pleine mer → début du jusant, basse mer → début du flot.
+Le courant de la Loire s'inverse (flot ⇄ jusant) deux fois par marée. La page le calcule seule d'après la **date** : pleines et basses mers de **Nantes** et coefficient
+(marée harmonique du moteur de `courant-loire`, inliné par `python3 inject_courant.py`, enveloppe dans `src/courant-wrapper.js`) et débit moyen mensuel Q de la Loire à Montjean.
+Pleine mer → début du jusant, basse mer → début du flot. Minutes après l'étale de Nantes (+ 20 min de correction mesurée sur le bac incluses), C = coefficient de marée :
 
-| Régime (par mois) | Débit moyen mensuel à Montjean | Flot | Jusant | Fenêtre | Statut |
-|---|---|---|---|---|---|
-| petits débits : juin → novembre | 246 à 775 m³/s | marée + 48 min | marée + 48 min | ± 20 min | mesuré (12 renverses) |
-| gros débits : décembre → mai | 846 à 1 540 m³/s | marée + 28 min | marée + 58 min | ± 30 min | **non mesuré** |
-
-- **Origine des retards** : retard des tables du Port (courant-loire) au débit moyen du régime (petits : flot 28, jusant 28 ; gros : flot 8, jusant 38 min après l'étale) **+ 20 min** mesurés sur le bac à petits débits (extrapolés aux gros débits sans mesure). Découpage juin/novembre – décembre/mai : meilleur ajustement des tables sur 12 mois (écart moyen 3,5 min), avec une coupure en demi-années. Débits moyens : Hydroportail M5300010, 1863-2026 (janv. 1 450, févr. 1 540, mars 1 360, avr. 1 090, mai 846, juin 583, juil. 356, août 246, sept. 260, oct. 412, nov. 775, déc. 1 160 m³/s).
-- **Mesure de référence** : 12 renverses du 13 au 19/11/2026 repérées par la trajectoire du bac (passe ≈ 170 m à l'est de la droite entre les quais au flot, 40–80 m à l'ouest au jusant ; corrélation −0,71 avec la pente du niveau à Nantes). Erreur moyenne ≈ 15 min, pire cas 53 min.
-- **Limite principale** : le régime vient du mois, pas du débit réel. En novembre 2026 le débit (≈ 310 m³/s) vaut la moitié de la moyenne du mois : classer novembre en « gros débits » aurait donné 20 min d'erreur moyenne au lieu de 14.
-- **Affichage** : bandeau violet (à venir 90 min avant, en cours dans la fenêtre, installé 45 min après) ; lignes de l'enchaînement surlignées si un horaire tombe dans la fenêtre. Les horaires prévus ne sont **pas** modifiés : sur 397 départs, aucun écart significatif près des renverses (22 % d'écarts > 4 min à ± 30 min, 19 % ailleurs).
-- **Suite** : valider le régime gros débits dès la première crue mesurée (`comparer_modeles.py` du dépôt privé), puis décider d'un décalage des départs.
+- **début du flot = basse mer Nantes + 30,2 − 0,0241·Q + 0,164·C**
+- **début du jusant = pleine mer Nantes + 34,3 + 0,0136·Q − 0,096·C**
+- valable pour Q de 200 à 1 600 m³/s (au-delà le retard du jusant explose : 57 min à 3 000). Fenêtre ± 20 min (Q ≤ 1 000), ± 30 min au-delà (non mesuré).
+- Q par mois (Hydroportail M5300010, 1863-2026) : janv. 1 450, févr. 1 540, mars 1 360, avr. 1 090, mai 846, juin 583, juil. 356, août 246, sept. 260, oct. 412, nov. 775, déc. 1 160 m³/s.
+- **Validation** : 12 renverses du 13 au 19/11/2026 (trajectoire du bac : ≈ 170 m à l'est de la droite entre les quais au flot, 40–80 m à l'ouest au jusant). Erreur moyenne ≈ 13 min (Q = 308) à ≈ 16 min (Q mensuel climatologique 775), pire cas 29–38 min. Le terme en coefficient n'améliore pas l'ajustement mesuré (coefficients mesurés 32–60) : il reprend l'effet des tables du Port.
+- **Limite principale** : Q vient du mois, pas du débit réel (novembre 2026 : ≈ 310 contre 775 m³/s de moyenne). Gros débits et vives-eaux jamais mesurés.
+- **Affichage** : bandeau violet (à venir 90 min avant, en cours dans la fenêtre, installé 45 min après) ; lignes de l'enchaînement surlignées si un horaire tombe dans la fenêtre.
+- **Quais et courant** : sur 397 départs, aucun retard significatif près des renverses (22 % d'écarts > 4 min à ± 30 min, 19 % ailleurs). En revanche le **sens** du courant décale légèrement départs et traversées (Mann-Whitney p ≈ 0, ≈ 90 départs par cas, 6 jours, 07–20 h) : écart à la grille Basse-Indre flot +0,4 / jusant +1,8 min, Indret flot +2,5 / jusant +1,1 min ; traversée 144 s au flot contre 122 s au jusant. La prévision applique ± 0,7 min au départ et ± 0,18 min à la traversée (écart au moyen), selon le sens donné par l'équation (`PARAM.courantDepart`, `PARAM.courantTraversee`).
+- **Suite** : valider gros débits et vives-eaux dès la première crue mesurée (`comparer_modeles.py` du dépôt privé, qui teste encore l'ancienne règle).
 
 ## Calibrage et validation
 Relevés enregistrés par le serveur du 13 au 18/11/2026 (≈ 7 800 positions, ≈ 1 000 événements, 490 départs évaluables). Rejeu : à chaque arrivée on prévoit

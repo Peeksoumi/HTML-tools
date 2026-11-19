@@ -2,7 +2,7 @@
 const fs=require('fs'), path=require('path');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
 const src=html.match(/<script>([\s\S]*?)\/\/  INTERFACE/)[1];
-const M=new Function(src+"\nreturn {msParis,creneauxJour,creneauProche,detecterMode,prevoir,typeService,formatHM,dansService,PARAM};")();
+const M=new Function(src+"\nreturn {msParis,creneauxJour,creneauProche,detecterMode,prevoir,typeService,formatHM,dansService,PARAM,corrCourant};")();
 let ko=0; const ok=(c,m)=>{ if(!c){ ko++; console.error("ÉCHEC :",m); } else console.log("ok :",m); };
 const hm=ms=>M.formatHM(ms), P=(cle,h,m=0)=>M.msParis(cle,h*60+m);
 
@@ -32,8 +32,12 @@ ok(M.detecterMode(grille,P("2026-11-17",11,0),P("2026-11-17",10,50)).mode!=="arr
 const evs=[d(9,12,"N"),d(9,22,"S"),d(9,32,"N"),{type:"arr",q:"S",t:P("2026-11-17",9,35)},d(9,42,"S"),{type:"arr",q:"N",t:P("2026-11-17",9,46)}];
 const pr=M.prevoir(evs,P("2026-11-17",9,47),4);
 const dep=pr.evenements[0];
-ok(dep.type==="dep"&&dep.q==="N"&&hm(dep.t)==="09:51","grille : arrivée 09:46 à BI → départ prévu 09:51 (créneau 09:50 + 1,25 min), obtenu "+hm(dep.t));
-ok(dep.delta>1.5&&dep.delta<3,"écart au nominal ≈ +2 min : "+dep.delta.toFixed(1));
+const cc=M.corrCourant(P("2026-11-17",9,46),P("2026-11-17",9,47),"N");
+const sauve=M.PARAM.courantDepart; M.PARAM.courantDepart={N:{flot:0,jusant:0},S:{flot:0,jusant:0}};
+const sans=M.prevoir(evs,P("2026-11-17",9,47),4).evenements[0]; M.PARAM.courantDepart=sauve;
+ok(cc.dep!==0&&Math.abs(cc.dep)<1,"sens du courant à 09:46 connu : correction de départ "+cc.dep+" min");
+ok(dep.type==="dep"&&dep.q==="N"&&Math.abs((dep.t-sans.t)/60000-cc.dep)<0.01&&hm(sans.t)==="09:51","grille : départ prévu = modèle sans courant (09:51) + effet du courant ("+cc.dep+" min), obtenu "+hm(dep.t));
+ok(dep.delta>0.5&&dep.delta<3.5,"écart au nominal ≈ +2 min : "+dep.delta.toFixed(1));
 ok(pr.evenements.map(e=>e.type+e.q).join(",")==="depN,arrS,depS,arrN","alternance départ/arrivée");
 // Prévision en rotation
 const evr=[d(7,6,"N"),{type:"arr",q:"S",t:P("2026-11-17",7,9)},d(7,11,"S"),{type:"arr",q:"N",t:P("2026-11-17",7,14)},d(7,18,"N"),{type:"arr",q:"S",t:P("2026-11-17",7,21)}];
