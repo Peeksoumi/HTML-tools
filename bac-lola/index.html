@@ -107,7 +107,8 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
   <h2>Fonctionnement et sources</h2>
   <h3>Fonctionnement</h3>
   <ul>
-    <li><b>Détection</b> : à l'ouverture, la page reçoit les 10 dernières positions AIS de Lola (≈ 10 min, projetées sur le chenal) puis suit les nouvelles ; arrivée et départ à un quai sont confirmés par deux positions cohérentes (lieu et vitesse). Tout le calcul reste dans le navigateur.</li>
+    <li><b>Détection</b> : la page lit toutes les 30 s le fichier public des 30 dernières minutes de positions AIS de Lola (projetées sur le chenal) ; ce fichier n'est remis à jour que toutes les 5 min. arrivée et départ à un quai sont confirmés par deux positions cohérentes (lieu et vitesse). Tout le calcul reste dans le navigateur.</li>
+    <li><b>Entre deux mises à jour</b> : la source ayant jusqu'à ≈ 6 min d'âge (une traversée dure 3 min), le modèle déroule les départs et arrivées prévus déjà passés : la situation, le bateau (position interpolée) et les prévisions en sont déduits, signalés « estimé ». Les tableaux « changements mesurés » ne montrent que des mesures ; chaque mise à jour recale l'estimation.</li>
     <li><b>Nominal</b> : grille GTFS, un départ toutes les 20 min par quai (semaine : Basse-Indre 05:30→22:10, Indret 05:40→22:20 ; week-end et fériés : 06:30→21:30 et 06:40→21:20). Arrivée nominale = départ nominal + 3 min.</li>
     <li><b>Lecture</b> : chaque quai affiche son prochain départ prévu et la situation du bac (à quai ici, en traversée vers l'autre quai, à l'autre quai, en traversée vers ici) ; l'enchaînement complet des changements est listé une seule fois, une ligne par traversée, départ et arrivée ensemble, chacun dans la colonne de son quai (Indret à gauche, Basse-Indre à droite, comme le schéma) ; l'horaire officiel et l'écart Δ restent sur les cartes.</li>
     <li><b>Modes</b> : <i>rotation continue</i> si les départs consécutifs sont espacés de ≤ 8,5 min ; <i>retard / perturbation</i> si l'écart médian à la grille dépasse 4,5 min ; <i>arrêt</i> hors service ou sans mouvement depuis 30 min.</li>
@@ -118,7 +119,7 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
   <h3>Sources de données</h3>
   <ul>
     <li><b>GTFS « Horaires des bacs de Loire en Loire-Atlantique »</b> (Département de Loire-Atlantique, data.gouv.fr, Licence Ouverte) : créneaux nominaux et jours fériés.</li>
-    <li><b>Position AIS de Lola</b> (MMSI 227158520) : AISVesselTracker, repli Shiptrail (les navigateurs n'y ont pas accès directement : elles refusent les appels d'une autre page). Un relais sans mémoire sur peeksoumi.com les interroge et ne garde que les 10 dernières positions en mémoire vive : aucune base de données, aucun enregistrement, la page ne lit jamais les relevés d'entraînement ; un des deux appels réseau de la page (avec Open-Meteo), rien n'y est envoyé.</li>
+    <li><b>Position AIS de Lola</b> (MMSI 227158520) : AISVesselTracker, repli Shiptrail (leurs serveurs refusent les appels d'une page web). Un relais indépendant les interroge environ chaque minute, ne garde que 30 min en mémoire vive et publie ce fichier toutes les 5 min dans le dépôt public GitHub <i>Peeksoumi/lola-relais</i> (un seul commit, sans historique, licences des sources applicables). La page lit ce fichier (raw.githubusercontent.com) ; aucune base de données, la page ne lit jamais les relevés d'entraînement ; un des deux appels réseau de la page (avec Open-Meteo), rien n'y est envoyé.</li>
     <li><b>Open-Meteo</b> (open-meteo.com, CC BY 4.0) : météo actuelle (température, ciel, vent) aux coordonnées des bacs, rafraîchie toutes les 10 min ; la page envoie seulement ces coordonnées fixes, rien de personnel.</li>
     <li><b>Calibrage</b> : relevés enregistrés par le serveur du 13 au 18/11/2026 : ils ne servent qu'à fixer les paramètres du modèle hors ligne, la page ne les lit jamais.</li>
   </ul>
@@ -126,7 +127,7 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
   <ul>
     <li>Calibrage sur 6 jours seulement, dont 3 jours de semaine : décalages et fenêtres de rotation provisoires, vendredi et vacances non étudiés.</li>
     <li>Les causes d'un retard (autre bateau, changement de sens de la marée, vent) ne sont pas détectées en direct ; ils sont enregistrés à part pour une version ultérieure.</li>
-    <li>À l'ouverture de la page, il faut 1 à 2 min pour confirmer le sens de traversée (10 positions seulement, pas d'historique). Les sources AIS publiques se rafraîchissent environ chaque minute, avec ~1 min de retard : heures mesurées à ± 1 min, prévisions en retard d'autant. Si la connexion au serveur est perdue ou si aucune position n'arrive depuis 3 min, un bandeau rouge l'indique. Au-delà de 10 min sans nouvelle position, les prévisions sont suspendues.</li>
+    <li>À l'ouverture, la page rejoue 30 min de positions : le sens est connu tout de suite. Les sources AIS publiques se rafraîchissent environ chaque minute, avec ~1 min de retard : heures mesurées à ± 1 min, prévisions en retard d'autant. Source remise à jour toutes les 5 min : la situation entre deux mises à jour est estimée par le modèle (une perturbation y est vue avec jusqu'à 6 min de retard). Si la connexion à GitHub est perdue ou si aucune position n'arrive depuis 12 min, un bandeau rouge l'indique ; au-delà de 20 min, les prévisions sont suspendues.</li>
     <li>Manœuvres hors service (positionnement de début ou de fin de journée) non prévues ; un arrêt est déclaré après 30 min sans mouvement en période de service.</li>
   </ul>
 </div>
@@ -489,8 +490,9 @@ const SEUIL_HORS_ZONE=0.0008; // écart au chenal (unités lat/lon) au-delà duq
 // ====================================================================
 //  INTERFACE
 // ====================================================================
-// Positions AIS de Lola : relais sans mémoire (10 dernières positions en RAM, AISVesselTracker puis Shiptrail), jamais les relevés enregistrés.
-const URL_POSITIONS = "https://peeksoumi.com/lola-direct/positions";
+// Positions AIS de Lola : fichier public du dépôt GitHub « lola-relais » (30 dernières minutes, remis à jour toutes les 5 min par un relais), jamais les relevés enregistrés.
+const URL_POSITIONS = "https://raw.githubusercontent.com/Peeksoumi/lola-relais/main/positions.json";
+const AGE_ALERTE=12*60000, AGE_INDISPO=20*60000; // la source n'est remise à jour que toutes les 5 min (+ délai de mise en cache)
 const URL_METEO = "https://api.open-meteo.com/v1/forecast?latitude=47.196&longitude=-1.674&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m&wind_speed_unit=kmh&timezone=Europe%2FParis";
 const $=id=>document.getElementById(id);
 function iconeMeteo(c,jour){ // codes WMO → [pictogramme, libellé]
@@ -539,12 +541,22 @@ function evenementsEffectifs(now){
     if(s.phase==="traversee" && s.de && ((s.tDep||now-30000)-last>1000)) evs.push({type:"dep",q:s.de,t:Math.round(s.tDep||now-30000),approx:true});
     return evs;
 }
+// Entre deux mises à jour de la source (≈ 5 min), le modèle déroule les événements prévus déjà passés : ils sont marqués estimés (« ~ ») et remplacés par les mesures à la mise à jour suivante.
+function avecEstimes(evs,now){
+    const out=evs.slice();
+    for(let i=0;i<8&&out.length;i++){
+        const e=prevoir(out,out[out.length-1].t,1,derniereMarche).evenements[0];
+        if(!e||e.t>now) break;
+        out.push({type:e.type,q:e.q,t:e.t,approx:true,estime:true});
+    }
+    return out;
+}
 async function lirePosition(){
     try{
-        const rep=await fetch(URL_POSITIONS,{cache:"no-store"});
+        const rep=await fetch(URL_POSITIONS+"?t="+Math.floor(Date.now()/30000),{cache:"no-store"}); // ?t= : contourne le cache du CDN GitHub
         if(!rep.ok) throw new Error();
         const d=await rep.json();
-        if(!detecteur){ journal=[]; detecteur=creerDetecteur(null,e=>{ journal.push(e); }); } // première lecture : rejeu des 10 dernières positions
+        if(!detecteur){ journal=[]; detecteur=creerDetecteur(null,e=>{ journal.push(e); }); } // première lecture : rejeu des 30 dernières minutes
         d.samples.filter(s=>s[0]>dernierTs).forEach(traiter);
         lecturesOk=true; dernierSucces=Date.now();
     }catch(e){ lecturesOk=false; }
@@ -586,19 +598,20 @@ function jourTag(t,now){
 }
 
 function rendre(){
-    const now=Date.now(), evs=evenementsEffectifs(now);
+    const now=Date.now(), mesures=evenementsEffectifs(now);
+    const age=derniereMesure?now-derniereMesure:null;
+    const indispo=age===null || age>AGE_INDISPO;
+    const evs=indispo?mesures:avecEstimes(mesures,now), estime=evs.length>mesures.length;
     const pr=prevoir(evs,now,10,derniereMarche), mode=pr.mode;
     const b=$("bandeau");
-    const age=derniereMesure?now-derniereMesure:null;
-    const indispo=age===null || age>10*60000;
     const live = derniereMesure ? '<span class="led'+(lecturesOk&&!indispo?'':' off')+'"></span>Position AIS de '+formatHMS(derniereMesure)+' (il y a '+(age<90000?Math.round(age/1000)+' s':Math.round(age/60000)+' min')+')'+(vitesse!=null?' · '+vitesse.toFixed(1).replace(".",",")+' nd':'')
                                  : '<span class="led off"></span>'+(lecturesOk?'Aucune position reçue':'En attente de la position du bac…');
     if(indispo){ mode.mode="arret"; mode.raison=derniereMesure?"Position AIS indisponible":"En attente de la position…"; mode.detail=derniereMesure?"Dernière position il y a "+Math.round(age/60000)+" min":""; }
     b.className="m-"+mode.mode;
     const dur=ms=>ms<90000?Math.round(ms/1000)+' s':Math.round(ms/60000)+' min';
     let alerte="";
-    if(!lecturesOk) alerte='⚠ Connexion perdue avec le serveur de positions'+(dernierSucces?' — dernière mise à jour il y a '+dur(now-dernierSucces):' — aucune donnée reçue')+'. Nouvelle tentative toutes les 10 s.';
-    else if(age!==null && age>3*60000 && !indispo) alerte='⚠ Aucune nouvelle position du bac depuis '+dur(age)+' : source AIS en retard ou bac hors de portée.';
+    if(!lecturesOk) alerte='⚠ Connexion perdue avec la source des positions (GitHub)'+(dernierSucces?' — dernière mise à jour il y a '+dur(now-dernierSucces):' — aucune donnée reçue')+'. Nouvelle tentative toutes les 30 s.';
+    else if(age!==null && age>AGE_ALERTE && !indispo) alerte='⚠ Aucune nouvelle position du bac depuis '+dur(age)+' : source AIS en retard ou bac hors de portée.';
     b.innerHTML='<div class="mode">'+mode.raison+'</div><div class="detail">'+mode.detail+'</div><div class="live">'+live+'</div>'+(alerte?'<div class="alerte" role="alert">'+alerte+'</div>':'');
     const BATEAU='<svg viewBox="0 0 44 36" width="44" height="36"><path d="M4 22h36l-5 9H9z" fill="#d9635f"/><rect x="8" y="14" width="28" height="8" rx="1" fill="#e8edf0"/><rect x="14" y="7" width="16" height="7" rx="1" fill="#e8edf0"/><rect x="26" y="1" width="4" height="7" fill="#d9635f"/><g fill="#4f8fbd"><rect x="11" y="16.5" width="3" height="3"/><rect x="17" y="16.5" width="3" height="3"/><rect x="23" y="16.5" width="3" height="3"/><rect x="29" y="16.5" width="3" height="3"/></g></svg>';
     // Visuel : dérivé de la MÊME situation que les cartes (dernier événement), jamais de la vitesse brute
@@ -607,7 +620,8 @@ function rendre(){
     if(der){
         const aQuai=der.type==="arr", Q=der.q, vers=aQuai?null:autre(der.q), cible=aQuai?Q:vers;
         const prochain=pr.evenements.find(x=>aQuai?(x.type==="dep"&&x.q===Q):(x.type==="arr"&&x.q===vers));
-        const p=aQuai?(Q==="S"?0.04:0.96):Math.min(0.92,Math.max(0.08,pBac===null?0.5:pBac));
+        let p=aQuai?(Q==="S"?0.04:0.96):Math.min(0.92,Math.max(0.08,pBac===null?0.5:pBac));
+        if(!aQuai&&prochain&&age>90000){ const f=Math.min(1,Math.max(0,(now-der.t)/(prochain.t-der.t))), a0=der.q==="S"?0.04:0.96, a1=vers==="N"?0.96:0.04; p=a0+(a1-a0)*f; } // position estimée entre deux mises à jour
         const cote=(aQuai?autre(Q):vers)==="N"?1:-1;
         if(!indispo) focus={q:cible,kind:aQuai?"ici":"approche"};
         const ici=q=>(focus&&focus.kind==="ici"&&focus.q===q)?' ici':'';
@@ -620,6 +634,7 @@ function rendre(){
         if(aQuai){ t="À quai à "+NOM_QUAI[Q]; if(prochain&&!indispo) sous=(prochain.t-now<60000?'<span class="td">Départ imminent</span>':'Départ prévu vers <span class="td">'+formatHM(prochain.t)+'</span>'); }
         else { t=(vers==="N"?"En route vers "+NOM_QUAI[vers]+" ➜":"⬅ En route vers "+NOM_QUAI[vers]); if(prochain&&!indispo) sous='Arrivée prévue vers <span class="ta">'+formatHM(prochain.t)+'</span>'; }
         if(indispo) sous="Position trop ancienne : situation à confirmer";
+        else if(estime||age>90000) sous+=(sous?' · ':'')+'<i>estimé par le modèle (source mise à jour toutes les 5 min)</i>';
         $("carte").innerHTML=h+'<div class="sens">'+t+(sous?'<small>'+sous+'</small>':'')+'</div>';
     } else $("carte").innerHTML='<div class="sens">Situation du bac en attente…</div>';
     const panne=indispo || (mode.mode==="arret" && mode.raison.indexOf("Arrêt")===0);
@@ -652,7 +667,7 @@ function rendre(){
     const dernierDep=evs.filter(e=>e.type==="dep").pop();
     $("chaine").innerHTML = panne ? '<div class="vide">Prévisions suspendues : '+(indispo?"position AIS indisponible":"arrêt en cours")+'.</div>' :
         ENTETE_QQ+traversees((pr.evenements[0]&&pr.evenements[0].type==="arr"&&dernierDep&&dernierDep.q===autre(pr.evenements[0].q)?[dernierDep]:[]).concat(pr.evenements.slice(0,8))).slice(0,4).map((r,i)=>ligneTraversee(r,formatHM,now,i===0?"next":"")).join("")+'</table>';
-    const mes=traversees(evs.slice(-12)).reverse().slice(0,5);
+    const mes=traversees(mesures.slice(-12)).reverse().slice(0,5); // uniquement les changements réellement mesurés
     $("mesures").innerHTML = mes.length ? ENTETE_QQ+mes.map(r=>ligneTraversee(r,formatHMS,now,"")).join("")+'</table>'
         : '<div class="vide">Aucun changement mesuré pour l\'instant.</div>';
 }
@@ -661,7 +676,7 @@ rendre();
 lirePosition();
 lireMeteo();
 setInterval(lireMeteo,600000);
-setInterval(lirePosition,10000);
+setInterval(lirePosition,30000);
 setInterval(rendre,1000);
 </script>
 </body>

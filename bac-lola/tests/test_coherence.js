@@ -11,7 +11,7 @@ const pts=[[...N,0.1],[...N,0.1],[...N,0.2],[...mid[0],3],[...mid[1],3.2],[...mi
 let bad=0, vus={};
 for(let n=3;n<=pts.length;n++){
   const samples=pts.slice(0,n).map((r,i)=>[t0+i*60000,r[0],r[1],r[2],null]);
-  for(const dt of [20000,70000,150000]){
+  for(const dt of [20000,70000,150000,330000]){
     const els={}, doc={getElementById:id=>els[id]||(els[id]={innerHTML:"",className:"",textContent:""})};
     let horloge=samples[n-1][0]+dt; const RD=Date;
     const D=class extends RD{constructor(...a){super(...(a.length?a:[horloge]))} static now(){return horloge}; static UTC(...a){return RD.UTC(...a)}; static parse(s){return RD.parse(s)}};

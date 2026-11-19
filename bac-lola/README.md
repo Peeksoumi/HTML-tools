@@ -8,10 +8,13 @@ liste de l'enchaînement prévu des changements (une ligne par traversée, dépa
 ## Méthode (modèle hybride)
 1. **Nominal** : GTFS « Bacs de Loire en Loire-Atlantique » 2026 (ligne Basse-Indre <> Indret), 1 départ / 20 min / quai. Semaine : BI 05:30→22:10,
    Indret 05:40→22:20 ; week-end et fériés : BI 06:30→21:30, Indret 06:40→21:20. Arrivée nominale = départ nominal + 3 min.
-2. **Détection** : positions AIS de Lola (AISVesselTracker, repli Shiptrail) lues par un relais sans mémoire sur le serveur du site
-   (`/lola-direct/positions` : les 10 dernières positions en RAM, sans base de données ni fichier ; il ne lit jamais les relevés d'entraînement).
-   Les sources AIS refusent les appels directs d'un navigateur, d'où ce relais. À l'ouverture la page reçoit ces ≈ 10 min de positions et les passe dans le détecteur
-   (projection sur le chenal ; arrivée / départ confirmés par 2 positions), puis suit les nouvelles positions toutes les 10 s.
+2. **Détection** : positions AIS de Lola (AISVesselTracker, repli Shiptrail) interrogées par un relais indépendant qui garde 30 min en RAM et publie
+   toutes les 5 min `positions.json` dans le dépôt public [Peeksoumi/lola-relais](https://github.com/Peeksoumi/lola-relais) (un seul commit, sans historique).
+   La page lit ce fichier (`raw.githubusercontent.com`, `?t=` anti-cache) toutes les 30 s ; elle ne lit jamais les relevés d'entraînement.
+   Les sources AIS refusent les appels directs d'un navigateur, d'où ce relais. À l'ouverture la page rejoue les 30 min de positions dans le détecteur
+   (projection sur le chenal ; arrivée / départ confirmés par 2 positions).
+   Entre deux mises à jour (jusqu'à ≈ 6 min), le modèle déroule les événements prévus déjà passés (marqués « estimé ») ; les tableaux de mesures restent purement mesurés.
+   Alerte rouge après 12 min sans nouvelle position, prévisions suspendues après 20 min.
 3. **Modes** : rotation continue si les départs consécutifs sont espacés de ≤ 8,5 min ; perturbation si l'écart médian à la grille > 4,5 min ;
    arrêt hors service ou sans mouvement depuis 30 min.
 4. **Prévision** : simulation du cycle. Grille : créneau + décalage appris (semaine +1,3 min, week-end +1,7 min, réajusté sur les 5 derniers départs),
