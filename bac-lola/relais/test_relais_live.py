@@ -137,22 +137,26 @@ class TestRelais(unittest.TestCase):
         R.ajouter([now + 1000, 47.2, -1.7, 5, 90])    # doublon (±2 s)
         self.assertEqual(len(R.anneau), 1)
 
-    def test_secours_selon_le_mouvement(self):
+    def test_lectures_brutes_par_source(self):
+        R.brut.clear(); R.anneau.clear()
         now = int(time.time() * 1000)
-        R.etat["ais_dernier"] = 0
-        self.assertTrue(R.secours_necessaires())      # aisstream n'a jamais rien donné
-        R.ajouter([now, 47.2, -1.7, 0.1, None])       # à quai
-        R.etat["ais_dernier"] = time.time() - 60
-        self.assertFalse(R.secours_necessaires())     # 1 min de silence à quai : normal
-        R.etat["ais_dernier"] = time.time() - 100
-        self.assertTrue(R.secours_necessaires())      # plus de 75 s à quai
-        R.anneau.clear(); R.ajouter([now, 47.2, -1.7, 5.0, 90])   # en mouvement
-        R.etat["ais_dernier"] = time.time() - 10
-        self.assertFalse(R.secours_necessaires())
-        R.etat["ais_dernier"] = time.time() - 30
-        self.assertTrue(R.secours_necessaires())      # 30 s de silence en mouvement
-        R.anneau.clear(); R.ajouter([now, 47.2, -1.7, None, None])  # vitesse inconnue : on ne sait pas
-        self.assertTrue(R.secours_necessaires())
+        R.noter_brut([now, 47.2, -1.7, 1.0, 90.0], "avt")
+        R.noter_brut([now, 47.2, -1.7, 1.0, 90.0], "avt")           # même source, même heure : une seule fois
+        R.noter_brut([now, 47.2, -1.7, None, None], "shiptrail")    # autre source, même heure : gardée (pour comparer)
+        self.assertEqual([x[5] for x in R.brut], ["avt", "shiptrail"])
+        self.assertEqual(R.charge_brut()["n"], 2)
+
+    def test_lire_source_garde_brut_et_ajoute_a_l_anneau(self):
+        R.brut.clear(); R.anneau.clear()
+        now = int(time.time() * 1000)
+        vrai = R.lire_avt
+        R.lire_avt = lambda: [now - 400000, 47.2, -1.7, 1.0, 90.0]     # AVT 400 s en retard
+        try:
+            R.lire_source("avt")
+        finally:
+            R.lire_avt = vrai
+        self.assertEqual(len(R.brut), 1)       # gardée en brut
+        self.assertEqual(len(R.anneau), 0)     # mais trop vieille pour la meilleure donnée
 
     def test_publication_a_chaque_nouvelle_position(self):
         import os, tempfile
@@ -185,6 +189,7 @@ class TestRelais(unittest.TestCase):
         base = "http://127.0.0.1:%d" % srv.server_address[1]
         p = json.load(urllib.request.urlopen(base + "/positions"))
         self.assertEqual(p["n"], 1)
+        self.assertIn("samples", json.load(urllib.request.urlopen(base + "/sources")))
         with self.assertRaises(Exception):
             urllib.request.urlopen(base + "/autre")
         srv.shutdown()
@@ -254,11 +259,6 @@ class TestRelais(unittest.TestCase):
             R.publier(dernier, force=True); self.assertGreater(len(appels), n)                # battement : publie quand même
         finally:
             R.subprocess.run, R.REPO = vrai_run, vrai_repo
-
-    def test_secours_a_quai_apres_75_s(self):
-        R.anneau.clear(); R.ajouter([int(time.time() * 1000), 47.2, -1.68, 0.0, None])
-        R.etat["ais_dernier"] = time.time() - 60; self.assertFalse(R.secours_necessaires())
-        R.etat["ais_dernier"] = time.time() - 80; self.assertTrue(R.secours_necessaires())
 
 
 if __name__ == "__main__":
