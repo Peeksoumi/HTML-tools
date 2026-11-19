@@ -111,10 +111,18 @@ def source_avt():
     m = re.search(r'geo\.position" content="(-?\d+\.\d+);(-?\d+\.\d+)"', h)
     if not m:
         raise ValueError("AVT: position introuvable (HTTP %s) : %s" % (statut, h[:200].replace("\n", " ")))
-    v = re.search(r"moving at ([\d.]+) knots", h)
-    c = re.search(r'"(?:cog|course|courseOverGround)\\?":\s*([\d.]+)', h)
-    t = re.search(r"20\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z?", h)
-    return [m.group(1), m.group(2), v.group(1) if v else "", c.group(1) if c else "", t.group(0) if t else ""]
+    # la page décrit la position courante : « Speed: 0 knots, Course: 175° » (ancienne formulation : « moving at X knots »)
+    v = re.search(r"Speed: ([\d.]+) knots", h) or re.search(r"moving at ([\d.]+) knots", h)
+    c = re.search(r"Course: ([\d.]+)°", h) or re.search(r'"(?:cog|course|courseOverGround)\\?":\s*([\d.]+)', h)
+    t = re.search(r'temporalCoverage"?:\s*"?(20\d\d-\d\d-\d\dT\d\d:\d\d:\d\dZ)', h) or re.search(r"20\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z?", h)
+    heure = t.group(1) if t and t.lastindex else (t.group(0) if t else "")
+    if not heure:  # repli : « Position last updated 19 Nov 2026, 10:58 UTC » (précision à la minute)
+        u = re.search(r"Position last updated (\d+ \w+ \d{4}), (\d\d:\d\d) UTC", h)
+        try:
+            heure = datetime.strptime(u.group(1) + " " + u.group(2), "%d %b %Y %H:%M").strftime("%Y-%m-%dT%H:%M:00Z") if u else ""
+        except ValueError:
+            heure = ""
+    return [m.group(1), m.group(2), v.group(1) if v else "", c.group(1) if c else "", heure]
 
 
 def source_shiptrail():
@@ -170,12 +178,25 @@ def lire(nom, fonction):
     return [ts, float(champs[0]), float(champs[1]), flottant(champs[2]), flottant(champs[3])]
 
 
+DOUBLON_S = 45        # s : la même position (à ~2 m près) vue par deux sources dans cet intervalle est un seul message AIS
+DOUBLON_DEG = 2e-5    # ≈ 2 m : écart toléré entre les coordonnées de deux sources pour un même message
+
+
 def ajouter(s):
     """Insère la position dans l'anneau, triée par heure et sans doublon (±2 s) : une position d'AVT, souvent en retard de ~30 s sur Shiptrail,
     n'est plus perdue quand la source de secours a déjà fourni une position plus récente."""
     with verrou:
         if any(abs(x[0] - s[0]) <= 2000 for x in anneau):
             return
+        # même message AIS relevé par deux sources (heures différentes de quelques secondes) : on garde la plus ancienne et on complète vitesse / cap
+        for x in anneau:
+            if abs(x[0] - s[0]) <= DOUBLON_S * 1000 and abs(x[1] - s[1]) <= DOUBLON_DEG and abs(x[2] - s[2]) <= DOUBLON_DEG:
+                x[0] = min(x[0], s[0])
+                for i in (3, 4):
+                    if x[i] is None:
+                        x[i] = s[i]
+                anneau.sort(key=lambda y: y[0])
+                return
         anneau.append(s)
         anneau.sort(key=lambda x: x[0])
         limite = time.time() * 1000 - FENETRE_S * 1000
