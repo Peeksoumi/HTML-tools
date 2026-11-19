@@ -22,7 +22,7 @@ sudo systemctl restart lola-relais
 
 ## Méthode (page)
 1. Interroge `/lola-direct/positions` toutes les 5 s et affiche la dernière position (heure AIS, source indiquée) ; une position plus ancienne que celle affichée est ignorée.
-Côté relais : aisstream en continu ; si aisstream est muet depuis 3 min, AISVesselTracker puis Shiptrail sont interrogés toutes les 15 s.
+Côté relais : aisstream en continu ; si aisstream est muet depuis 20 s en mouvement (3 min à quai), AISVesselTracker puis Shiptrail sont interrogés toutes les 15 s.
 2. Entre deux relevés : estimation en ligne droite d'après la vitesse et le cap (60 s au plus), lissée sur 0,7 s à l'arrivée du relevé suivant.
 3. Fraîcheur : « En direct » sous 2 min, avertissement jusqu'à 10 min, alerte rouge au-delà ; « Relais AIS injoignable » après deux échecs de suite (les dernières valeurs restent affichées). Après 3 échecs, les essais sont espacés.
 4. Tracé : aller = GTFS officiel « Bacs de Loire en Loire-Atlantique » ; retour = symétrique par rapport à l'axe nord-sud du chenal.
