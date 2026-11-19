@@ -2,13 +2,13 @@
 """Relais sans mémoire pour la page bac-lola : les positions AIS de Lola de la dernière heure, tenues en mémoire vive.
 
 - Aucune base de données ni fichier de relevés : une fenêtre glissante de 60 min en RAM, perdue au redémarrage.
-- Dès qu'une nouvelle position diffère de la dernière publiée, il publie cette fenêtre (positions.json) dans un dépôt GitHub public, en écrasant tout
+- Dès qu'une nouvelle position arrive (aisstream ou secours), il publie cette fenêtre (positions.json) dans un dépôt GitHub public, en écrasant tout
   (un seul commit, aucun historique git), au plus toutes les 15 s (GitHub recommande ≤ 6 pushes/min/dépôt) : la page bac-lola y relit les positions pour se resynchroniser.
   Variables : LOLA_RELAIS_REPO (ex. git@github.com:Peeksoumi/lola-relais.git) et la clé de dépôt `deploy_key` (systemd LoadCredential).
 - Ne lit JAMAIS les relevés enregistrés (releves_*.csv) : ceux-ci ne servent qu'à entraîner le modèle.
 - Source principale : aisstream.io (websocket tenu ouvert, clé = identifiant systemd `aisstream_key`, jamais dans le dépôt).
-  Ordre de collecte : aisstream, puis AISVesselTracker, puis Shiptrail. Les secours sont interrogés (toutes les 15 s) dès qu'aisstream n'a rien donné
-  depuis 20 s alors que le bac se déplace (vitesse ≥ 0,5 nd, ou vitesse inconnue), afin d'avoir une position tous les ~15 s ; à quai, seulement après 4 min de silence.
+  Ordre de collecte : aisstream, puis AISVesselTracker, puis Shiptrail. Les secours ne sont interrogés (toutes les 15 s) que si aisstream n'a rien donné depuis 3 min
+  (à quai, un bac n'émet qu'une position toutes les 3 min).
 - GET /positions -> {"maj": ms, "fenetre_min": 60, "n": N, "source": "aisstream|avt|shiptrail", "samples": [[ts_ms, lat, lon, vitesse|null, cap|null], ...]}
   (ts = heure de la position côté source ; les en-têtes CORS sont ajoutés par nginx.)
 Écoute sur 127.0.0.1:18791 ; nginx le publie sous /lola-direct/ (flux « direct » lu par la page, avec CORS).
@@ -126,9 +126,7 @@ PAS = 15            # s entre deux interrogations
 RETARD_MAX = 180    # s : au-delà, on bascule sur la source de secours
 FENETRE_S = 60 * 60   # on ne conserve jamais plus d'une heure de positions
 PUBLIER_MIN_S = 15    # s minimum entre deux publications GitHub (≤ 4/min, sous les 6 pushes/min recommandés)
-AIS_FRAIS_S = 240     # s : à quai, on n'interroge les sources de secours qu'après ce silence d'aisstream
-AIS_FRAIS_MOUVEMENT_S = 20   # s : même seuil quand le bac se déplace (cadence visée : une position toutes les ~15 s)
-VITESSE_MOUVEMENT = 0.5      # nœuds
+AIS_SILENCE_S = 180   # s : au-delà de ce silence d'aisstream (à quai : une position toutes les 3 min), on lit les sources de secours
 AIS_URL = os.environ.get("AISSTREAM_URL", "wss://stream.aisstream.io/v0/stream")
 RUN = os.environ.get("RUNTIME_DIRECTORY", "/run/lola-relais")  # tmpfs : en RAM
 REPO = os.environ.get("LOLA_RELAIS_REPO", "")
@@ -206,11 +204,8 @@ def interroger():
 
 
 def secours_necessaires():
-    """Vrai quand aisstream est muet depuis trop longtemps : 20 s si le bac bouge (ou si on ne sait pas), 4 min à quai."""
-    with verrou:
-        vit = anneau[-1][3] if anneau else None
-    bouge = vit is None or vit >= VITESSE_MOUVEMENT
-    return time.time() - etat.get("ais_dernier", 0) > (AIS_FRAIS_MOUVEMENT_S if bouge else AIS_FRAIS_S)
+    """Vrai quand aisstream est muet depuis plus de 3 min (ou n'a jamais rien donné)."""
+    return time.time() - etat.get("ais_dernier", 0) > AIS_SILENCE_S
 
 
 def boucle():
@@ -236,7 +231,7 @@ def publier(dernier):
     if not REPO or not os.path.exists(cle):
         return dernier
     d = charge_utile()
-    if not d["samples"] or tuple(d["samples"][-1][1:3]) == dernier:   # on ne publie que si la position a changé
+    if not d["samples"] or d["samples"][-1][0] == dernier:   # on ne publie que s'il y a une nouvelle position
         return dernier
     rep = os.path.join(RUN, "pub")
     shutil.rmtree(rep, ignore_errors=True)
@@ -252,7 +247,7 @@ def publier(dernier):
                 ["git", "push", "-q", "-f", REPO, "main"]):
         subprocess.run(cmd, cwd=rep, env=env, check=True, capture_output=True, timeout=60)
     shutil.rmtree(rep, ignore_errors=True)
-    return tuple(d["samples"][-1][1:3])
+    return d["samples"][-1][0]
 
 
 # --- aisstream.io : websocket tenu ouvert (client minimal RFC 6455, sans dépendance) -----------
