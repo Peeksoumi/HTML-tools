@@ -1,35 +1,35 @@
-# Lola — position AIS en direct
+# Lola — position AIS en direct (aisstream.io)
 
-Page autonome (un seul `index.html`) qui affiche la position du bac de Loire **Lola** (MMSI 227158520, Indret ⇄ Basse-Indre) le plus près possible du temps réel :
-latitude, longitude, vitesse, cap, heure et âge du relevé, carte du chenal avec le bac, et la source utilisée.
+Page autonome (un seul `index.html`) qui affiche la position du bac de Loire **Lola** (MMSI 227158520, Indret ⇄ Basse-Indre) à partir des **seules données d'aisstream.io** :
+latitude, longitude, vitesse, cap, heure et âge du relevé, carte du chenal avec le bac.
 
-## Méthode
-1. **Trois sources en parallèle**, la page garde le relevé à l'heure AIS la plus récente (égalité : worker, puis relais, puis GitHub) :
-   - **worker AIS** (toutes les 5 s) : flux temps réel d'[aisstream.io](https://aisstream.io) filtré sur le MMSI, voir [`worker/`](worker/) ;
-   - **relais du site** `peeksoumi.com/lola-direct/positions` (toutes les 15 s) : AISVesselTracker, Shiptrail en secours, voir [`../bac-lola/relais`](../bac-lola/relais/) ;
-   - **copie GitHub** [Peeksoumi/lola-relais](https://github.com/Peeksoumi/lola-relais) (toutes les 60 s, seulement si les deux autres n'ont rien de récent).
-2. **Entre deux relevés** : estimation en ligne droite d'après la vitesse et le cap (60 s au plus), lissée sur 0,7 s à l'arrivée du relevé suivant.
-3. **Fraîcheur** : « En direct » sous 2 min, avertissement jusqu'à 10 min, alerte rouge au-delà ; « Connexion perdue » si les trois sources échouent (les dernières valeurs restent affichées).
-   Une source qui échoue 3 fois de suite n'est plus interrogée qu'une fois par ~6 périodes.
-4. **Tracé** : aller = GTFS officiel « Bacs de Loire en Loire-Atlantique » ; retour = symétrique par rapport à l'axe nord-sud du chenal.
+## Où mettre la clé d'API
+**Dans un secret du worker Cloudflare `lola-ais`, nom exact `AISSTREAM_KEY`. Jamais dans `index.html` ni dans ce dépôt (public).**
+aisstream.io refuse les connexions directes depuis un navigateur (la clé serait lisible par tous les visiteurs de la page) : la page lit le worker, et le worker lit aisstream.io avec la clé.
 
-Pas de bouton « Télécharger la page » : l'outil n'a de sens qu'avec ses sources distantes.
+- Ligne de commande, depuis `worker/` : `npx wrangler secret put AISSTREAM_KEY`, puis coller la clé quand elle est demandée.
+- Tableau de bord Cloudflare : *Workers & Pages* → `lola-ais` → *Settings* → *Variables and Secrets* → *Add* → type **Secret**, nom `AISSTREAM_KEY`, valeur = la clé → *Deploy*.
 
-## Worker AIS (`worker/`)
-Worker Cloudflare + Durable Object qui garde une connexion websocket vers aisstream.io (les navigateurs n'y ont pas accès : la clé d'API serait exposée), mémorise le dernier relevé et le sert en JSON (`?format=json`) ou en texte `lat lon vitesse cap HH:MM:SS`.
-La connexion se ferme après 10 min sans interrogation. **La clé d'API n'est jamais dans le dépôt** : secret `AISSTREAM_KEY`.
+## Déploiement du worker (`worker/`)
+1. `npx wrangler login` puis `npx wrangler deploy` (crée le worker `lola-ais`).
+2. Ajouter le secret `AISSTREAM_KEY` (voir ci-dessus).
+3. Contrôle : ouvrir `https://lola-ais.<compte>.workers.dev/?format=json` ; au premier appel la connexion s'ouvre, recharger après une minute. Si l'adresse diffère de `URL_WORKER` dans `index.html`, la corriger.
 
-Déploiement (depuis le dossier `worker/`) :
-1. `npx wrangler deploy`
-2. `npx wrangler secret put AISSTREAM_KEY` (clé gratuite sur aisstream.io)
-3. contrôle : ouvrir `https://lola-ais.<compte>.workers.dev/?format=json` ; si l'adresse diffère de `URL_WORKER` dans `index.html`, la corriger.
+Le worker (Durable Object) garde une connexion websocket vers aisstream.io filtrée sur le MMSI, dans une boîte autour de l'estuaire (Nantes → Saint-Nazaire), mémorise le dernier relevé et le sert en JSON (`?format=json`) ou en texte `lat lon vitesse cap HH:MM:SS`. La connexion se ferme après 10 min sans interrogation.
+Non testé contre aisstream.io au moment de l'écriture.
 
-Non testé contre aisstream.io au moment de l'écriture. La couverture de l'estuaire de la Loire par les récepteurs d'aisstream.io est à vérifier (`aisstream.io/coverage`) ; sans récepteur, la page vit sur le relais.
+## Méthode (page)
+1. Interroge le worker toutes les 5 s et affiche son dernier relevé (heure AIS) ; un relevé plus ancien que celui affiché est ignoré.
+2. Entre deux relevés : estimation en ligne droite d'après la vitesse et le cap (60 s au plus), lissée sur 0,7 s à l'arrivée du relevé suivant.
+3. Fraîcheur : « En direct » sous 2 min, avertissement jusqu'à 10 min, alerte rouge au-delà ; « Worker AIS injoignable » après deux échecs de suite (les dernières valeurs restent affichées). Après 3 échecs, les essais sont espacés.
+4. Tracé : aller = GTFS officiel « Bacs de Loire en Loire-Atlantique » ; retour = symétrique par rapport à l'axe nord-sud du chenal.
+
+Pas de bouton « Télécharger la page » : l'outil n'a de sens qu'avec le worker.
 
 ## Limites
-- Un bac à quai n'émet qu'un relevé toutes les ~3 min ; la page ne peut pas être plus fraîche que ses sources.
-- Le relais a environ 1 min de retard, la copie GitHub jusqu'à ~6 min.
+- Rien ne s'affiche tant que le worker n'est pas déployé et qu'un récepteur d'aisstream.io (réseau de bénévoles) ne capte pas l'estuaire : couverture à vérifier sur `aisstream.io/coverage`.
+- Un bac à quai n'émet qu'un relevé toutes les ~3 min ; la page ne peut pas être plus fraîche que la source.
 - L'estimation est rectiligne (fausse dans les virages et à l'accostage). L'âge se calcule avec l'horloge de l'appareil.
 
 ## Tests
-`node tests/test_page.js` : choix du relevé, repli entre sources, erreurs, estimation, alertes (faux DOM, aucun réseau).
+`node tests/test_page.js` : relevé, erreurs du worker, estimation, alertes de fraîcheur (faux DOM, aucun réseau).
