@@ -22,7 +22,7 @@ sudo systemctl restart lola-relais
 
 ## Méthode (page)
 1. Interroge `/lola-direct/positions` toutes les 5 s et affiche la dernière position (heure AIS, source indiquée) ; une position plus ancienne que celle affichée est ignorée.
-Côté relais : aisstream en continu ; si aisstream est muet depuis 20 s alors que le bac se déplace (vitesse ≥ 0,5 nd ou inconnue), AISVesselTracker puis Shiptrail sont interrogés toutes les 15 s ; à quai, seulement après 4 min de silence.
+Côté relais : aisstream en continu ; si aisstream est muet depuis 3 min, AISVesselTracker puis Shiptrail sont interrogés toutes les 15 s.
 2. Entre deux relevés : estimation en ligne droite d'après la vitesse et le cap (60 s au plus), lissée sur 0,7 s à l'arrivée du relevé suivant.
 3. Fraîcheur : « En direct » sous 2 min, avertissement jusqu'à 10 min, alerte rouge au-delà ; « Relais AIS injoignable » après deux échecs de suite (les dernières valeurs restent affichées). Après 3 échecs, les essais sont espacés.
 4. Tracé : aller = GTFS officiel « Bacs de Loire en Loire-Atlantique » ; retour = symétrique par rapport à l'axe nord-sud du chenal.
@@ -30,7 +30,7 @@ Côté relais : aisstream en continu ; si aisstream est muet depuis 20 s alors q
 Pas de bouton « Télécharger la page » : l'outil n'a de sens qu'avec le relais du serveur.
 
 ## Limites
-- AISVesselTracker et Shiptrail rafraîchissent environ toutes les 30 à 80 s : une position toutes les 15 s n'est tenue que si aisstream capte l'estuaire (couverture à vérifier sur `aisstream.io/coverage`). Non testé contre les vraies sources au moment de l'écriture.
+- AISVesselTracker et Shiptrail rafraîchissent environ toutes les 30 à 80 s : les positions sont plus espacées si aisstream ne capte pas l'estuaire (couverture à vérifier sur `aisstream.io/coverage`). Non testé contre les vraies sources au moment de l'écriture.
 - Un bac à quai n'émet qu'un relevé toutes les ~3 min ; la page ne peut pas être plus fraîche que la source.
 - L'estimation est rectiligne (fausse dans les virages et à l'accostage). L'âge se calcule avec l'horloge de l'appareil.
 

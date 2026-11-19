@@ -4,13 +4,13 @@ const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
 const m=html.match(/<script>([\s\S]*)<\/script>/); if(!m) throw new Error("script introuvable");
 const els={};
 const doc={getElementById:id=>els[id]||(els[id]={innerHTML:"",className:"",textContent:""})};
-let intervals=[], reseauHs=false, directHs=false, urls=[];
+let intervals=[], reseauHs=false, urls=[];
 // Positions simulées (publiées par le serveur) : bac à quai Basse-Indre puis traversée vers Indret
 const t0=Date.parse("2026-11-17T08:00:00Z");
 const pts=[[47.19744,-1.67439,0.1],[47.19744,-1.67439,0.1],[47.19744,-1.67439,0.2],[47.1969,-1.6731,3],[47.1962,-1.6724,3.2],[47.1956,-1.6728,2],[47.19534,-1.6743,0.1],[47.19534,-1.6743,0.1]];
 const samples=pts.map((r,i)=>[t0+i*60000,r[0],r[1],r[2],null]);
 const ctx={document:doc,
-  fetch:async(u)=>{ urls.push(u); if(/open-meteo/.test(u)) return {ok:true,json:async()=>({current:{time:"2026-11-17T09:00",temperature_2m:9.6,weather_code:61,wind_speed_10m:18.2,wind_direction_10m:250}})}; if(reseauHs||(directHs&&/lola-direct/.test(u))) throw new Error("réseau coupé"); return {ok:true,json:async()=>({maj:t0,n:samples.length,samples})}; },
+  fetch:async(u)=>{ urls.push(u); if(/open-meteo/.test(u)) return {ok:true,json:async()=>({current:{time:"2026-11-17T09:00",temperature_2m:9.6,weather_code:61,wind_speed_10m:18.2,wind_direction_10m:250}})}; if(reseauHs) throw new Error("réseau coupé"); return {ok:true,json:async()=>({maj:t0,n:samples.length,samples})}; },
   setInterval:(f,ms)=>intervals.push([f,ms]),Intl,Date,Math,JSON,console,parseFloat,isFinite,Number,Set,Array,Object,String};
 vm.createContext(ctx);
 let horloge=t0+8*60000; const RD=Date; ctx.Date=class extends RD{constructor(...a){super(...(a.length?a:[horloge]))} static now(){return horloge}; static UTC(...a){return RD.UTC(...a)}; static parse(s){return RD.parse(s)}};
@@ -28,25 +28,25 @@ vm.runInContext(m[1]+"\nthis.__t={rendre,lirePosition,lireMeteo,journal:()=>jour
   ok(/class="bateau/.test(els.carte.innerHTML)&&/Indret|Basse-Indre/.test(els.carte.innerHTML),"visuel : bateau positionné entre les deux quais ("+els.carte.innerHTML.replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim()+")");
   await ctx.__t.lireMeteo(); ok(/10 °C · Pluie · vent 18 km\/h O/.test(els.meteo.innerHTML)&&/🌧️/.test(els.meteo.innerHTML),"météo affichée : "+els.meteo.innerHTML.replace(/<[^>]+>/g,""));
   ok(!/class="alerte"/.test(b),"pas d'alerte quand la connexion fonctionne");
-  ok(/Direct · position AIS/.test(els.bandeau.innerHTML),"direct disponible : libellé « Direct »");
-  ok(urls.some(u=>/peeksoumi\.com\/lola-direct\/positions$/.test(u))&&urls.some(u=>/raw\.githubusercontent\.com\/Peeksoumi\/lola-relais\/main\/positions\.json\?t=/.test(u)),"lecture simultanée : relais direct + fichier GitHub (?t= anti-cache)");
-  ok(intervals.some(x=>x[1]===15000),"relecture toutes les 15 s");
+  ok(/Relais GitHub · position AIS/.test(els.bandeau.innerHTML),"libellé « Relais GitHub »");
+  ok(urls.some(u=>/raw\.githubusercontent\.com\/Peeksoumi\/lola-relais\/main\/positions\.json\?t=/.test(u))&&!urls.some(u=>/lola-direct/.test(u)),"lecture du seul fichier GitHub (?t= anti-cache), plus de relais direct");
+  ok(intervals.some(x=>x[1]===15000),"tick toutes les 15 s, lecture GitHub limitée à une toutes les 30 s");
+  const nb=urls.filter(u=>/lola-relais/.test(u)).length;
+  horloge+=10000; await ctx.__t.lirePosition();
+  ok(urls.filter(u=>/lola-relais/.test(u)).length===nb,"deux lectures à moins de 30 s : une seule requête GitHub");
   const mesAvant=els.mesures.innerHTML.replace(/<small>.*?<\/small>/g,"");
-  // position figée alors que le direct répond : seuil de 3 min
-  horloge+=4*60000; await ctx.__t.lirePosition();
-  ok(/Aucune nouvelle position du bac depuis \d+ min/.test(els.bandeau.innerHTML),"direct disponible mais position figée > 3 min : alerte de retard");
-  // direct coupé, GitHub seul : seuils élargis, situation estimée
-  directHs=true; horloge+=70000; await ctx.__t.lirePosition();
-  ok(/Relais GitHub · position AIS/.test(els.bandeau.innerHTML)&&!/Connexion perdue/.test(els.bandeau.innerHTML),"direct coupé : repli sur GitHub, pas d'alerte de connexion");
-  horloge+=5*60000; await ctx.__t.lirePosition();
-  ok(!/class="alerte"/.test(els.bandeau.innerHTML),"GitHub seul, source vieille de ~7 min : pas d'alerte");
+  // position figée : seuil d'alerte de 5 min
+  horloge+=3*60000; await ctx.__t.lirePosition();
+  ok(!/class="alerte"/.test(els.bandeau.innerHTML),"position de ~4 min 10 s (aisstream muet à quai, repli en cours) : pas d'alerte");
+  horloge+=2*60000; await ctx.__t.lirePosition();
+  ok(/Aucune nouvelle position du bac depuis \d+ min/.test(els.bandeau.innerHTML),"position figée > 5 min : alerte de retard");
   ok(/estimé par le modèle/.test(els.carte.innerHTML),"entre deux mises à jour : situation signalée « estimée »");
   ok(els.mesures.innerHTML.replace(/<small>.*?<\/small>/g,"")===mesAvant,"tableau des mesures : inchangé par les estimations");
-  // les deux sources coupées
-  reseauHs=true; horloge+=70000; await ctx.__t.lirePosition();
-  ok(/class="alerte"[^>]*>⚠ Connexion perdue/.test(els.bandeau.innerHTML),"les deux sources coupées : alerte « Connexion perdue »");
+  // GitHub injoignable
+  reseauHs=true; horloge+=40000; await ctx.__t.lirePosition();
+  ok(/class="alerte"[^>]*>⚠ Connexion perdue/.test(els.bandeau.innerHTML),"GitHub coupé : alerte « Connexion perdue »");
   ok(/dernière mise à jour il y a/.test(els.bandeau.innerHTML),"l'alerte indique l'ancienneté de la dernière mise à jour");
-  reseauHs=false; directHs=false; await ctx.__t.lirePosition();
+  reseauHs=false; horloge+=40000; await ctx.__t.lirePosition();
   ok(!/Connexion perdue/.test(els.bandeau.innerHTML),"connexion rétablie : alerte retirée");
   horloge+=20*60000; await ctx.__t.lirePosition();
   ok(/Position AIS indisponible/.test(els.bandeau.innerHTML)&&/Position trop ancienne/.test(els.carte.innerHTML),"position figée > 10 min : prévisions suspendues");

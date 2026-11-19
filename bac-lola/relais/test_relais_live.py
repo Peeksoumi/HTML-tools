@@ -116,18 +116,36 @@ class TestRelais(unittest.TestCase):
         R.ajouter([now + 1000, 47.2, -1.7, 5, 90])    # doublon (±2 s)
         self.assertEqual(len(R.anneau), 1)
 
-    def test_secours_selon_mouvement(self):
-        now = int(time.time() * 1000)
-        R.etat["ais_dernier"] = time.time() - 30      # aisstream muet depuis 30 s
-        self.assertTrue(R.secours_necessaires())      # aucune position connue : on ne sait pas, on interroge
-        R.ajouter([now, 47.2, -1.7, 5.0, 90])
-        self.assertTrue(R.secours_necessaires())      # en mouvement : seuil de 20 s dépassé
-        R.anneau.clear(); R.ajouter([now, 47.2, -1.7, 0.1, 90])
-        self.assertFalse(R.secours_necessaires())     # à quai : seuil de 4 min
-        R.etat["ais_dernier"] = time.time() - 300
-        self.assertTrue(R.secours_necessaires())
-        R.anneau.clear(); R.ajouter([now, 47.2, -1.7, 5.0, 90]); R.etat["ais_dernier"] = time.time() - 5
-        self.assertFalse(R.secours_necessaires())     # aisstream récent : pas de secours
+    def test_secours_apres_3_min_de_silence(self):
+        R.etat["ais_dernier"] = 0
+        self.assertTrue(R.secours_necessaires())      # aisstream n'a jamais rien donné
+        R.etat["ais_dernier"] = time.time() - 120
+        self.assertFalse(R.secours_necessaires())     # 2 min de silence : normal (une position / 3 min à quai)
+        R.etat["ais_dernier"] = time.time() - 200
+        self.assertTrue(R.secours_necessaires())      # plus de 3 min : on lit les autres sources
+
+    def test_publication_a_chaque_nouvelle_position(self):
+        import os, tempfile
+        d = tempfile.mkdtemp()
+        R.REPO = "git@exemple:x/y.git"; R.RUN = d
+        os.environ["CREDENTIALS_DIRECTORY"] = d
+        open(os.path.join(d, "deploy_key"), "w").write("x")
+        appels = []
+        vrai = R.subprocess.run
+        R.subprocess.run = lambda cmd, **k: appels.append(cmd[:2])
+        try:
+            now = int(time.time() * 1000)
+            R.ajouter([now, 47.2, -1.7, 0.1, None])
+            dernier = R.publier(None)
+            self.assertEqual(dernier, now)
+            n = len(appels)
+            self.assertEqual(R.publier(dernier), dernier)   # rien de nouveau : pas de push
+            self.assertEqual(len(appels), n)
+            R.ajouter([now + 60000, 47.2, -1.7, 0.1, None])  # même lieu, nouvelle heure : on publie
+            self.assertEqual(R.publier(dernier), now + 60000)
+            self.assertGreater(len(appels), n)
+        finally:
+            R.subprocess.run = vrai
 
     def test_endpoint_positions(self):
         now = int(time.time() * 1000)
