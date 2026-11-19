@@ -4,7 +4,7 @@
 
 - garde ouverte une connexion websocket vers **aisstream.io** (source principale, clé = identifiant systemd `aisstream_key`) ; AISVesselTracker puis Shiptrail ne sont interrogés (toutes les 15 s) que si aisstream est muet depuis 20 s quand le bac est en mouvement, 3 min quand il est à quai ; chaque changement d'état (aisstream, source, publication) est écrit dans le journal (`journalctl -u lola-relais`) ; garde **1 h maximum** de positions en mémoire vive (rien n'est écrit sur disque) ;
 - sert ces positions sur `127.0.0.1:18791/positions` (publié par nginx sous `/lola-direct/`, avec CORS) : c'est le « direct » lu par la page (lu aussi par la page `lola-position`) ;
-- publie `positions.json` dans le dépôt public [Peeksoumi/lola-relais](https://github.com/Peeksoumi/lola-relais) dès qu'une nouvelle position arrive, au plus toutes les 15 s (GitHub recommande ≤ 6 pushes/min/dépôt) : dépôt neuf, un seul commit, push forcé (aucun historique) ;
+- publie `positions.json` dans le dépôt public [Peeksoumi/lola-relais](https://github.com/Peeksoumi/lola-relais) dès qu'une nouvelle position arrive, au plus toutes les 15 s (GitHub recommande ≤ 6 pushes/min/dépôt), et au moins chaque minute même sans nouvelle position (battement de cœur, champ `maj`) : dépôt neuf, un seul commit, push forcé (aucun historique) ;
 - la clé d'écriture du dépôt (`deploy_key`) et la clé aisstream (`aisstream_key`) ne sont jamais dans ce dépôt : elles sont fournies par systemd (`LoadCredential`).
 
 Test : `python3 test_relais_live.py` (client websocket contre un faux serveur, lecture des messages, anneaux, points d'accès).

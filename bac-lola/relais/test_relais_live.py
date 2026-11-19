@@ -142,10 +142,10 @@ class TestRelais(unittest.TestCase):
         R.etat["ais_dernier"] = 0
         self.assertTrue(R.secours_necessaires())      # aisstream n'a jamais rien donné
         R.ajouter([now, 47.2, -1.7, 0.1, None])       # à quai
-        R.etat["ais_dernier"] = time.time() - 120
-        self.assertFalse(R.secours_necessaires())     # 2 min de silence à quai : normal
-        R.etat["ais_dernier"] = time.time() - 200
-        self.assertTrue(R.secours_necessaires())      # plus de 3 min à quai
+        R.etat["ais_dernier"] = time.time() - 60
+        self.assertFalse(R.secours_necessaires())     # 1 min de silence à quai : normal
+        R.etat["ais_dernier"] = time.time() - 100
+        self.assertTrue(R.secours_necessaires())      # plus de 75 s à quai
         R.anneau.clear(); R.ajouter([now, 47.2, -1.7, 5.0, 90])   # en mouvement
         R.etat["ais_dernier"] = time.time() - 10
         self.assertFalse(R.secours_necessaires())
@@ -236,6 +236,29 @@ class TestRelais(unittest.TestCase):
         self.assertEqual(R.anneau[0], [t, 47.2, -1.68, 3.0, 120.0])
         R.ajouter([t + 20000, 47.201, -1.68, 3.0, 120.0])          # vraie nouvelle position
         self.assertEqual(len(R.anneau), 2)
+
+    def test_battement_de_coeur_republie_sans_nouvelle_position(self):
+        import tempfile, os
+        d = tempfile.mkdtemp(); open(os.path.join(d, "deploy_key"), "w").write("x")
+        os.environ["CREDENTIALS_DIRECTORY"] = d
+        R.anneau.clear(); R.ajouter([int(time.time() * 1000), 47.2, -1.68, 0.0, 175.0])
+        appels = []
+        vrai_run, vrai_repo = R.subprocess.run, R.REPO
+        R.subprocess.run = lambda *a, **k: appels.append(a[0]) or None
+        R.REPO = "git@exemple:x/y.git"
+        try:
+            dernier = R.publier(None)
+            n = len(appels)
+            self.assertGreater(n, 0)
+            self.assertEqual(R.publier(dernier), dernier); self.assertEqual(len(appels), n)   # rien de neuf : pas de publication
+            R.publier(dernier, force=True); self.assertGreater(len(appels), n)                # battement : publie quand même
+        finally:
+            R.subprocess.run, R.REPO = vrai_run, vrai_repo
+
+    def test_secours_a_quai_apres_75_s(self):
+        R.anneau.clear(); R.ajouter([int(time.time() * 1000), 47.2, -1.68, 0.0, None])
+        R.etat["ais_dernier"] = time.time() - 60; self.assertFalse(R.secours_necessaires())
+        R.etat["ais_dernier"] = time.time() - 80; self.assertTrue(R.secours_necessaires())
 
 
 if __name__ == "__main__":
