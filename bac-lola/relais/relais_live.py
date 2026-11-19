@@ -8,7 +8,8 @@
 - Ne lit JAMAIS les relevés enregistrés (releves_*.csv) : ceux-ci ne servent qu'à entraîner le modèle.
 - Source principale : aisstream.io (websocket tenu ouvert, clé = identifiant systemd `aisstream_key`, jamais dans le dépôt).
   Ordre de collecte : aisstream, puis AISVesselTracker, puis Shiptrail. Les secours ne sont interrogés (toutes les 15 s) que si aisstream est muet depuis 20 s quand le bac
-  est en mouvement (vitesse ≥ 1,5 nd ou inconnue), depuis 3 min quand il est à quai (il n'y émet qu'une position toutes les 3 min).
+  est en mouvement (vitesse ≥ 1,5 nd ou inconnue), depuis 75 s quand il est à quai (aisstream n'y émet qu'une position toutes les 3-5 min, AVT se rafraîchit toutes les 30-80 s).
+  Sans nouvelle position, le relais republie quand même chaque minute (battement de cœur : « maj » prouve que le relais est vivant).
 - GET /positions -> {"maj": ms, "fenetre_min": 60, "n": N, "source": "aisstream|avt|shiptrail", "samples": [[ts_ms, lat, lon, vitesse|null, cap|null], ...]}
   (ts = heure de la position côté source ; les en-têtes CORS sont ajoutés par nginx.)
 Écoute sur 127.0.0.1:18791 ; nginx le publie sous /lola-direct/ (flux « direct » lu par la page, avec CORS).
@@ -134,7 +135,8 @@ PAS = 15            # s entre deux interrogations
 RETARD_MAX = 180    # s : au-delà, on bascule sur la source de secours
 FENETRE_S = 60 * 60   # on ne conserve jamais plus d'une heure de positions
 PUBLIER_MIN_S = 15    # s minimum entre deux publications GitHub (≤ 4/min, sous les 6 pushes/min recommandés)
-AIS_SILENCE_QUAI_S = 180       # s : à quai, aisstream n'émet qu'une position toutes les 3 min : silence normal en dessous
+AIS_SILENCE_QUAI_S = 75        # s : à quai, aisstream n'émet qu'une position toutes les 3-5 min ; AVT se rafraîchit toutes les 30-80 s : on le lit dès 75 s de silence
+BATTEMENT_S = 60               # s : sans nouvelle position, on republie quand même (« maj » = relais vivant) au moins à cette fréquence
 AIS_SILENCE_MOUVEMENT_S = 20   # s : en mouvement, une position toutes les quelques secondes : au-delà, on lit les secours
 V_MOUVEMENT = 1.5              # nœuds (même seuil que la page bac-lola)
 AIS_URL = os.environ.get("AISSTREAM_URL", "wss://stream.aisstream.io/v0/stream")
@@ -234,7 +236,7 @@ def interroger():
 
 
 def secours_necessaires():
-    """Vrai quand aisstream est muet trop longtemps : 20 s si le bac est en mouvement (ou si on ne sait pas), 3 min s'il est à quai."""
+    """Vrai quand aisstream est muet trop longtemps : 20 s si le bac est en mouvement (ou si on ne sait pas), 75 s s'il est à quai."""
     with verrou:
         vit = anneau[-1][3] if anneau else None
     seuil = AIS_SILENCE_QUAI_S if (vit is not None and vit < V_MOUVEMENT) else AIS_SILENCE_MOUVEMENT_S
@@ -258,13 +260,13 @@ def charge_utile():
                 "samples": [x for x in anneau if x[0] >= limite]}
 
 
-def publier(dernier):
+def publier(dernier, force=False):
     """Pousse positions.json dans le dépôt public, sans historique : dépôt neuf, un seul commit, push forcé."""
     cle = os.path.join(os.environ.get("CREDENTIALS_DIRECTORY", ""), "deploy_key")
     if not REPO or not os.path.exists(cle):
         return dernier
     d = charge_utile()
-    if not d["samples"] or d["samples"][-1][0] == dernier:   # on ne publie que s'il y a une nouvelle position
+    if not d["samples"] or (d["samples"][-1][0] == dernier and not force):   # sinon seulement s'il y a une nouvelle position (force : battement de cœur)
         return dernier
     rep = os.path.join(RUN, "pub")
     shutil.rmtree(rep, ignore_errors=True)
@@ -440,14 +442,14 @@ def boucle_aisstream():
 def boucle_publication():
     dernier, dernier_t = None, 0
     while True:
-        nouveau.wait()
+        nouvelle = nouveau.wait(BATTEMENT_S)    # False : rien reçu depuis 60 s -> battement de cœur
         attente = PUBLIER_MIN_S - (time.time() - dernier_t)
         if attente > 0:
             time.sleep(attente)     # les positions qui arrivent pendant l'attente partent dans la même publication
         nouveau.clear()
         dernier_t = time.time()
         try:
-            dernier = publier(dernier)
+            dernier = publier(dernier, force=not nouvelle)
             etat["publication"] = "ok %d" % int(time.time())
         except subprocess.CalledProcessError as e:
             noter("publication", "échec : " + (e.stderr or b"").decode("utf8", "replace")[-200:])
