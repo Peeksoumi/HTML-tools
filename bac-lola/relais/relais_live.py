@@ -2,16 +2,19 @@
 """Relais sans mémoire pour la page bac-lola : les positions AIS de Lola de la dernière heure, tenues en mémoire vive.
 
 - Aucune base de données ni fichier de relevés : une fenêtre glissante de 60 min en RAM, perdue au redémarrage.
-- Dès qu'une nouvelle position arrive (aisstream ou secours), il publie cette fenêtre (positions.json) dans un dépôt GitHub public, en écrasant tout
-  (un seul commit, aucun historique git), au plus toutes les 15 s (GitHub recommande ≤ 6 pushes/min/dépôt) : la page bac-lola y relit les positions pour se resynchroniser.
+- Lit **les trois sources en parallèle**, en permanence : aisstream.io (websocket tenu ouvert, clé = identifiant systemd `aisstream_key`, jamais dans le dépôt),
+  AISVesselTracker et Shiptrail (une thread chacune, toutes les 15 s). Chaque lecture est gardée telle quelle, avec l'heure de la position et le nom de la source (anneau brut).
+- La « meilleure donnée » (positions.json) : les trois sources fusionnées sans doublon (même message AIS vu par deux sources : heure la plus ancienne, vitesse et cap complétés).
+- Dès qu'une nouvelle position arrive, il publie dans un dépôt GitHub public, en écrasant tout (un seul commit, aucun historique git), au plus toutes les 15 s
+  (GitHub recommande ≤ 6 pushes/min/dépôt) : positions.json (meilleure donnée, relue par la page bac-lola pour se resynchroniser) et, dans le même commit, sources.json
+  (toutes les lectures brutes horodatées avec leur source, 1 h).
   Variables : LOLA_RELAIS_REPO (ex. git@github.com:Peeksoumi/lola-relais.git) et la clé de dépôt `deploy_key` (systemd LoadCredential).
-- Ne lit JAMAIS les relevés enregistrés (releves_*.csv) : ceux-ci ne servent qu'à entraîner le modèle.
-- Source principale : aisstream.io (websocket tenu ouvert, clé = identifiant systemd `aisstream_key`, jamais dans le dépôt).
-  Ordre de collecte : aisstream, puis AISVesselTracker, puis Shiptrail. Les secours ne sont interrogés (toutes les 15 s) que si aisstream est muet depuis 20 s quand le bac
-  est en mouvement (vitesse ≥ 1,5 nd ou inconnue), depuis 75 s quand il est à quai (aisstream n'y émet qu'une position toutes les 3-5 min, AVT se rafraîchit toutes les 30-80 s).
   Sans nouvelle position, le relais republie quand même chaque minute (battement de cœur : « maj » prouve que le relais est vivant).
+- Ne lit JAMAIS les relevés enregistrés (releves_*.csv) : ceux-ci ne servent qu'à entraîner le modèle. Le stockage pour analyse est fait indépendamment par le dépôt privé
+  (collecteur), qui relit GET /sources ; le relais, lui, ne garde rien sur disque.
 - GET /positions -> {"maj": ms, "fenetre_min": 60, "n": N, "source": "aisstream|avt|shiptrail", "samples": [[ts_ms, lat, lon, vitesse|null, cap|null], ...]}
   (ts = heure de la position côté source ; les en-têtes CORS sont ajoutés par nginx.)
+- GET /sources -> {"maj": ms, "fenetre_min": 60, "colonnes": [...], "n": N, "samples": [[ts_ms, lat, lon, vitesse|null, cap|null, "aisstream|avt|shiptrail"], ...]}
 Écoute sur 127.0.0.1:18791 ; nginx le publie sous /lola-direct/ (flux « direct » lu par la page, avec CORS).
 Autonome : aucune dépendance au dépôt privé (déployé sur le VPS depuis ce dépôt public).
 """
@@ -135,15 +138,12 @@ PAS = 15            # s entre deux interrogations
 RETARD_MAX = 180    # s : au-delà, on bascule sur la source de secours
 FENETRE_S = 60 * 60   # on ne conserve jamais plus d'une heure de positions
 PUBLIER_MIN_S = 15    # s minimum entre deux publications GitHub (≤ 4/min, sous les 6 pushes/min recommandés)
-AIS_SILENCE_QUAI_S = 75        # s : à quai, aisstream n'émet qu'une position toutes les 3-5 min ; AVT se rafraîchit toutes les 30-80 s : on le lit dès 75 s de silence
 BATTEMENT_S = 60               # s : sans nouvelle position, on republie quand même (« maj » = relais vivant) au moins à cette fréquence
-AIS_SILENCE_MOUVEMENT_S = 20   # s : en mouvement, une position toutes les quelques secondes : au-delà, on lit les secours
-V_MOUVEMENT = 1.5              # nœuds (même seuil que la page bac-lola)
 AIS_URL = os.environ.get("AISSTREAM_URL", "wss://stream.aisstream.io/v0/stream")
 RUN = os.environ.get("RUNTIME_DIRECTORY", "/run/lola-relais")  # tmpfs : en RAM
 REPO = os.environ.get("LOLA_RELAIS_REPO", "")
 anneau = []
-brut_ais = []   # positions aisstream telles que reçues (sans fusion avec AVT / Shiptrail), pour comparer les sources ; servies sur /aisstream
+brut = []       # TOUTES les lectures telles que reçues, une par source : [ts_ms, lat, lon, vitesse|None, cap|None, source] (1 h, RAM) ; servies sur /sources et publiées dans sources.json
 nouveau = threading.Event()   # posé quand une position inédite entre dans `anneau`
 etat = {"source": None, "erreur": None}
 verrou = threading.Lock()
@@ -185,6 +185,18 @@ DOUBLON_S = 45        # s : la même position (à ~2 m près) vue par deux sourc
 DOUBLON_DEG = 2e-5    # ≈ 2 m : écart toléré entre les coordonnées de deux sources pour un même message
 
 
+def noter_brut(s, source):
+    """Garde la lecture brute (heure de la position + nom de la source), sans fusion, pour comparer les sources entre elles."""
+    with verrou:
+        if any(x[0] == s[0] and x[5] == source for x in brut):
+            return
+        brut.append(list(s[:5]) + [source])
+        brut.sort(key=lambda x: x[0])
+        limite = time.time() * 1000 - FENETRE_S * 1000
+        while brut and brut[0][0] < limite:
+            brut.pop(0)
+
+
 def ajouter(s):
     """Insère la position dans l'anneau, triée par heure et sans doublon (±2 s) : une position d'AVT, souvent en retard de ~30 s sur Shiptrail,
     n'est plus perdue quand la source de secours a déjà fourni une position plus récente."""
@@ -217,38 +229,33 @@ def lire_avt():
         return lire("avt", source_avt)
 
 
-def interroger():
-    maintenant = time.time() * 1000
-    for nom, f in (("avt", lire_avt), ("shiptrail", lambda: lire("shiptrail", source_shiptrail))):
-        try:
-            s = f()
-            if nom == "avt" and maintenant - s[0] > RETARD_MAX * 1000:
-                noter("avt", "en retard")
-                continue
-            if nom == "avt":
-                noter("avt", "ok")
-            ajouter(s)
-            noter("source", nom); etat["erreur"] = None
-            return
-        except Exception as e:
-            etat["erreur"] = "%s: %s" % (nom, str(e)[:200])
-            if nom == "avt":
-                noter("avt", "échec : " + str(e)[:150])
-
-
-def secours_necessaires():
-    """Vrai quand aisstream est muet trop longtemps : 20 s si le bac est en mouvement (ou si on ne sait pas), 75 s s'il est à quai."""
+def lire_source(nom):
+    """Une lecture de la source `nom` : toujours gardée en brut ; ajoutée à l'anneau (« meilleure donnée », sans doublon) sauf AVT trop en retard."""
+    f = lire_avt if nom == "avt" else (lambda: lire("shiptrail", source_shiptrail))
+    try:
+        s = f()
+    except Exception as e:
+        etat["erreur"] = "%s: %s" % (nom, str(e)[:200])
+        noter(nom, "échec : " + str(e)[:150])
+        return
+    noter(nom, "ok")
+    noter_brut(s, nom)
+    if nom == "avt" and time.time() * 1000 - s[0] > RETARD_MAX * 1000:
+        noter("avt", "en retard")
+        return
+    ajouter(s)
     with verrou:
-        vit = anneau[-1][3] if anneau else None
-    seuil = AIS_SILENCE_QUAI_S if (vit is not None and vit < V_MOUVEMENT) else AIS_SILENCE_MOUVEMENT_S
-    return time.time() - etat.get("ais_dernier", 0) > seuil
+        dernier = anneau[-1][0] if anneau else 0
+    if s[0] >= dernier - 2000:
+        noter("source", nom)
+    etat["erreur"] = None
 
 
-def boucle():
+def boucle(nom):
+    """Interroge la source `nom` toutes les PAS secondes, indépendamment des autres (une thread par source)."""
     while True:
         try:
-            if secours_necessaires():
-                interroger()
+            lire_source(nom)
         except Exception as e:
             etat["erreur"] = str(e)[:200]
         time.sleep(PAS)
@@ -259,6 +266,13 @@ def charge_utile():
         limite = time.time() * 1000 - FENETRE_S * 1000
         return {"maj": int(time.time() * 1000), "fenetre_min": FENETRE_S // 60, "n": len(anneau), "source": etat["source"],
                 "samples": [x for x in anneau if x[0] >= limite]}
+
+
+def charge_brut():
+    with verrou:
+        limite = time.time() * 1000 - FENETRE_S * 1000
+        return {"maj": int(time.time() * 1000), "fenetre_min": FENETRE_S // 60, "colonnes": ["ts_ms", "lat", "lon", "vitesse", "cap", "source"],
+                "n": len(brut), "samples": [x for x in brut if x[0] >= limite]}
 
 
 def publier(dernier, force=False):
@@ -274,9 +288,12 @@ def publier(dernier, force=False):
     os.makedirs(rep)
     with open(os.path.join(rep, "positions.json"), "w") as f:
         json.dump(d, f, separators=(",", ":"))
+    with open(os.path.join(rep, "sources.json"), "w") as f:   # en parallèle : toutes les lectures horodatées, avec leur source
+        json.dump(charge_brut(), f, separators=(",", ":"))
     with open(os.path.join(rep, "README.md"), "w") as f:
-        f.write("# lola-relais\n\nPositions AIS du bac Lola des %d dernières minutes (aisstream.io, repli AISVesselTracker puis Shiptrail), mises à jour à chaque changement de position (au plus toutes les %d s).\n"
-                "Un seul commit, jamais d'historique. Lu par la page bac-lola (HTML-tools).\n" % (FENETRE_S // 60, PUBLIER_MIN_S))
+        f.write("# lola-relais\n\n- `positions.json` : la meilleure position (aisstream.io, AISVesselTracker et Shiptrail lus en parallèle, sans doublon) des %d dernières minutes, mise à jour à chaque nouvelle position (au plus toutes les %d s).\n"
+                "- `sources.json` : toutes les lectures brutes des trois sources, horodatées (heure de la position) et nommées, pour les comparer.\n"
+                "Un seul commit, jamais d'historique. `positions.json` est lu par la page bac-lola (HTML-tools).\n" % (FENETRE_S // 60, PUBLIER_MIN_S))
     env = dict(os.environ, HOME=RUN, GIT_SSH_COMMAND="ssh -i %s -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=%s/known_hosts" % (cle, RUN))
     for cmd in (["git", "init", "-q", "-b", "main"], ["git", "add", "-A"],
                 ["git", "-c", "user.name=lola-relais", "-c", "user.email=lola-relais@users.noreply.github.com", "commit", "-q", "-m", "positions"],
@@ -427,13 +444,8 @@ def boucle_aisstream():
                 msg = ws.recevoir()
                 s = releve_aisstream(msg) if msg is not None else None
                 if s:
-                    etat["ais_dernier"] = time.time()
                     noter("source", "aisstream"); noter("ais", "ok")
-                    with verrou:
-                        brut_ais.append(list(s))
-                        limite_brut = time.time() * 1000 - FENETRE_S * 1000
-                        while brut_ais and brut_ais[0][0] < limite_brut:
-                            brut_ais.pop(0)
+                    noter_brut(s, "aisstream")
                     ajouter(s)
                     attente = 5
         except Exception as e:
@@ -465,9 +477,8 @@ def boucle_publication():
 
 class H(BaseHTTPRequestHandler):
     def do_GET(self):
-        if self.path.split("?")[0] == "/aisstream":
-            with verrou:
-                corps = json.dumps({"maj": int(time.time() * 1000), "n": len(brut_ais), "samples": list(brut_ais)}).encode()
+        if self.path.split("?")[0] == "/sources":
+            corps = json.dumps(charge_brut()).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Cache-Control", "no-store")
@@ -491,6 +502,7 @@ class H(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     threading.Thread(target=boucle_aisstream, daemon=True).start()
-    threading.Thread(target=boucle, daemon=True).start()
+    for nom in ("avt", "shiptrail"):
+        threading.Thread(target=boucle, args=(nom,), daemon=True).start()
     threading.Thread(target=boucle_publication, daemon=True).start()
     ThreadingHTTPServer(("127.0.0.1", 18791), H).serve_forever()
