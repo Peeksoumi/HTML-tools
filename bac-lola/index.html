@@ -500,7 +500,7 @@ const SEUIL_HORS_ZONE=0.0008; // écart au chenal (unités lat/lon) au-delà duq
 // Positions AIS de Lola, deux lectures simultanées d'un même relais (script bac-lola/relais, jamais les relevés enregistrés) :
 //  - copie publique du dépôt lola-relais, publiée par le relais à chaque nouvelle position (≥ 15 s d'intervalle) et au moins 1 fois/min : seule source de la page, elle cale le modèle.
 const URL_GITHUB = "https://raw.githubusercontent.com/Peeksoumi/lola-relais/main/positions.json";
-// Deux seuils selon la dernière vitesse connue : à quai l'AIS n'émet qu'une position toutes les 3 min ; en mouvement, toutes les quelques secondes.
+// Deux seuils selon la dernière vitesse connue : à quai l'AIS n'émet qu'une position toutes les 3 à 5 min ; en mouvement, toutes les quelques secondes.
 // frais : la position est une mesure ; au-delà, la situation n'est plus qu'une hypothèse du modèle. alerte : bandeau rouge.
 const SEUILS={quai:{frais:4*60000,alerte:5*60000}, marche:{frais:60000,alerte:60000}}, AGE_INDISPO=10*60000, RELAIS_MUET=3*60000;
 let dernierGithub=0, majRelais=0;
