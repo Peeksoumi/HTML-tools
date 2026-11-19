@@ -81,10 +81,10 @@ vm.runInContext(m[1]+"\nthis.__t={rendre,lirePosition,lireMeteo,journal:()=>jour
   horloge=J+720000+11*60000; await ctx.__t.lirePosition();
   ok(/Position AIS indisponible/.test(els.bandeau.innerHTML)&&/<span class="led off">/.test(els.bandeau.innerHTML),"en service, > 10 min : « indisponible », point rouge");
   // relais arrêté (aucune publication depuis 4 min) alors que la position date de 2 min : « Relais muet », pas une simple hypothèse
-  samples=[pos(-120000,IND[0],IND[1],0.1)]; horloge=J+720000+11*60000+31000; majFige=horloge-240000;
+  horloge=J+720000+11*60000+31000; samples=[pos(horloge-J-120000,IND[0],IND[1],0.1)]; majFige=horloge-240000;
   await ctx.__t.lirePosition();
-  ok(/Relais muet/.test(els.bandeau.innerHTML),"relais sans publication depuis > 3 min : « Relais muet »");
+  ok(/Le relais ne publie plus depuis 4 min/.test(els.bandeau.innerHTML)&&!/Position AIS indisponible/.test(els.bandeau.innerHTML)&&/<span class="led creux">/.test(els.bandeau.innerHTML),"relais sans publication depuis > 3 min : avertissement, situation en hypothèse (pas d'indisponibilité)");
   majFige=0; horloge+=60000; await ctx.__t.lirePosition();
-  ok(!/Relais muet/.test(els.bandeau.innerHTML),"le relais republie : plus d'alerte « Relais muet »");
+  ok(!/Le relais ne publie plus/.test(els.bandeau.innerHTML),"le relais republie : avertissement retiré");
   console.log(b.replace(/<[^>]+>/g," ").replace(/\s+/g," "));
 })();
