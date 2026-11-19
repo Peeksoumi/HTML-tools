@@ -254,6 +254,7 @@ function dansFenetreRotation(t){
 //  Entrée : relevés {t, p (0 Indret → 1 Basse-Indre), vitesse (nds), hors}
 // ====================================================================
 const P_QUAI=0.15, V_ARRET=0.8, V_MARCHE=1.5, DEPLACEMENT_DEPART=0.05, LACUNE_MAX_MS=120000;
+const V_REPOS=0.3; // en traversée, une seule position à l'arrêt près d'un quai confirme l'arrivée (positions espacées de 30-130 s : en attendre une 2e fait afficher « en route » alors que le bac est à quai)
 function creerDetecteur(init, onEvenement){
     let etat=(init&&init.phase)?init:{phase:"inconnu"}, cand=null, prev=null;
     function pousser(s){
@@ -272,13 +273,14 @@ function creerDetecteur(init, onEvenement){
                     onEvenement(ev);
                     etat={phase:"traversee",de:ev.q,vers:autre(ev.q),tDep:cand.t};
                     cand=null;
+                    return pousser(s); // cette même position peut déjà être l'arrivée (départ confirmé seulement par la position d'arrivée)
                 }
             } else { cand=null; etat.tDern=s.t; etat.pRepos=0.8*etat.pRepos+0.2*s.p; }
         } else {
             if(proche && arret){
                 if(!cand||cand.type!=="arr"||cand.q!==proche) cand={type:"arr",q:proche,n:1,t:s.t,lacune:(prev?s.t-prev.t:0)};
                 else cand.n++;
-                if(cand.n>=2){
+                if(cand.n>=2 || (etat.phase==="traversee" && s.vitesse<V_REPOS && proche===etat.vers)){
                     const approx=(etat.phase==="inconnu")||cand.lacune>LACUNE_MAX_MS;
                     const ev={t:Math.round(cand.t),type:"arr",q:proche};
                     if(approx) ev.approx=true;
