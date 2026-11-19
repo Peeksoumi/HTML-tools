@@ -143,6 +143,7 @@ AIS_URL = os.environ.get("AISSTREAM_URL", "wss://stream.aisstream.io/v0/stream")
 RUN = os.environ.get("RUNTIME_DIRECTORY", "/run/lola-relais")  # tmpfs : en RAM
 REPO = os.environ.get("LOLA_RELAIS_REPO", "")
 anneau = []
+brut_ais = []   # positions aisstream telles que reçues (sans fusion avec AVT / Shiptrail), pour comparer les sources ; servies sur /aisstream
 nouveau = threading.Event()   # posé quand une position inédite entre dans `anneau`
 etat = {"source": None, "erreur": None}
 verrou = threading.Lock()
@@ -428,6 +429,11 @@ def boucle_aisstream():
                 if s:
                     etat["ais_dernier"] = time.time()
                     noter("source", "aisstream"); noter("ais", "ok")
+                    with verrou:
+                        brut_ais.append(list(s))
+                        limite_brut = time.time() * 1000 - FENETRE_S * 1000
+                        while brut_ais and brut_ais[0][0] < limite_brut:
+                            brut_ais.pop(0)
                     ajouter(s)
                     attente = 5
         except Exception as e:
@@ -459,6 +465,16 @@ def boucle_publication():
 
 class H(BaseHTTPRequestHandler):
     def do_GET(self):
+        if self.path.split("?")[0] == "/aisstream":
+            with verrou:
+                corps = json.dumps({"maj": int(time.time() * 1000), "n": len(brut_ais), "samples": list(brut_ais)}).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Length", str(len(corps)))
+            self.end_headers()
+            self.wfile.write(corps)
+            return
         if self.path.split("?")[0] not in ("/positions", "/positions.json", "/"):
             self.send_error(404); return
         corps = json.dumps(dict(charge_utile(), publication=etat.get("publication"), ais=etat.get("ais"), avt=etat.get("avt"), erreur=etat.get("erreur"))).encode()
