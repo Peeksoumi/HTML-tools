@@ -16,8 +16,8 @@ let horloge=T0, urls=[];
 const RD=Date;
 const FauxDate=class extends RD{constructor(...a){super(...(a.length?a:[horloge]))} static now(){return horloge} static parse(s){return RD.parse(s)}};
 
-// Réponse simulée du worker ; hs = réseau coupé, status = code HTTP, illisible = corps non JSON
-const rep={json:{connexion:"connecté",releve:null}};
+// Réponse simulée du relais ; hs = réseau coupé, status = code HTTP, illisible = corps non JSON
+const rep={json:{ais:"connecté, en attente d'une position",samples:[]}};
 const ctx={
   document:doc, navigator:{}, window:{devicePixelRatio:1},
   ResizeObserver:class{observe(){}}, requestAnimationFrame:noop,
@@ -26,30 +26,30 @@ const ctx={
     return {ok:(rep.status||200)<400,status:rep.status||200,json:async()=>{ if(rep.illisible) throw new Error("x"); return rep.json; }}; }
 };
 vm.createContext(ctx);
-vm.runInContext(m[1]+"\nthis.__t={etat,src,interroger,declencher,extrapoler,majTextes,releveDuWorker};",ctx);
+vm.runInContext(m[1]+"\nthis.__t={etat,src,interroger,declencher,extrapoler,majTextes,releveDuRelais};",ctx);
 
 const ok=(c,msg)=>{ if(!c){ console.error("ÉCHEC :",msg); process.exitCode=1; } else console.log("ok :",msg); };
 const attendre=()=>new Promise(r=>setTimeout(r,20));
-const releve=(ageS,lat,vit,cap)=>({connexion:"connecté",releve:{lat:lat,lon:-1.6725,vitesseNoeuds:vit,capDegres:cap,heureUtc:new Date(T0-ageS*1000).toISOString(),ageSecondes:ageS}});
+const releve=(ageS,lat,vit,cap)=>({ais:"ok",samples:[[T0-ageS*1000-60000,47.2,-1.67,1,1],[T0-ageS*1000,lat,-1.6725,vit,cap]]});
 
 (async()=>{
   const t=ctx.__t;
   await attendre(); // lecture lancée au démarrage de la page
 
-  // --- aucune donnée reçue par le worker ---
+  // --- aucune donnée reçue par le relais ---
   t.majTextes(horloge);
-  ok(urls.length>=1 && urls.every(u=>/lola-ais\.[^/]+\.workers\.dev\/\?format=json$/.test(u)),"une seule source interrogée : le worker AIS, en JSON ("+urls[0]+")");
-  ok(els.statut.className==="warn" && /En attente du premier relevé aisstream\.io \(connexion : connecté\)/.test(els.statutTexte.textContent),"worker connecté sans relevé : attente signalée avec l'état de connexion");
-  ok(/◌ Worker AIS : aucun relevé/.test(els.sources.textContent),"ligne de source : aucun relevé");
+  ok(urls.length>=1 && urls.every(u=>/peeksoumi\.com\/lola-direct\/aisstream$/.test(u)),"une seule source interrogée : le relais AIS du VPS ("+urls[0]+")");
+  ok(els.statut.className==="warn" && /En attente du premier relevé aisstream\.io \(aisstream : connecté, en attente d'une position\)/.test(els.statutTexte.textContent),"relais connecté sans position : attente signalée avec l'état de connexion");
+  ok(/◌ Relais AIS : aucun relevé/.test(els.sources.textContent),"ligne de source : aucun relevé");
 
   // --- premier relevé ---
   rep.json=releve(30,47.1969,3.0,95);
   await t.interroger(); t.majTextes(horloge);
-  ok(t.etat.fix.lat===47.1969 && t.etat.fix.vit===3 && t.etat.fix.cap===95,"relevé du worker retenu");
+  ok(t.etat.fix.lat===47.1969 && t.etat.fix.vit===3 && t.etat.fix.cap===95,"dernière position du relais retenue");
   ok(els.statut.className==="ok" && /En direct · aisstream\.io/.test(els.statutTexte.textContent),"statut « En direct » : "+els.statutTexte.textContent);
   ok(els.vLat.textContent==="47.19690°" && els.vLon.textContent==="-1.67250°" && els.vVit.textContent==="3.0 nds" && els.vCap.textContent==="95°","latitude, longitude, vitesse et cap affichés");
   ok(els.vHeure.textContent==="09:39:30" && els.vAge.textContent==="30 s","heure du relevé (Paris) et âge : "+els.vHeure.textContent+" / "+els.vAge.textContent);
-  ok(/● Worker AIS : relevé il y a 30 s/.test(els.sources.textContent),"ligne de source avec l'âge");
+  ok(/● Relais AIS : relevé il y a 30 s/.test(els.sources.textContent),"ligne de source avec l'âge");
 
   // --- nouveau relevé : le sentier s'allonge ; relevé identique : rien ne change ---
   rep.json=releve(5,47.1960,4.2,200);
@@ -62,28 +62,28 @@ const releve=(ageS,lat,vit,cap)=>({connexion:"connecté",releve:{lat:lat,lon:-1.
   ok(t.etat.fix.lat===47.196,"relevé plus ancien que celui affiché : ignoré (jamais de retour en arrière)");
 
   // --- vitesse et cap absents ---
-  const r=t.releveDuWorker({connexion:"connecté",releve:{lat:47.1,lon:-1.6,heureUtc:new Date(T0).toISOString()}});
+  const r=t.releveDuRelais({samples:[[T0,47.1,-1.6]]});
   ok(r.vit===null && r.cap===null,"vitesse et cap absents → null");
-  let leve=false; try{ t.releveDuWorker({releve:{lat:99,lon:0,heureUtc:"x"}}); }catch(x){ leve=true; }
+  let leve=false; try{ t.releveDuRelais({samples:[[T0,99,0,1,1]]}); }catch(x){ leve=true; }
   ok(leve,"relevé invalide : erreur levée");
 
-  // --- erreurs du worker ---
+  // --- erreurs du relais ---
   rep.hs=true; await t.interroger(); t.majTextes(horloge);
-  ok(/✗ Worker AIS : réseau coupé/.test(els.sources.textContent) && els.statut.className==="ok","une coupure isolée : erreur affichée, statut inchangé");
+  ok(/✗ Relais AIS : réseau coupé/.test(els.sources.textContent) && els.statut.className==="ok","une coupure isolée : erreur affichée, statut inchangé");
   await t.interroger(); t.majTextes(horloge);
-  ok(els.statut.className==="bad" && /Worker AIS injoignable · dernier relevé il y a/.test(els.statutTexte.textContent),"deux échecs : « injoignable » avec l'âge du dernier relevé");
+  ok(els.statut.className==="bad" && /Relais AIS injoignable · dernier relevé il y a/.test(els.statutTexte.textContent),"deux échecs : « injoignable » avec l'âge du dernier relevé");
   ok(els.vLat.textContent!=="—","dernières valeurs conservées à l'écran");
   rep.hs=false; rep.status=404; await t.interroger(); t.majTextes(horloge);
-  ok(/✗ Worker AIS : HTTP 404/.test(els.sources.textContent),"worker non déployé (404) : erreur claire");
+  ok(/✗ Relais AIS : HTTP 404/.test(els.sources.textContent),"relais non publié (404) : erreur claire");
   rep.status=200; rep.illisible=true; await t.interroger(); t.majTextes(horloge);
-  ok(/✗ Worker AIS : réponse illisible/.test(els.sources.textContent),"réponse non JSON : « réponse illisible »");
+  ok(/✗ Relais AIS : réponse illisible/.test(els.sources.textContent),"réponse non JSON : « réponse illisible »");
   rep.illisible=false;
 
   // --- essais espacés après 3 échecs ---
   const avant=urls.length;
   t.src.erreurs=3; t.src.derniere=horloge;
   t.declencher(); await attendre();
-  ok(urls.length===avant,"après 3 échecs : le worker n'est plus sollicité à chaque tick");
+  ok(urls.length===avant,"après 3 échecs : le relais n'est plus sollicité à chaque tick");
   t.src.erreurs=0;
 
   // --- estimation entre deux relevés ---

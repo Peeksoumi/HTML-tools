@@ -2,16 +2,20 @@
 """Relais sans mémoire pour la page bac-lola : les positions AIS de Lola de la dernière heure, tenues en mémoire vive.
 
 - Aucune base de données ni fichier de relevés : une fenêtre glissante de 60 min en RAM, perdue au redémarrage.
-- Toutes les 5 min, il publie cette fenêtre (positions.json) dans un dépôt GitHub public, en écrasant tout (un seul commit, aucun historique git) :
-  la page bac-lola y relit les positions pour se resynchroniser. Variables : LOLA_RELAIS_REPO (ex. git@github.com:Peeksoumi/lola-relais.git) et la clé de dépôt `deploy_key` (systemd LoadCredential).
+- Dès qu'une nouvelle position diffère de la dernière publiée, il publie cette fenêtre (positions.json) dans un dépôt GitHub public, en écrasant tout
+  (un seul commit, aucun historique git), au plus toutes les 15 s (GitHub recommande ≤ 6 pushes/min/dépôt) : la page bac-lola y relit les positions pour se resynchroniser.
+  Variables : LOLA_RELAIS_REPO (ex. git@github.com:Peeksoumi/lola-relais.git) et la clé de dépôt `deploy_key` (systemd LoadCredential).
 - Ne lit JAMAIS les relevés enregistrés (releves_*.csv) : ceux-ci ne servent qu'à entraîner le modèle.
-- Interroge AISVesselTracker (source principale) puis Shiptrail (secours si AVT échoue ou a plus de 3 min de retard).
-- GET /positions -> {"maj": ms, "fenetre_min": 60, "n": N, "source": "avt|shiptrail", "samples": [[ts_ms, lat, lon, vitesse|null, cap|null], ...]}
+- Source principale : aisstream.io (websocket tenu ouvert, clé = identifiant systemd `aisstream_key`, jamais dans le dépôt).
+  Secours, interrogés seulement si aisstream n'a rien donné depuis 4 min : AISVesselTracker puis Shiptrail.
+- GET /positions -> {"maj": ms, "fenetre_min": 60, "n": N, "source": "aisstream|avt|shiptrail", "samples": [[ts_ms, lat, lon, vitesse|null, cap|null], ...]}
   (ts = heure de la position côté source ; les en-têtes CORS sont ajoutés par nginx.)
+- GET /aisstream -> même format, mais uniquement les positions reçues d'aisstream (page lola-position).
 Écoute sur 127.0.0.1:18791 ; nginx le publie sous /lola-direct/ (flux « direct » lu par la page, avec CORS).
 Autonome : aucune dépendance au dépôt privé (déployé sur le VPS depuis ce dépôt public).
 """
-import json, os, shutil, subprocess, threading, time
+import base64, hashlib, json, os, select, shutil, socket, ssl, struct, subprocess, threading, time
+from urllib.parse import urlparse
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -121,10 +125,14 @@ def source_shiptrail():
 PAS = 15            # s entre deux interrogations
 RETARD_MAX = 180    # s : au-delà, on bascule sur la source de secours
 FENETRE_S = 60 * 60   # on ne conserve jamais plus d'une heure de positions
-PUBLIER_S = 300       # publication GitHub toutes les 5 min
+PUBLIER_MIN_S = 15    # s minimum entre deux publications GitHub (≤ 4/min, sous les 6 pushes/min recommandés)
+AIS_FRAIS_S = 240     # s : tant qu'aisstream a donné une position plus récente, on n'interroge pas les sources de secours
+AIS_URL = os.environ.get("AISSTREAM_URL", "wss://stream.aisstream.io/v0/stream")
 RUN = os.environ.get("RUNTIME_DIRECTORY", "/run/lola-relais")  # tmpfs : en RAM
 REPO = os.environ.get("LOLA_RELAIS_REPO", "")
 anneau = []
+anneau_ais = []     # uniquement les positions d'aisstream (endpoint /aisstream)
+nouveau = threading.Event()   # posé quand une position inédite entre dans `anneau`
 etat = {"source": None, "erreur": None}
 verrou = threading.Lock()
 
@@ -154,17 +162,20 @@ def lire(nom, fonction):
     return [ts, float(champs[0]), float(champs[1]), flottant(champs[2]), flottant(champs[3])]
 
 
-def ajouter(s):
+def ajouter(s, ring=None):
     """Insère la position dans l'anneau, triée par heure et sans doublon (±2 s) : une position d'AVT, souvent en retard de ~30 s sur Shiptrail,
     n'est plus perdue quand la source de secours a déjà fourni une position plus récente."""
+    ring = anneau if ring is None else ring
     with verrou:
-        if any(abs(x[0] - s[0]) <= 2000 for x in anneau):
+        if any(abs(x[0] - s[0]) <= 2000 for x in ring):
             return
-        anneau.append(s)
-        anneau.sort(key=lambda x: x[0])
+        ring.append(s)
+        ring.sort(key=lambda x: x[0])
         limite = time.time() * 1000 - FENETRE_S * 1000
-        while anneau and anneau[0][0] < limite:
-            anneau.pop(0)
+        while ring and ring[0][0] < limite:
+            ring.pop(0)
+    if ring is anneau:
+        nouveau.set()
 
 
 def lire_avt():
@@ -198,17 +209,19 @@ def interroger():
 def boucle():
     while True:
         try:
-            interroger()
+            if time.time() - etat.get("ais_dernier", 0) > AIS_FRAIS_S:
+                interroger()
         except Exception as e:
             etat["erreur"] = str(e)[:200]
         time.sleep(PAS)
 
 
-def charge_utile():
+def charge_utile(ring=None, source=None):
+    ring = anneau if ring is None else ring
     with verrou:
         limite = time.time() * 1000 - FENETRE_S * 1000
-        return {"maj": int(time.time() * 1000), "fenetre_min": FENETRE_S // 60, "n": len(anneau), "source": etat["source"],
-                "samples": [x for x in anneau if x[0] >= limite]}
+        return {"maj": int(time.time() * 1000), "fenetre_min": FENETRE_S // 60, "n": len(ring), "source": source or etat["source"],
+                "samples": [x for x in ring if x[0] >= limite]}
 
 
 def publier(dernier):
@@ -217,7 +230,7 @@ def publier(dernier):
     if not REPO or not os.path.exists(cle):
         return dernier
     d = charge_utile()
-    if not d["samples"] or d["samples"][-1][0] == dernier:
+    if not d["samples"] or tuple(d["samples"][-1][1:3]) == dernier:   # on ne publie que si la position a changé
         return dernier
     rep = os.path.join(RUN, "pub")
     shutil.rmtree(rep, ignore_errors=True)
@@ -225,21 +238,174 @@ def publier(dernier):
     with open(os.path.join(rep, "positions.json"), "w") as f:
         json.dump(d, f, separators=(",", ":"))
     with open(os.path.join(rep, "README.md"), "w") as f:
-        f.write("# lola-relais\n\nPositions AIS du bac Lola des %d dernières minutes (AISVesselTracker, repli Shiptrail), mises à jour toutes les 5 min.\n"
-                "Un seul commit, jamais d'historique. Lu par la page bac-lola (HTML-tools).\n" % (FENETRE_S // 60))
+        f.write("# lola-relais\n\nPositions AIS du bac Lola des %d dernières minutes (aisstream.io, repli AISVesselTracker puis Shiptrail), mises à jour à chaque changement de position (au plus toutes les %d s).\n"
+                "Un seul commit, jamais d'historique. Lu par la page bac-lola (HTML-tools).\n" % (FENETRE_S // 60, PUBLIER_MIN_S))
     env = dict(os.environ, HOME=RUN, GIT_SSH_COMMAND="ssh -i %s -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=%s/known_hosts" % (cle, RUN))
     for cmd in (["git", "init", "-q", "-b", "main"], ["git", "add", "-A"],
                 ["git", "-c", "user.name=lola-relais", "-c", "user.email=lola-relais@users.noreply.github.com", "commit", "-q", "-m", "positions"],
                 ["git", "push", "-q", "-f", REPO, "main"]):
         subprocess.run(cmd, cwd=rep, env=env, check=True, capture_output=True, timeout=60)
     shutil.rmtree(rep, ignore_errors=True)
-    return d["samples"][-1][0]
+    return tuple(d["samples"][-1][1:3])
+
+
+# --- aisstream.io : websocket tenu ouvert (client minimal RFC 6455, sans dépendance) -----------
+GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+
+
+class WS:
+    """Client websocket minimal : trames texte, trames client masquées, ping/pong, fragmentation."""
+
+    def __init__(self, url, timeout=30):
+        u = urlparse(url)
+        tls = u.scheme == "wss"
+        s = socket.create_connection((u.hostname, u.port or (443 if tls else 80)), timeout=10)
+        if tls:
+            s = ssl.create_default_context().wrap_socket(s, server_hostname=u.hostname)
+        s.settimeout(timeout)
+        self.s, self.buf = s, b""
+        cle = base64.b64encode(os.urandom(16)).decode()
+        chemin = (u.path or "/") + ("?" + u.query if u.query else "")
+        s.sendall(("GET %s HTTP/1.1\r\nHost: %s\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
+                   "Sec-WebSocket-Key: %s\r\nSec-WebSocket-Version: 13\r\n\r\n" % (chemin, u.netloc, cle)).encode())
+        while b"\r\n\r\n" not in self.buf:
+            self.buf += self._lire()
+        tete, self.buf = self.buf.split(b"\r\n\r\n", 1)
+        tete = tete.decode("latin-1")
+        attendu = base64.b64encode(hashlib.sha1((cle + GUID).encode()).digest()).decode()
+        if " 101" not in tete.split("\r\n")[0] or attendu not in tete:
+            raise ConnectionError("poignée de main refusée : " + tete[:120].replace("\r\n", " | "))
+        self.dernier_rx = time.time()
+
+    def _lire(self):
+        d = self.s.recv(65536)
+        if not d:
+            raise ConnectionError("connexion fermée par le serveur")
+        return d
+
+    def _exact(self, n):
+        while len(self.buf) < n:
+            self.buf += self._lire()
+        sortie, self.buf = self.buf[:n], self.buf[n:]
+        return sortie
+
+    def attendre(self, t):
+        """True si des octets sont disponibles (évite un délai d'attente au milieu d'une trame)."""
+        if self.buf or (hasattr(self.s, "pending") and self.s.pending()):
+            return True
+        return bool(select.select([self.s], [], [], t)[0])
+
+    def envoyer(self, op, data=b""):
+        n = len(data)
+        tete = bytes([0x80 | op]) + (bytes([0x80 | n]) if n < 126 else bytes([0x80 | 126]) + struct.pack(">H", n) if n < 65536
+                                     else bytes([0x80 | 127]) + struct.pack(">Q", n))
+        masque = os.urandom(4)
+        self.s.sendall(tete + masque + bytes(b ^ masque[i % 4] for i, b in enumerate(data)))
+
+    def recevoir(self):
+        """Prochain message texte complet (les pings reçoivent un pong, les pongs sont ignorés)."""
+        msg = b""
+        while True:
+            b0, b1 = self._exact(2)
+            n = b1 & 0x7F
+            if n == 126:
+                n = struct.unpack(">H", self._exact(2))[0]
+            elif n == 127:
+                n = struct.unpack(">Q", self._exact(8))[0]
+            masque = self._exact(4) if b1 & 0x80 else None
+            data = self._exact(n)
+            if masque:
+                data = bytes(b ^ masque[i % 4] for i, b in enumerate(data))
+            self.dernier_rx = time.time()
+            op = b0 & 0x0F
+            if op == 8:
+                raise ConnectionError("fermeture demandée par le serveur")
+            if op == 9:
+                self.envoyer(10, data)
+            elif op != 10:
+                msg += data
+                if b0 & 0x80:
+                    return msg.decode("utf-8", "replace")
+
+    def fermer(self):
+        try:
+            self.s.close()
+        except OSError:
+            pass
+
+
+def releve_aisstream(msg):
+    """Message aisstream (texte JSON) -> [ts_ms, lat, lon, vitesse|None, cap|None] pour Lola, sinon None ; ValueError si aisstream signale une erreur."""
+    d = json.loads(msg)
+    if d.get("error"):
+        raise ValueError("aisstream : %s" % d["error"])
+    type_ = d.get("MessageType")
+    if type_ not in ("PositionReport", "StandardClassBPositionReport"):
+        return None
+    m = (d.get("Message") or {}).get(type_) or {}
+    meta = d.get("MetaData") or {}
+    if str(m.get("UserID") or meta.get("MMSI") or "") != str(MMSI):
+        return None
+    lat, lon = flottant(m.get("Latitude")), flottant(m.get("Longitude"))
+    if lat is None or lon is None or abs(lat) > 90 or abs(lon) > 180:   # 91 / 181 = « non disponible »
+        return None
+    vit, cap = flottant(m.get("Sog")), flottant(m.get("Cog"))
+    if vit is not None and vit >= 102.3:
+        vit = None
+    if cap is not None and cap >= 360:
+        cap = None
+    t = re.match(r"(\d{4}-\d\d-\d\d)[ T](\d\d:\d\d:\d\d)(\.\d+)?", meta.get("time_utc") or "")
+    ts = vers_ms("%sT%s%s" % (t.group(1), t.group(2), (t.group(3) or "")[:4])) if t else None
+    return [ts or int(time.time() * 1000), lat, lon, vit, cap]
+
+
+def boucle_aisstream():
+    """Garde la connexion ouverte (reconnexion avec attente croissante) ; sans clé, ne fait rien."""
+    try:
+        with open(os.path.join(os.environ.get("CREDENTIALS_DIRECTORY", ""), "aisstream_key")) as f:
+            cle = f.read().strip()
+    except OSError:
+        etat["ais"] = "désactivé : identifiant systemd aisstream_key absent"
+        return
+    attente = 5
+    while True:
+        ws = None
+        try:
+            ws = WS(AIS_URL)
+            ws.envoyer(1, json.dumps({"APIKey": cle, "BoundingBoxes": [[[46.9, -2.5], [47.4, -1.4]]],
+                                      "FiltersShipMMSI": [str(MMSI)],
+                                      "FilterMessageTypes": ["PositionReport", "StandardClassBPositionReport"]}).encode())
+            etat["ais"] = "connecté, en attente d'une position"
+            while True:
+                if not ws.attendre(45):
+                    ws.envoyer(9)   # ping : le silence est normal à quai (une position toutes les ~3 min)
+                    if time.time() - ws.dernier_rx > 180:
+                        raise TimeoutError("aucune réponse (pas même un pong) depuis 3 min")
+                    continue
+                s = releve_aisstream(ws.recevoir())
+                if s:
+                    etat["ais_dernier"], etat["source"], etat["ais"] = time.time(), "aisstream", "ok"
+                    ajouter(s, anneau_ais)
+                    ajouter(s)
+                    attente = 5
+        except Exception as e:
+            etat["ais"] = "échec : %s" % str(e)[:150]
+        finally:
+            if ws:
+                ws.fermer()
+        time.sleep(attente)
+        attente = min(attente * 2, 120)
 
 
 def boucle_publication():
-    dernier = None
+    dernier, dernier_t = None, 0
     while True:
-        time.sleep(PUBLIER_S)
+        nouveau.wait()
+        attente = PUBLIER_MIN_S - (time.time() - dernier_t)
+        if attente > 0:
+            time.sleep(attente)     # les positions qui arrivent pendant l'attente partent dans la même publication
+        nouveau.clear()
+        dernier_t = time.time()
         try:
             dernier = publier(dernier)
             etat["publication"] = "ok %d" % int(time.time())
@@ -251,9 +417,14 @@ def boucle_publication():
 
 class H(BaseHTTPRequestHandler):
     def do_GET(self):
-        if self.path.split("?")[0] not in ("/positions", "/positions.json", "/"):
+        chemin = self.path.split("?")[0]
+        if chemin == "/aisstream":
+            d = dict(charge_utile(anneau_ais, "aisstream"), ais=etat.get("ais"))
+        elif chemin in ("/positions", "/positions.json", "/"):
+            d = dict(charge_utile(), publication=etat.get("publication"), ais=etat.get("ais"), avt=etat.get("avt"), erreur=etat.get("erreur"))
+        else:
             self.send_error(404); return
-        corps = json.dumps(dict(charge_utile(), publication=etat.get("publication"), avt=etat.get("avt"), erreur=etat.get("erreur"))).encode()
+        corps = json.dumps(d).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Cache-Control", "no-store")
@@ -266,6 +437,7 @@ class H(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
+    threading.Thread(target=boucle_aisstream, daemon=True).start()
     threading.Thread(target=boucle, daemon=True).start()
     threading.Thread(target=boucle_publication, daemon=True).start()
     ThreadingHTTPServer(("127.0.0.1", 18791), H).serve_forever()

@@ -8,10 +8,10 @@ liste de l'enchaînement prévu des changements (une ligne par traversée, dépa
 ## Méthode (modèle hybride)
 1. **Nominal** : GTFS « Bacs de Loire en Loire-Atlantique » 2026 (ligne Basse-Indre <> Indret), 1 départ / 20 min / quai. Semaine : BI 05:30→22:10,
    Indret 05:40→22:20 ; week-end et fériés : BI 06:30→21:30, Indret 06:40→21:20. Arrivée nominale = départ nominal + 3 min.
-2. **Détection** : positions AIS de Lola (AISVesselTracker, repli Shiptrail) interrogées chaque minute par le script [`relais/relais_live.py`](relais/relais_live.py),
+2. **Détection** : positions AIS de Lola (aisstream.io en continu ; repli AISVesselTracker puis Shiptrail) reçues par le script [`relais/relais_live.py`](relais/relais_live.py),
    exécuté sur le VPS (1 h en RAM, aucune base). Les sources AIS refusant les navigateurs, la page lit ce relais de deux façons **simultanées** :
    en **direct** (`peeksoumi.com/lola-direct/positions`, positions d'au plus ~2 min) et via la copie publique **GitHub**
-   [Peeksoumi/lola-relais](https://github.com/Peeksoumi/lola-relais) (publiée toutes les 5 min par le même script, un seul commit sans historique).
+   [Peeksoumi/lola-relais](https://github.com/Peeksoumi/lola-relais) (publiée par le même script à chaque changement de position, au plus toutes les 15 s, un seul commit sans historique).
    Les positions sont fusionnées par heure ; si le direct tombe, GitHub resynchronise le modèle, qui estime alors la situation entre deux mises à jour
    (événements « estimés »). À l'ouverture la page rejoue la dernière heure de positions dans le détecteur (projection sur le chenal ; arrivée / départ confirmés par 2 positions).
    Alertes : direct 3 min / indisponible 10 min ; GitHub seul 12 min / 20 min. La page ne lit jamais les relevés d'entraînement.
