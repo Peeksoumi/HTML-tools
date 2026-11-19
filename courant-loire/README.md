@@ -13,7 +13,8 @@ et inversement, au **bac Lola** (Indret / Basse-Indre) et à **l'île de Nantes*
 4. **Renverse** : étale + Δt lu dans la table 5 « Corrections relatives aux renverses de courant » du Port de Nantes Saint-Nazaire
    (Nantes Usine Brûlée et Cordemais ; coefficients 45/70/95 ; débits à Montjean 200/1 000/3 000 m³/s), interpolé en coefficient, débit
    et position (Lola ≈ 15 % du trajet Nantes → Cordemais). Courant de flot < 0,3 nœud : pas de renverse annoncée.
-5. **Débit** : lu à Montjean-sur-Loire (station M530001010) via l'API Hub'Eau, ou saisi à la main.
+5. **Correction à Lola** : + 20 min sur les renverses (médiane de l'écart à 12 renverses mesurées par la trajectoire du bac, 13→19/11/2026, mortes-eaux ; erreur moyenne ≈ 15 min après correction). Pas de correction à l'île de Nantes. Même valeur que `bac-lola`.
+6. **Débit** : lu à Montjean-sur-Loire (station M530001010) via l'API Hub'Eau, ou saisi à la main.
 
 ## Précision
 Réaliste : **± 10 à 20 min**. Les tables du Port donnent des fourchettes de 10 à 30 min et l'étale est calée à ± 3 / ± 7 min ; vent, pression,
