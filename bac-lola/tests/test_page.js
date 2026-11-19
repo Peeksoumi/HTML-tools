@@ -8,7 +8,7 @@ let intervals=[], reseauHs=false, urls=[];
 // Positions simulées (publiées par le serveur) : bac à quai Basse-Indre puis traversée vers Indret
 const t0=Date.parse("2026-11-17T08:00:00Z");
 const pts=[[47.19744,-1.67439,0.1],[47.19744,-1.67439,0.1],[47.19744,-1.67439,0.2],[47.1969,-1.6731,3],[47.1962,-1.6724,3.2],[47.1956,-1.6728,2],[47.19534,-1.6743,0.1],[47.19534,-1.6743,0.1]];
-const samples=pts.map((r,i)=>[t0+i*60000,r[0],r[1],r[2],null]);
+let samples=pts.map((r,i)=>[t0+i*60000,r[0],r[1],r[2],null]);
 const ctx={document:doc,
   fetch:async(u)=>{ urls.push(u); if(/open-meteo/.test(u)) return {ok:true,json:async()=>({current:{time:"2026-11-17T09:00",temperature_2m:9.6,weather_code:61,wind_speed_10m:18.2,wind_direction_10m:250}})}; if(reseauHs) throw new Error("réseau coupé"); return {ok:true,json:async()=>({maj:t0,n:samples.length,samples})}; },
   setInterval:(f,ms)=>intervals.push([f,ms]),Intl,Date,Math,JSON,console,parseFloat,isFinite,Number,Set,Array,Object,String};
@@ -40,7 +40,7 @@ vm.runInContext(m[1]+"\nthis.__t={rendre,lirePosition,lireMeteo,journal:()=>jour
   ok(!/class="alerte"/.test(els.bandeau.innerHTML),"position de ~4 min 10 s (aisstream muet à quai, repli en cours) : pas d'alerte");
   horloge+=2*60000; await ctx.__t.lirePosition();
   ok(/Aucune nouvelle position du bac depuis \d+ min/.test(els.bandeau.innerHTML),"position figée > 5 min : alerte de retard");
-  ok(/estimé par le modèle/.test(els.carte.innerHTML),"entre deux mises à jour : situation signalée « estimée »");
+  ok(/hypothèse du modèle/.test(els.carte.innerHTML)&&/\(supposé\)/.test(els.carte.innerHTML),"position ancienne : situation signalée « hypothèse du modèle » / « (supposé) »");
   ok(els.mesures.innerHTML.replace(/<small>.*?<\/small>/g,"")===mesAvant,"tableau des mesures : inchangé par les estimations");
   // GitHub injoignable
   reseauHs=true; horloge+=40000; await ctx.__t.lirePosition();
@@ -50,5 +50,35 @@ vm.runInContext(m[1]+"\nthis.__t={rendre,lirePosition,lireMeteo,journal:()=>jour
   ok(!/Connexion perdue/.test(els.bandeau.innerHTML),"connexion rétablie : alerte retirée");
   horloge+=20*60000; await ctx.__t.lirePosition();
   ok(/Position AIS indisponible/.test(els.bandeau.innerHTML)&&/Position trop ancienne/.test(els.carte.innerHTML),"position figée > 10 min : prévisions suspendues");
+  // --- états : mesuré / hypothèse / indisponible, deux seuils selon la vitesse, nuit, hors chenal ---
+  const T=x=>Date.parse(x), led=/<span class="led"><\/span>Relais GitHub/;
+  // nuit : une position ancienne est normale (le bac n'émet plus)
+  horloge=T("2026-11-18T02:00:00Z"); await ctx.__t.lirePosition();
+  ok(/Hors service/.test(els.bandeau.innerHTML)&&!/indisponible/.test(els.bandeau.innerHTML)&&!/class="alerte"/.test(els.bandeau.innerHTML),"nuit, position ancienne : « Hors service », ni « indisponible » ni alerte");
+  // en service, à quai, position fraîche (1 min) : mesure, aucune estimation
+  const J=T("2026-11-18T08:00:00Z"), pos=(dt,lat,lon,v)=>[J+dt,lat,lon,v,null], IND=[47.19534,-1.6743];
+  samples=[pos(-420000,47.1962,-1.6724,3.2),pos(-360000,47.1956,-1.6728,2.0),pos(-300000,IND[0],IND[1],0.1),pos(-240000,IND[0],IND[1],0.1),pos(-60000,IND[0],IND[1],0.1)]; // traversée puis arrivée à Indret
+  horloge=J; await ctx.__t.lirePosition();
+  ok(led.test(els.bandeau.innerHTML)&&!/hypothèse|supposé/.test(els.carte.innerHTML)&&!/quai hypo/.test(els.quais.innerHTML),"à quai, position < 4 min : mesure (point vert plein), aucune mention d'hypothèse");
+  ok(!/class="alerte"/.test(els.bandeau.innerHTML)&&!/dernier état connu/.test(els.bandeau.innerHTML),"position fraîche : titre du mode plein, pas d'alerte");
+  // à quai, 4 min 20 s : hypothèse sans alerte (l'AIS n'émet qu'une position / 3 min à quai)
+  horloge=J+200000; ctx.__t.rendre();
+  ok(/<span class="led creux">/.test(els.bandeau.innerHTML)&&/quai hypo/.test(els.quais.innerHTML)&&/hypothèse du modèle/.test(els.carte.innerHTML)&&/dernier état connu/.test(els.bandeau.innerHTML)&&!/class="alerte"/.test(els.bandeau.innerHTML),"à quai, 4 min 20 s : point creux, quai en pointillé, titre « dernier état connu », sans alerte");
+  ok(/class="badge">~ à quai \?<\/div>/.test(els.quais.innerHTML)||/class="badge">~ en approche \?<\/div>/.test(els.quais.innerHTML),"badge « ~ … ? » sur le quai en hypothèse");
+  horloge=J+250000; ctx.__t.rendre();
+  ok(/Aucune nouvelle position du bac depuis 5 min/.test(els.bandeau.innerHTML),"à quai : alerte rouge à partir de 5 min");
+  // en mouvement : seuil d'alerte à 1 min
+  samples=samples.concat([pos(500000,47.1962,-1.6724,3.0)]);
+  horloge=J+520000; await ctx.__t.lirePosition();
+  ok(led.test(els.bandeau.innerHTML)&&!/class="alerte"/.test(els.bandeau.innerHTML),"en mouvement, position de 20 s : mesure, pas d'alerte");
+  horloge=J+500000+90000; ctx.__t.rendre();
+  ok(/Aucune nouvelle position du bac depuis 2 min|Aucune nouvelle position du bac depuis 90 s/.test(els.bandeau.innerHTML)&&/<span class="led creux">/.test(els.bandeau.innerHTML),"en mouvement, 90 s sans position : alerte rouge et hypothèse (à quai, la même ancienneté ne déclenche rien)");
+  // hors du chenal : position reçue mais situation non confirmée
+  samples=samples.concat([pos(700000,47.2100,-1.6000,0.1)]);
+  horloge=J+720000; await ctx.__t.lirePosition();
+  ok(/hors du chenal/.test(els.bandeau.innerHTML)&&/hors du chenal/.test(els.carte.innerHTML)&&/hypothèse du modèle/.test(els.carte.innerHTML),"position hors du chenal : signalée, situation en hypothèse");
+  // plus de 10 min en service : indisponible
+  horloge=J+720000+11*60000; ctx.__t.rendre();
+  ok(/Position AIS indisponible/.test(els.bandeau.innerHTML)&&/<span class="led off">/.test(els.bandeau.innerHTML),"en service, > 10 min : « indisponible », point rouge");
   console.log(b.replace(/<[^>]+>/g," ").replace(/\s+/g," "));
 })();

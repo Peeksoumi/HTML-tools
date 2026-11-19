@@ -75,14 +75,14 @@ h1{font-size:26px;margin:0;font-weight:600}
   <h2>Fonctionnement et sources</h2>
   <h3>Fonctionnement</h3>
   <ul>
-    <li><b>Lecture</b> : la page interroge le relais AIS du VPS toutes les 5 s et affiche sa dernière position ; le relais cherche d'abord dans aisstream, puis AISVesselTracker, puis Shiptrail, si aisstream est muet depuis 3 min. L'âge se calcule à partir de l'heure AIS de la position.</li>
+    <li><b>Lecture</b> : la page interroge le relais AIS du VPS toutes les 5 s et affiche sa dernière position ; le relais cherche d'abord dans aisstream, puis AISVesselTracker, puis Shiptrail, si aisstream est muet depuis 20 s en mouvement ou 3 min à quai. L'âge se calcule à partir de l'heure AIS de la position.</li>
     <li><b>Temps réel</b> : entre deux relevés, la position est estimée en ligne droite d'après la vitesse et le cap (60 s au plus), puis lissée à l'arrivée du relevé suivant. Point plein = relevé, anneau = estimation.</li>
     <li><b>Calcul</b> : tout se fait dans le navigateur ; la page ne fait que lire le relais et n'y envoie rien (peeksoumi.com).</li>
   </ul>
   <h3>Sources de données</h3>
   <ul>
     <li><b>aisstream.io</b> (1<sup>re</sup> source) : flux AIS temps réel de récepteurs de bénévoles (gratuit sur clé). Il refuse les navigateurs : la clé est un secret du VPS, dont le relais (<i>bac-lola/relais</i>) garde la connexion websocket pour le MMSI 227158520.</li>
-    <li><b>AISVesselTracker</b> (2<sup>e</sup>) puis <b>Shiptrail</b> (3<sup>e</sup>) : pages / API publiques, lues par le relais seulement si aisstream est muet depuis 3 min.</li>
+    <li><b>AISVesselTracker</b> (2<sup>e</sup>) puis <b>Shiptrail</b> (3<sup>e</sup>) : pages / API publiques, lues par le relais seulement si aisstream est muet depuis 20 s en mouvement ou 3 min à quai.</li>
     <li><b>Tracé du chenal</b> : GTFS officiel « Bacs de Loire en Loire-Atlantique » (aller) ; le retour est son symétrique par rapport à l'axe nord-sud.</li>
   </ul>
   <h3>Limites</h3>

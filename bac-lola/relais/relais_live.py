@@ -7,8 +7,8 @@
   Variables : LOLA_RELAIS_REPO (ex. git@github.com:Peeksoumi/lola-relais.git) et la clé de dépôt `deploy_key` (systemd LoadCredential).
 - Ne lit JAMAIS les relevés enregistrés (releves_*.csv) : ceux-ci ne servent qu'à entraîner le modèle.
 - Source principale : aisstream.io (websocket tenu ouvert, clé = identifiant systemd `aisstream_key`, jamais dans le dépôt).
-  Ordre de collecte : aisstream, puis AISVesselTracker, puis Shiptrail. Les secours ne sont interrogés (toutes les 15 s) que si aisstream n'a rien donné depuis 3 min
-  (à quai, un bac n'émet qu'une position toutes les 3 min).
+  Ordre de collecte : aisstream, puis AISVesselTracker, puis Shiptrail. Les secours ne sont interrogés (toutes les 15 s) que si aisstream est muet depuis 20 s quand le bac
+  est en mouvement (vitesse ≥ 1,5 nd ou inconnue), depuis 3 min quand il est à quai (il n'y émet qu'une position toutes les 3 min).
 - GET /positions -> {"maj": ms, "fenetre_min": 60, "n": N, "source": "aisstream|avt|shiptrail", "samples": [[ts_ms, lat, lon, vitesse|null, cap|null], ...]}
   (ts = heure de la position côté source ; les en-têtes CORS sont ajoutés par nginx.)
 Écoute sur 127.0.0.1:18791 ; nginx le publie sous /lola-direct/ (flux « direct » lu par la page, avec CORS).
@@ -126,7 +126,9 @@ PAS = 15            # s entre deux interrogations
 RETARD_MAX = 180    # s : au-delà, on bascule sur la source de secours
 FENETRE_S = 60 * 60   # on ne conserve jamais plus d'une heure de positions
 PUBLIER_MIN_S = 15    # s minimum entre deux publications GitHub (≤ 4/min, sous les 6 pushes/min recommandés)
-AIS_SILENCE_S = 180   # s : au-delà de ce silence d'aisstream (à quai : une position toutes les 3 min), on lit les sources de secours
+AIS_SILENCE_QUAI_S = 180       # s : à quai, aisstream n'émet qu'une position toutes les 3 min : silence normal en dessous
+AIS_SILENCE_MOUVEMENT_S = 20   # s : en mouvement, une position toutes les quelques secondes : au-delà, on lit les secours
+V_MOUVEMENT = 1.5              # nœuds (même seuil que la page bac-lola)
 AIS_URL = os.environ.get("AISSTREAM_URL", "wss://stream.aisstream.io/v0/stream")
 RUN = os.environ.get("RUNTIME_DIRECTORY", "/run/lola-relais")  # tmpfs : en RAM
 REPO = os.environ.get("LOLA_RELAIS_REPO", "")
@@ -134,6 +136,13 @@ anneau = []
 nouveau = threading.Event()   # posé quand une position inédite entre dans `anneau`
 etat = {"source": None, "erreur": None}
 verrou = threading.Lock()
+
+
+def noter(cle, valeur):
+    """Met à jour etat[cle] et écrit une ligne dans le journal systemd quand la valeur change (journalctl -u lola-relais)."""
+    if etat.get(cle) != valeur:
+        print("%s UTC  %s : %s" % (time.strftime("%H:%M:%S", time.gmtime()), cle, valeur), flush=True)
+    etat[cle] = valeur
 
 
 def vers_ms(txt):
@@ -190,22 +199,25 @@ def interroger():
         try:
             s = f()
             if nom == "avt" and maintenant - s[0] > RETARD_MAX * 1000:
-                etat["avt"] = "en retard de %d s" % ((maintenant - s[0]) / 1000)
+                noter("avt", "en retard")
                 continue
             if nom == "avt":
-                etat["avt"] = "ok"
+                noter("avt", "ok")
             ajouter(s)
-            etat["source"], etat["erreur"] = nom, None
+            noter("source", nom); etat["erreur"] = None
             return
         except Exception as e:
             etat["erreur"] = "%s: %s" % (nom, str(e)[:200])
             if nom == "avt":
-                etat["avt"] = "échec : " + str(e)[:150]
+                noter("avt", "échec : " + str(e)[:150])
 
 
 def secours_necessaires():
-    """Vrai quand aisstream est muet depuis plus de 3 min (ou n'a jamais rien donné)."""
-    return time.time() - etat.get("ais_dernier", 0) > AIS_SILENCE_S
+    """Vrai quand aisstream est muet trop longtemps : 20 s si le bac est en mouvement (ou si on ne sait pas), 3 min s'il est à quai."""
+    with verrou:
+        vit = anneau[-1][3] if anneau else None
+    seuil = AIS_SILENCE_QUAI_S if (vit is not None and vit < V_MOUVEMENT) else AIS_SILENCE_MOUVEMENT_S
+    return time.time() - etat.get("ais_dernier", 0) > seuil
 
 
 def boucle():
@@ -264,7 +276,7 @@ class WS:
         if tls:
             s = ssl.create_default_context().wrap_socket(s, server_hostname=u.hostname)
         s.settimeout(timeout)
-        self.s, self.buf = s, b""
+        self.s, self.buf, self.partiel = s, b"", b""
         cle = base64.b64encode(os.urandom(16)).decode()
         chemin = (u.path or "/") + ("?" + u.query if u.query else "")
         s.sendall(("GET %s HTTP/1.1\r\nHost: %s\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
@@ -304,29 +316,32 @@ class WS:
         self.s.sendall(tete + masque + bytes(b ^ masque[i % 4] for i, b in enumerate(data)))
 
     def recevoir(self):
-        """Prochain message texte complet (les pings reçoivent un pong, les pongs sont ignorés)."""
-        msg = b""
-        while True:
-            b0, b1 = self._exact(2)
-            n = b1 & 0x7F
-            if n == 126:
-                n = struct.unpack(">H", self._exact(2))[0]
-            elif n == 127:
-                n = struct.unpack(">Q", self._exact(8))[0]
-            masque = self._exact(4) if b1 & 0x80 else None
-            data = self._exact(n)
-            if masque:
-                data = bytes(b ^ masque[i % 4] for i, b in enumerate(data))
-            self.dernier_rx = time.time()
-            op = b0 & 0x0F
-            if op == 8:
-                raise ConnectionError("fermeture demandée par le serveur")
-            if op == 9:
-                self.envoyer(10, data)
-            elif op != 10:
-                msg += data
-                if b0 & 0x80:
-                    return msg.decode("utf-8", "replace")
+        """Lit UNE trame. Renvoie le message texte complet, ou None si la trame était un ping / pong / un fragment :
+        l'appelant retourne alors à attendre(), sans quoi on resterait bloqué sur une connexion silencieuse."""
+        b0, b1 = self._exact(2)
+        n = b1 & 0x7F
+        if n == 126:
+            n = struct.unpack(">H", self._exact(2))[0]
+        elif n == 127:
+            n = struct.unpack(">Q", self._exact(8))[0]
+        masque = self._exact(4) if b1 & 0x80 else None
+        data = self._exact(n)
+        if masque:
+            data = bytes(b ^ masque[i % 4] for i, b in enumerate(data))
+        self.dernier_rx = time.time()
+        op = b0 & 0x0F
+        if op == 8:
+            raise ConnectionError("fermeture demandée par le serveur")
+        if op == 9:
+            self.envoyer(10, data)
+            return None
+        if op == 10:
+            return None
+        self.partiel += data
+        if not b0 & 0x80:
+            return None
+        msg, self.partiel = self.partiel, b""
+        return msg.decode("utf-8", "replace")
 
     def fermer(self):
         try:
@@ -368,7 +383,7 @@ def boucle_aisstream():
     except OSError:
         cle = ""
     if not cle:
-        etat["ais"] = "désactivé : identifiant systemd aisstream_key absent ou vide"
+        noter("ais", "désactivé : identifiant systemd aisstream_key absent ou vide")
         return
     attente = 5
     while True:
@@ -378,20 +393,22 @@ def boucle_aisstream():
             ws.envoyer(1, json.dumps({"APIKey": cle, "BoundingBoxes": [[[46.9, -2.5], [47.4, -1.4]]],
                                       "FiltersShipMMSI": [str(MMSI)],
                                       "FilterMessageTypes": ["PositionReport", "StandardClassBPositionReport"]}).encode())
-            etat["ais"] = "connecté, en attente d'une position"
+            noter("ais", "connecté, en attente d'une position")
             while True:
                 if not ws.attendre(45):
                     ws.envoyer(9)   # ping : le silence est normal à quai (une position toutes les ~3 min)
                     if time.time() - ws.dernier_rx > 180:
                         raise TimeoutError("aucune réponse (pas même un pong) depuis 3 min")
                     continue
-                s = releve_aisstream(ws.recevoir())
+                msg = ws.recevoir()
+                s = releve_aisstream(msg) if msg is not None else None
                 if s:
-                    etat["ais_dernier"], etat["source"], etat["ais"] = time.time(), "aisstream", "ok"
+                    etat["ais_dernier"] = time.time()
+                    noter("source", "aisstream"); noter("ais", "ok")
                     ajouter(s)
                     attente = 5
         except Exception as e:
-            etat["ais"] = "échec : %s" % str(e)[:150]
+            noter("ais", "échec : %s" % str(e)[:150])
         finally:
             if ws:
                 ws.fermer()
@@ -412,9 +429,9 @@ def boucle_publication():
             dernier = publier(dernier)
             etat["publication"] = "ok %d" % int(time.time())
         except subprocess.CalledProcessError as e:
-            etat["publication"] = "échec : " + (e.stderr or b"").decode("utf8", "replace")[-200:]
+            noter("publication", "échec : " + (e.stderr or b"").decode("utf8", "replace")[-200:])
         except Exception as e:
-            etat["publication"] = "échec : %s" % str(e)[:200]
+            noter("publication", "échec : %s" % str(e)[:200])
 
 
 class H(BaseHTTPRequestHandler):

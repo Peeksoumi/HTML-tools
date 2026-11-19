@@ -65,11 +65,32 @@ class TestWS(unittest.TestCase):
 
         ws = R.WS(faux_serveur(scenario))
         ws.envoyer(1, json.dumps({"APIKey": "k", "FiltersShipMMSI": ["227158520"]}).encode())
-        self.assertEqual(ws.recevoir(), "partie")
-        self.assertEqual(ws.recevoir(), "x" * 300)
+        messages = []
+        while len(messages) < 2:
+            m = ws.recevoir()
+            if m is not None:
+                messages.append(m)
+        self.assertEqual(messages, ["partie", "x" * 300])
         time.sleep(0.4)
         self.assertEqual(recu["sub"]["FiltersShipMMSI"], ["227158520"])
         self.assertEqual(recu["pong"][0], 0x8A)   # opcode pong, fin
+        ws.fermer()
+
+    def test_ping_puis_silence_ne_bloque_pas(self):
+        """Régression : après un ping/pong, recevoir() doit rendre la main tout de suite (connexion silencieuse), pas attendre la trame suivante."""
+        def scenario(c, sub):
+            c.sendall(trame(10))     # pong isolé
+            time.sleep(2.5)          # puis silence plus long que le délai de lecture du client
+            c.sendall(trame(1, b"enfin"))
+        ws = R.WS(faux_serveur(scenario), timeout=1)
+        ws.envoyer(1, b"{}")
+        t0 = time.time()
+        self.assertTrue(ws.attendre(5))
+        self.assertIsNone(ws.recevoir())
+        self.assertLess(time.time() - t0, 1.0)
+        self.assertFalse(ws.attendre(1))                 # silence : on attend sans lever d'erreur
+        self.assertTrue(ws.attendre(5))
+        self.assertEqual(ws.recevoir(), "enfin")
         ws.fermer()
 
     def test_fermeture(self):
@@ -116,13 +137,22 @@ class TestRelais(unittest.TestCase):
         R.ajouter([now + 1000, 47.2, -1.7, 5, 90])    # doublon (±2 s)
         self.assertEqual(len(R.anneau), 1)
 
-    def test_secours_apres_3_min_de_silence(self):
+    def test_secours_selon_le_mouvement(self):
+        now = int(time.time() * 1000)
         R.etat["ais_dernier"] = 0
         self.assertTrue(R.secours_necessaires())      # aisstream n'a jamais rien donné
+        R.ajouter([now, 47.2, -1.7, 0.1, None])       # à quai
         R.etat["ais_dernier"] = time.time() - 120
-        self.assertFalse(R.secours_necessaires())     # 2 min de silence : normal (une position / 3 min à quai)
+        self.assertFalse(R.secours_necessaires())     # 2 min de silence à quai : normal
         R.etat["ais_dernier"] = time.time() - 200
-        self.assertTrue(R.secours_necessaires())      # plus de 3 min : on lit les autres sources
+        self.assertTrue(R.secours_necessaires())      # plus de 3 min à quai
+        R.anneau.clear(); R.ajouter([now, 47.2, -1.7, 5.0, 90])   # en mouvement
+        R.etat["ais_dernier"] = time.time() - 10
+        self.assertFalse(R.secours_necessaires())
+        R.etat["ais_dernier"] = time.time() - 30
+        self.assertTrue(R.secours_necessaires())      # 30 s de silence en mouvement
+        R.anneau.clear(); R.ajouter([now, 47.2, -1.7, None, None])  # vitesse inconnue : on ne sait pas
+        self.assertTrue(R.secours_necessaires())
 
     def test_publication_a_chaque_nouvelle_position(self):
         import os, tempfile

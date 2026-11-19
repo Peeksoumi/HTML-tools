@@ -47,6 +47,13 @@ h1{font-size:26px;margin:0;font-weight:600}
 .bateau.vieux{opacity:.35}
 #carte .sens{font-family:var(--mono);font-size:13px;color:var(--dim);text-align:center;margin-top:2px}
 .led.off{background:var(--rouge);box-shadow:0 0 4px var(--rouge)}
+.led.creux{background:transparent;box-shadow:none;border:1px solid var(--gris)}
+.quai.hypo{border:1px dashed var(--gris);background:#0d1113}
+.quai.hypo .badge{color:var(--gris)}
+.bateau.hypo{opacity:.6;outline:1px dashed var(--gris);outline-offset:2px;border-radius:6px}
+.voie .reste.hy{height:0;background:none;border-top:2px dashed var(--gris)}
+.voie .pointe.n.hy{border-left-color:var(--gris)}.voie .pointe.s.hy{border-right-color:var(--gris)}
+.quai .grand,.ta,.td,#chaine table.qq td span{text-decoration:underline dotted;text-underline-offset:4px;text-decoration-thickness:1px}
 #quais{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .quai{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 12px;min-width:0;text-align:center}
 .quai.ici{border-color:var(--vert);background:#0c1411;box-shadow:0 0 0 1px var(--vert),0 0 14px rgba(79,174,131,.25)}
@@ -102,13 +109,13 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
 <div id="quais"></div>
 <h2 class="t">Enchaînement prévu</h2><div class="bloc" id="chaine"></div>
 <h2 class="t">Derniers changements mesurés</h2><div class="bloc" id="mesures"></div>
-<div class="pied">Partout : orange = départ, bleu = arrivée · Prévisions à ± 2 min près dans 9 cas sur 10 · Δ des cartes = écart prévu − horaire officiel (minutes)</div>
+<div class="pied">Partout : orange = départ, bleu = arrivée · vert = position mesurée (AIS) · souligné pointillé = prévu par le modèle · gris pointillé = hypothèse (position ancienne) · Prévisions à ± 2 min près dans 9 cas sur 10 · Δ des cartes = écart prévu − horaire officiel (minutes)</div>
 <div class="fonct" id="fonctionnement">
   <h2>Fonctionnement et sources</h2>
   <h3>Fonctionnement</h3>
   <ul>
     <li><b>Détection</b> : la page lit la dernière heure de positions AIS de Lola (projetées sur le chenal) dans la copie publique GitHub du relais, toutes les 30 s (voir sources). arrivée et départ à un quai sont confirmés par deux positions cohérentes (lieu et vitesse). Tout le calcul reste dans le navigateur.</li>
-    <li><b>Entre deux mises à jour</b> : la copie GitHub est mise à jour à chaque nouvelle position (une toutes les quelques secondes en traversée si aisstream capte l'estuaire, une toutes les 3 min à quai) ; entre deux positions le modèle déroule les départs et arrivées prévus déjà passés : la situation, le bateau (position interpolée) et les prévisions en sont déduits, signalés « estimé ». Les tableaux « changements mesurés » ne montrent que des mesures ; chaque mise à jour recale l'estimation.</li>
+    <li><b>Entre deux mises à jour</b> : la copie GitHub est mise à jour à chaque nouvelle position (une toutes les quelques secondes en traversée si aisstream capte l'estuaire, une toutes les 3 min à quai) ; tant que la position est fraîche (moins de 1 min en mouvement, moins de 4 min à quai), la situation affichée est une <b>mesure</b> (point vert plein) et le modèle ne la contredit jamais. Au-delà, c'est une <b>hypothèse</b> : le modèle déroule les départs et arrivées prévus déjà passés, et la situation, le bateau (position interpolée) et le mode sont signalés en gris pointillé (« supposé », « dernier état connu »). Les heures prévues sont soulignées en pointillé. Les tableaux « changements mesurés » ne montrent que des mesures ; chaque mise à jour recale l'hypothèse.</li>
     <li><b>Nominal</b> : grille GTFS, un départ toutes les 20 min par quai (semaine : Basse-Indre 05:30→22:10, Indret 05:40→22:20 ; week-end et fériés : 06:30→21:30 et 06:40→21:20). Arrivée nominale = départ nominal + 3 min.</li>
     <li><b>Lecture</b> : chaque quai affiche son prochain départ prévu et la situation du bac (à quai ici, en traversée vers l'autre quai, à l'autre quai, en traversée vers ici) ; l'enchaînement complet des changements est listé une seule fois, une ligne par traversée, départ et arrivée ensemble, chacun dans la colonne de son quai (Indret à gauche, Basse-Indre à droite, comme le schéma) ; l'horaire officiel et l'écart Δ restent sur les cartes.</li>
     <li><b>Modes</b> : <i>rotation continue</i> si les départs consécutifs sont espacés de ≤ 8,5 min ; <i>retard / perturbation</i> si l'écart médian à la grille dépasse 4,5 min ; <i>arrêt</i> hors service ou sans mouvement depuis 30 min.</li>
@@ -119,7 +126,7 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
   <h3>Sources de données</h3>
   <ul>
     <li><b>GTFS « Horaires des bacs de Loire en Loire-Atlantique »</b> (Département de Loire-Atlantique, data.gouv.fr, Licence Ouverte) : créneaux nominaux et jours fériés.</li>
-    <li><b>Position AIS de Lola</b> (MMSI 227158520) : aisstream.io (flux AIS de récepteurs de bénévoles), avec repli sur AISVesselTracker puis Shiptrail si aisstream est muet depuis 3 min (ces services refusent les appels d'une page web). Un script du dépôt (<i>bac-lola/relais</i>), exécuté sur le serveur du site, garde la connexion à aisstream, interroge les secours au besoin et garde 1 h en mémoire vive. Le relais publie la dernière heure de positions dans la copie publique <b>GitHub</b> <i>Peeksoumi/lola-relais</i> dès qu'une nouvelle position arrive (au plus toutes les 15 s, un seul commit, sans historique) ; la page ne lit que cette copie, c'est la source qui cale le modèle. Aucune base de données, la page ne lit jamais les relevés d'entraînement ; c'est l'un des deux appels réseau de la page (avec Open-Meteo), rien n'y est envoyé.</li>
+    <li><b>Position AIS de Lola</b> (MMSI 227158520) : aisstream.io (flux AIS de récepteurs de bénévoles), avec repli sur AISVesselTracker puis Shiptrail si aisstream est muet depuis 20 s en mouvement ou 3 min à quai (ces services refusent les appels d'une page web). Un script du dépôt (<i>bac-lola/relais</i>), exécuté sur le serveur du site, garde la connexion à aisstream, interroge les secours au besoin et garde 1 h en mémoire vive. Le relais publie la dernière heure de positions dans la copie publique <b>GitHub</b> <i>Peeksoumi/lola-relais</i> dès qu'une nouvelle position arrive (au plus toutes les 15 s, un seul commit, sans historique) ; la page ne lit que cette copie, c'est la source qui cale le modèle. Aucune base de données, la page ne lit jamais les relevés d'entraînement ; c'est l'un des deux appels réseau de la page (avec Open-Meteo), rien n'y est envoyé.</li>
     <li><b>Open-Meteo</b> (open-meteo.com, CC BY 4.0) : météo actuelle (température, ciel, vent) aux coordonnées des bacs, rafraîchie toutes les 10 min ; la page envoie seulement ces coordonnées fixes, rien de personnel.</li>
     <li><b>Calibrage</b> : relevés enregistrés par le serveur du 13 au 18/11/2026 : ils ne servent qu'à fixer les paramètres du modèle hors ligne, la page ne les lit jamais.</li>
   </ul>
@@ -127,7 +134,7 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
   <ul>
     <li>Calibrage sur 6 jours seulement, dont 3 jours de semaine : décalages et fenêtres de rotation provisoires, vendredi et vacances non étudiés.</li>
     <li>Les causes d'un retard (autre bateau, changement de sens de la marée, vent) ne sont pas détectées en direct ; ils sont enregistrés à part pour une version ultérieure.</li>
-    <li>À l'ouverture, la page rejoue 1 h de positions : le sens est connu tout de suite. Les sources AIS publiques se rafraîchissent environ chaque minute, avec ~1 min de retard : heures mesurées à ± 1 min, prévisions en retard d'autant. La copie GitHub dépend du relais du serveur : s'il tombe, elle n'est plus mise à jour (la situation est alors estimée par le modèle). Si aucune position n'arrive depuis 5 min, un bandeau rouge l'indique ; prévisions suspendues au-delà de 10 min. Si GitHub est injoignable : « Connexion perdue ».</li>
+    <li>À l'ouverture, la page rejoue 1 h de positions : le sens est connu tout de suite. Les sources AIS publiques se rafraîchissent environ chaque minute, avec ~1 min de retard : heures mesurées à ± 1 min, prévisions en retard d'autant. La copie GitHub dépend du relais du serveur : s'il tombe, elle n'est plus mise à jour (la situation est alors estimée par le modèle). Si aucune position n'arrive depuis 1 min en mouvement ou 5 min à quai, un bandeau rouge l'indique ; prévisions suspendues au-delà de 10 min en période de service (la nuit, une position ancienne est normale : « Hors service »). Si GitHub est injoignable : « Connexion perdue ».</li>
     <li>Manœuvres hors service (positionnement de début ou de fin de journée) non prévues ; un arrêt est déclaré après 30 min sans mouvement en période de service.</li>
   </ul>
 </div>
@@ -493,7 +500,9 @@ const SEUIL_HORS_ZONE=0.0008; // écart au chenal (unités lat/lon) au-delà duq
 // Positions AIS de Lola, deux lectures simultanées d'un même relais (script bac-lola/relais, jamais les relevés enregistrés) :
 //  - copie publique du dépôt lola-relais, publiée par le relais à chaque nouvelle position (≥ 15 s d'intervalle) : seule source de la page, elle cale le modèle.
 const URL_GITHUB = "https://raw.githubusercontent.com/Peeksoumi/lola-relais/main/positions.json";
-const AGE_ALERTE=5*60000, AGE_INDISPO=10*60000;   // aisstream peut se taire 3 min (à quai : une position toutes les 3 min) avant le repli sur une autre source
+// Deux seuils selon la dernière vitesse connue : à quai l'AIS n'émet qu'une position toutes les 3 min ; en mouvement, toutes les quelques secondes.
+// frais : la position est une mesure ; au-delà, la situation n'est plus qu'une hypothèse du modèle. alerte : bandeau rouge.
+const SEUILS={quai:{frais:4*60000,alerte:5*60000}, marche:{frais:60000,alerte:60000}}, AGE_INDISPO=10*60000;
 let dernierGithub=0;
 const URL_METEO = "https://api.open-meteo.com/v1/forecast?latitude=47.196&longitude=-1.674&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m&wind_speed_unit=kmh&timezone=Europe%2FParis";
 const $=id=>document.getElementById(id);
@@ -521,7 +530,7 @@ async function lireMeteo(){
     }catch(e){ $("meteo").textContent=""; }
 }
 
-let githubOk=false;
+let githubOk=false, horsChenal=false;
 let journal=[], detecteur=null, dernierTs=0, derniereMarche=0, vitesse=null, derniereMesure=null, lecturesOk=false, dernierSucces=0, prec=null, pBac=null;
 
 function vitesseDeplacement(a,b){ // nœuds, entre deux positions [ts,lat,lon] (quand la source ne donne pas la vitesse)
@@ -532,7 +541,8 @@ function vitesseDeplacement(a,b){ // nœuds, entre deux positions [ts,lat,lon] (
 function traiter(s){ // s = [ts (heure AIS, ms), lat, lon, vitesse|null, cap|null]
     const v=s[3]!=null ? s[3] : (prec ? vitesseDeplacement(prec,s) : 0);
     const pos=positionSurTrace(s[1],s[2]);
-    detecteur.pousser({t:s[0],p:Math.max(0,Math.min(1,pos.progression)),vitesse:v,hors:pos.ecart>SEUIL_HORS_ZONE});
+    horsChenal=pos.ecart>SEUIL_HORS_ZONE;
+    detecteur.pousser({t:s[0],p:Math.max(0,Math.min(1,pos.progression)),vitesse:v,hors:horsChenal});
     if(v>=V_MARCHE) derniereMarche=s[0];
     pBac=Math.max(0,Math.min(1,pos.progression));
     vitesse=v; derniereMesure=s[0]; dernierTs=s[0]; prec=s;
@@ -614,19 +624,27 @@ function jourTag(t,now){
 function rendre(){
     const now=Date.now(), mesures=evenementsEffectifs(now);
     const age=derniereMesure?now-derniereMesure:null;
-    const indispo=age===null || age>AGE_INDISPO;
-    const evs=indispo?mesures:avecEstimes(mesures,now), estime=evs.length>mesures.length;
+    const enMarche=vitesse!=null&&vitesse>=V_MARCHE, SE=enMarche?SEUILS.marche:SEUILS.quai;
+    const enService=dansService(now); // hors service (nuit), une position ancienne est normale : le bac n'émet plus
+    const indispo=age===null || (age>AGE_INDISPO && enService);
+    // Origine de la situation affichée : « mesure » (position AIS fraîche), « hypothese » (position ancienne : le modèle déduit), « indisponible », « aucune »
+    const etatMes = age===null ? "aucune" : indispo ? "indisponible" : (lecturesOk&&age<SE.frais ? "mesure" : "hypothese");
+    const etatSit = (etatMes==="mesure"&&horsChenal) ? "hypothese" : etatMes; // hors du chenal : la situation (quai / traversée) n'est pas confirmée
+    // Une mesure fraîche n'est jamais contredite par une estimation : le modèle ne déroule les événements prévus que si la position est ancienne
+    const evs=(indispo||etatMes==="mesure")?mesures:avecEstimes(mesures,now);
     const pr=prevoir(evs,now,10,derniereMarche), mode=pr.mode;
     const b=$("bandeau");
-    const live = derniereMesure ? '<span class="led'+(lecturesOk&&!indispo?'':' off')+'"></span>'+'Relais GitHub · position AIS de '+formatHMS(derniereMesure)+' (il y a '+(age<90000?Math.round(age/1000)+' s':Math.round(age/60000)+' min')+')'+(vitesse!=null?' · '+vitesse.toFixed(1).replace(".",",")+' nd':'')
-                                 : '<span class="led off"></span>'+(lecturesOk?'Aucune position reçue':'En attente de la position du bac…');
+    const live = derniereMesure ? '<span class="led'+(etatMes==="mesure"?'':etatMes==="hypothese"?' creux':' off')+'"></span>'+'Relais GitHub · position AIS de '+formatHMS(derniereMesure)+' (il y a '+(age<90000?Math.round(age/1000)+' s':Math.round(age/60000)+' min')+')'+(vitesse!=null?' · '+vitesse.toFixed(1).replace(".",",")+' nd':'')+(horsChenal?' · hors du chenal':'')
+                                 : '<span class="led '+(lecturesOk?'creux':'off')+'"></span>'+(lecturesOk?'Aucune position reçue':'En attente de la position du bac…');
     if(indispo){ mode.mode="arret"; mode.raison=derniereMesure?"Position AIS indisponible":"En attente de la position…"; mode.detail=derniereMesure?"Dernière position il y a "+Math.round(age/60000)+" min":""; }
-    b.className="m-"+mode.mode;
+    // mode déduit des derniers départs : gris « dernier état connu » tant que la position n'est pas fraîche
+    const incertain=etatSit==="hypothese" && ["normal","rotation","perturbation"].indexOf(mode.mode)>=0;
+    b.className="m-"+(incertain?"arret":mode.mode);
     const dur=ms=>ms<90000?Math.round(ms/1000)+' s':Math.round(ms/60000)+' min';
     let alerte="";
     if(!lecturesOk) alerte='⚠ Connexion perdue avec la copie GitHub des positions'+(dernierSucces?' — dernière mise à jour il y a '+dur(now-dernierSucces):' — aucune donnée reçue')+'. Nouvelle tentative toutes les 30 s.';
-    else if(age!==null && age>AGE_ALERTE && !indispo) alerte='⚠ Aucune nouvelle position du bac depuis '+dur(age)+' : source AIS en retard ou bac hors de portée.';
-    b.innerHTML='<div class="mode">'+mode.raison+'</div><div class="detail">'+mode.detail+'</div><div class="live">'+live+'</div>'+(alerte?'<div class="alerte" role="alert">'+alerte+'</div>':'');
+    else if(age!==null && age>SE.alerte && !indispo && enService) alerte='⚠ Aucune nouvelle position du bac depuis '+dur(age)+' : source AIS en retard ou bac hors de portée.';
+    b.innerHTML='<div class="mode">'+mode.raison+(incertain?' · dernier état connu':'')+'</div><div class="detail">'+mode.detail+'</div><div class="live">'+live+'</div>'+(alerte?'<div class="alerte" role="alert">'+alerte+'</div>':'');
     const BATEAU='<svg viewBox="0 0 44 36" width="44" height="36"><path d="M4 22h36l-5 9H9z" fill="#d9635f"/><rect x="8" y="14" width="28" height="8" rx="1" fill="#e8edf0"/><rect x="14" y="7" width="16" height="7" rx="1" fill="#e8edf0"/><rect x="26" y="1" width="4" height="7" fill="#d9635f"/><g fill="#4f8fbd"><rect x="11" y="16.5" width="3" height="3"/><rect x="17" y="16.5" width="3" height="3"/><rect x="23" y="16.5" width="3" height="3"/><rect x="29" y="16.5" width="3" height="3"/></g></svg>';
     // Visuel : dérivé de la MÊME situation que les cartes (dernier événement), jamais de la vitesse brute
     const der=evs.length?evs[evs.length-1]:null;
@@ -634,21 +652,23 @@ function rendre(){
     if(der){
         const aQuai=der.type==="arr", Q=der.q, vers=aQuai?null:autre(der.q), cible=aQuai?Q:vers;
         const prochain=pr.evenements.find(x=>aQuai?(x.type==="dep"&&x.q===Q):(x.type==="arr"&&x.q===vers));
+        const hyp=etatSit==="hypothese";
         let p=aQuai?(Q==="S"?0.04:0.96):Math.min(0.92,Math.max(0.08,pBac===null?0.5:pBac));
-        if(!aQuai&&prochain&&age>90000){ const f=Math.min(1,Math.max(0,(now-der.t)/(prochain.t-der.t))), a0=der.q==="S"?0.04:0.96, a1=vers==="N"?0.96:0.04; p=a0+(a1-a0)*f; } // position estimée entre deux mises à jour
+        if(!aQuai&&prochain&&hyp){ const f=Math.min(1,Math.max(0,(now-der.t)/(prochain.t-der.t))), a0=der.q==="S"?0.04:0.96, a1=vers==="N"?0.96:0.04; p=a0+(a1-a0)*f; } // position estimée entre deux mises à jour
         const cote=(aQuai?autre(Q):vers)==="N"?1:-1;
-        if(!indispo) focus={q:cible,kind:aQuai?"ici":"approche"};
+        if(!indispo) focus={q:cible,kind:hyp?"hypo":(aQuai?"ici":"approche"),aQuai:aQuai};
         const ici=q=>(focus&&focus.kind==="ici"&&focus.q===q)?' ici':'';
         let h='<div class="voie"><div class="eau"></div><div class="pilier'+ici("S")+'" style="left:0"></div><div class="pilier'+ici("N")+'" style="right:0"></div>';
-        if(!aQuai) h+= vers==="N" ? '<div class="reste" style="left:'+(p*100).toFixed(1)+'%;right:14px"></div><div class="pointe n"></div>'
-                                  : '<div class="reste" style="left:14px;right:'+((1-p)*100).toFixed(1)+'%"></div><div class="pointe s"></div>';
-        h+='<div class="bateau'+(indispo||!lecturesOk?' vieux':'')+'" style="left:'+(p*100).toFixed(1)+'%"><div style="transform:scaleX('+cote+')">'+BATEAU+'</div></div>'
-          +'<div class="nomq'+(!aQuai&&vers==="S"?' dest':'')+ici("S")+'" style="left:0">Indret</div><div class="nomq'+(!aQuai&&vers==="N"?' dest':'')+ici("N")+'" style="right:0">Basse-Indre</div></div>';
+        const hy=hyp?' hy':'';
+        if(!aQuai) h+= vers==="N" ? '<div class="reste'+hy+'" style="left:'+(p*100).toFixed(1)+'%;right:14px"></div><div class="pointe n'+hy+'"></div>'
+                                  : '<div class="reste'+hy+'" style="left:14px;right:'+((1-p)*100).toFixed(1)+'%"></div><div class="pointe s'+hy+'"></div>';
+        h+='<div class="bateau'+(indispo?' vieux':(hyp?' hypo':''))+'" style="left:'+(p*100).toFixed(1)+'%"><div style="transform:scaleX('+cote+')">'+BATEAU+'</div></div>'
+          +'<div class="nomq'+(!aQuai&&!hyp&&vers==="S"?' dest':'')+ici("S")+'" style="left:0">Indret</div><div class="nomq'+(!aQuai&&!hyp&&vers==="N"?' dest':'')+ici("N")+'" style="right:0">Basse-Indre</div></div>';
         let t,sous="";
-        if(aQuai){ t="À quai à "+NOM_QUAI[Q]; if(prochain&&!indispo) sous=(prochain.t-now<60000?'<span class="td">Départ imminent</span>':'Départ prévu vers <span class="td">'+formatHM(prochain.t)+'</span>'); }
-        else { t=(vers==="N"?"En route vers "+NOM_QUAI[vers]+" ➜":"⬅ En route vers "+NOM_QUAI[vers]); if(prochain&&!indispo) sous='Arrivée prévue vers <span class="ta">'+formatHM(prochain.t)+'</span>'; }
+        if(aQuai){ t="À quai à "+NOM_QUAI[Q]+(hyp?" (supposé)":""); if(prochain&&!indispo) sous=(prochain.t-now<60000?'<span class="td">Départ imminent</span>':'Départ prévu vers <span class="td">'+formatHM(prochain.t)+'</span>'); }
+        else { t=(vers==="N"?"En route vers "+NOM_QUAI[vers]+" ➜":"⬅ En route vers "+NOM_QUAI[vers])+(hyp?" (supposé)":""); if(prochain&&!indispo) sous='Arrivée prévue vers <span class="ta">'+formatHM(prochain.t)+'</span>'; }
         if(indispo) sous="Position trop ancienne : situation à confirmer";
-        else if(estime||age>90000) sous+=(sous?' · ':'')+'<i>estimé par le modèle</i>';
+        else if(hyp) sous+=(sous?' · ':'')+'<i>~ hypothèse du modèle · dernière position il y a '+dur(age)+(horsChenal&&etatMes==="mesure"?' (hors du chenal)':'')+'</i>';
         $("carte").innerHTML=h+'<div class="sens">'+t+(sous?'<small>'+sous+'</small>':'')+'</div>';
     } else $("carte").innerHTML='<div class="sens">Situation du bac en attente…</div>';
     const panne=indispo || (mode.mode==="arret" && mode.raison.indexOf("Arrêt")===0);
@@ -660,19 +680,20 @@ function rendre(){
         const arr=pr.evenements.find(x=>x.type==="arr"&&x.q===Q);
         const s=situation(Q,evs);
         let etat="", grand="—", cpt="", sec="", suiv="";
+        const sup=etatSit==="hypothese"?"supposé ":"";
         if(panne){ etat=indispo?"Position du bac indisponible : pas de prévision":"Arrêt en cours : pas de prévision"; }
         else if(deps.length){
             const d=deps[0];
             grand=formatHM(d.t); cpt=horsService?"Reprise du service"+jourTag(d.t,now):dans(d.t,now).replace("maintenant","imminent");
-            if(s===0) etat="Bac à quai ici"+((d.t-now)<60000?' · <span class="td">départ imminent</span>':"");
-            else if(s===1) etat="Bac parti vers "+no+(arr?', de retour ici vers <span class="ta">'+formatHM(arr.t)+'</span>':"");
-            else if(s===2) etat="Bac à "+no+(arr?', arrive ici vers <span class="ta">'+formatHM(arr.t)+'</span>':"");
-            else if(s===3) etat="Bac en approche"+(arr?', arrive vers <span class="ta">'+formatHM(arr.t)+'</span>':"");
+            if(s===0) etat="Bac "+sup+"à quai ici"+((d.t-now)<60000?' · <span class="td">départ imminent</span>':"");
+            else if(s===1) etat="Bac "+sup+"parti vers "+no+(arr?', de retour ici vers <span class="ta">'+formatHM(arr.t)+'</span>':"");
+            else if(s===2) etat="Bac "+sup+"à "+no+(arr?', arrive ici vers <span class="ta">'+formatHM(arr.t)+'</span>':"");
+            else if(s===3) etat="Bac "+sup+"en approche"+(arr?', arrive vers <span class="ta">'+formatHM(arr.t)+'</span>':"");
             if(d.nominal!=null) sec='officiel '+formatHM(d.nominal)+' · <span class="'+(d.mode==="rotation"?"":classeDelta(d.delta))+'">'+fmtDelta(d.delta)+' min</span>';
             if(deps[1]) suiv="Puis "+formatHM(deps[1].t)+(mode.mode==="rotation"?" (rotation)":"");
         }
         const cls=(!panne&&focus&&focus.q===Q)?' '+focus.kind:"";
-        const badge=cls?(focus.kind==="ici"?"● Bac à quai":"➜ Bac en approche"):"";
+        const badge=cls?(focus.kind==="ici"?"● Bac à quai":focus.kind==="hypo"?(focus.aQuai?"~ à quai ?":"~ en approche ?"):"➜ Bac en approche"):"";
         html+='<section class="quai'+cls+'"><div class="badge">'+badge+'</div><div class="nom">'+NOM_QUAI[Q]+'<span class="rive">rive '+(Q==="N"?"nord":"sud")+'</span></div>'
             +'<div class="lbl">Prochain départ</div><div class="grand">'+grand+'</div><div class="cpt2">'+cpt+'</div>'
             +'<div class="etat">'+etat+'</div><div class="sec">'+sec+'</div>'+(suiv?'<div class="suivant">'+suiv+'</div>':'')+'</section>';
