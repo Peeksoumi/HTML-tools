@@ -30,10 +30,24 @@ const L = C.renverses(now);
 assert(L.length >= 6, 'au moins 6 renverses sur 54 h');
 for (let i = 1; i < L.length; i++) { assert(L[i].type !== L[i - 1].type, 'alternance flot/jusant'); const h = (L[i].t - L[i - 1].t) / 3.6e6; assert(h > 3.5 && h < 9.5, 'intervalle plausible : ' + h.toFixed(1) + ' h'); }
 console.log('ok - renverses alternées, intervalles entre 3,5 h et 9,5 h');
-const r = L.find((x) => x.t > now), U = C.INCERTITUDE_MIN * 60000;
+const r = L.find((x) => x.t > now), U = r.incert * 60000;
 const phase = (t) => C.etatCourant(t).phase;
 assert.strictEqual(phase(r.t - 85 * 60000), 'avant'); assert.strictEqual(phase(r.t - 10 * 60000), 'en_cours'); assert.strictEqual(phase(r.t + 10 * 60000), 'en_cours');
 assert.strictEqual(phase(r.t + U + 10 * 60000), 'apres'); assert.strictEqual(phase(r.t + 60 * 60000), 'calme');
 assert.strictEqual(C.etatCourant(r.t - 10 * 60000).sens, r.type === 'flot' ? 'jusant' : 'flot');
 assert(C.renverseProche(r.t + 5 * 60000, now) && !C.renverseProche(r.t + 60 * 60000, now));
 console.log('ok - phases avant / en cours / après / calme et sens du courant');
+
+// 5. régimes de débit déduits de la date seule : petits débits juin → novembre, gros débits décembre → mai
+const reg = (iso) => C.renverses(Date.parse(iso)).filter((x) => Math.abs(x.t - Date.parse(iso)) < 12 * 3600e3).map((x) => x.regime);
+assert(reg('2026-07-15T12:00:00Z').every((x) => x === 'petits') && reg('2027-01-15T12:00:00Z').every((x) => x === 'gros'));
+assert(reg('2026-11-30T12:00:00Z').length && reg('2026-11-30T12:00:00Z').every((x) => x === 'petits'));
+assert(reg('2026-12-02T12:00:00Z').every((x) => x === 'gros') && reg('2027-05-31T00:00:00Z').every((x) => x === 'gros') && reg('2027-06-01T12:00:00Z').every((x) => x === 'petits'));
+for (const d of ['2027-01-15T12:00:00Z', '2027-07-15T12:00:00Z']) {
+  const Lr = C.renverses(Date.parse(d));
+  assert(Lr.length >= 6);
+  for (let i = 1; i < Lr.length; i++) { assert(Lr[i].type !== Lr[i - 1].type); const h = (Lr[i].t - Lr[i - 1].t) / 3.6e6; assert(h > 3 && h < 10, d + ' intervalle ' + h.toFixed(1) + ' h'); }
+}
+const R = C.REGIMES;
+assert(R.petits.flot === 48 && R.petits.jusant === 48 && R.gros.flot === 28 && R.gros.jusant === 58 && R.gros.incert > R.petits.incert);
+console.log('ok - régimes : petits débits (juin → novembre) et gros débits (décembre → mai), incertitude élargie sans mesure');

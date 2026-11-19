@@ -131,7 +131,7 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
     <li><b>Modes</b> : <i>rotation continue</i> si les départs consécutifs sont espacés de ≤ 8,5 min ; <i>retard / perturbation</i> si l'écart médian à la grille dépasse 4,5 min ; <i>arrêt</i> hors service ou sans mouvement depuis 30 min.</li>
     <li><b>Prévision hybride</b> : simulation du cycle départ → traversée (3,0 min en semaine, 3,3–3,4 min le week-end) → arrivée → départ. En grille : créneau + décalage appris (semaine +1,3 min, week-end +1,7 min, réajusté sur les 5 derniers départs). En rotation : arrivée + 3,6 min de séjour. En semaine, les fenêtres de pointe observées (06:55–09:30, 16:00–19:15) anticipent l'entrée et la sortie de rotation.</li>
     <li><b>Validation</b> : rejeu sur 490 départs du 13 au 18/11/2026 : erreur médiane 0,6 min, 93 % à ±2 min (grille officielle seule : 57 %). En rotation continue, erreur moyenne 1,5 min contre 8,4 min pour la grille.</li>
-    <li><b>Changement de courant</b> : la page calcule seule, d'après la date, les pleines mers et basses mers à Lola (analyse harmonique : constantes REFMAR de Saint-Nazaire, Le Pellerin et Nantes, calage SHOM, moteur de la page <i>courant-loire</i>), puis applique une règle simple : <b>renverse du courant = marée + 46 min</b> (pleine mer → début du jusant, basse mer → début du flot). Le retard de 46 min est la médiane de 12 renverses mesurées par la trajectoire du bac du 13 au 19/11/2026 (le bac passe par l'amont ou par l'aval de la droite entre les quais selon le sens du courant). Erreur moyenne ≈ 15 min (validation en laissant une mesure de côté), pire cas 51 min : fenêtre affichée ± 20 min. Le bandeau violet annonce le changement 90 min avant, le marque « en cours » dans la fenêtre, le rappelle 45 min après ; les lignes de l'enchaînement dont un horaire tombe dans la fenêtre sont surlignées. C'est une situation de perturbation <b>anticipée</b> : elle ne modifie pas encore les horaires prévus.</li>
+    <li><b>Changement de courant</b> : la page calcule seule, d'après la <b>date</b>, les pleines et basses mers à Lola (analyse harmonique : constantes REFMAR, calage SHOM, moteur de <i>courant-loire</i>) puis applique un retard qui dépend du régime de débit de la saison : <b>petits débits (juin → novembre) : marée + 48 min</b> (flot comme jusant) ; <b>gros débits (décembre → mai) : flot + 28 min, jusant + 58 min</b>. Pleine mer → début du jusant, basse mer → début du flot. Les retards viennent des tables du Port au débit moyen de chaque régime (débit moyen mensuel de la Loire à Montjean), plus 20 min mesurés sur le bac (le bac passe par l'amont ou l'aval de la droite entre les quais selon le sens du courant). Petits débits : 12 renverses mesurées du 13 au 19/11/2026, erreur moyenne ≈ 15 min, pire cas 53 min, fenêtre ± 20 min. Gros débits : <b>jamais mesuré</b>, fenêtre élargie à ± 30 min. Le bandeau violet annonce le changement 90 min avant, le marque « en cours » dans la fenêtre, le rappelle 45 min après ; les lignes de l'enchaînement dont un horaire tombe dans la fenêtre sont surlignées. C'est une situation de perturbation <b>anticipée</b> : elle ne modifie pas encore les horaires prévus.</li>
     <li><b>Visuel</b> : un bateau est placé entre Indret et Basse-Indre selon la dernière position AIS projetée sur le chenal ; sa situation (à quai à Indret, à quai à Basse-Indre, en route vers l'un ou l'autre) est la même que celle des cartes de quai : elle vient du dernier changement détecté, pas de la vitesse brute. Une flèche orange indique la direction ; atténué si la position est ancienne.</li>
   </ul>
   <h3>Sources de données</h3>
@@ -141,12 +141,12 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
     <li><b>API GitHub</b> (api.github.com) : lecture de positions.json du dépôt lola-relais, sans cache CDN ; limite de 60 requêtes/h par IP, d'où une lecture toutes les 75 s et le repli automatique sur raw.githubusercontent.com (cache de ~5 min) pendant 10 min si elle refuse.</li>
     <li><b>Google Maps</b> : le bouton « Itinéraire » de chaque quai ouvre simplement un lien google.com/maps (destination = accès au quai, voiture) ; la page n'envoie rien à Google tant que vous ne cliquez pas.</li>
     <li><b>Open-Meteo</b> (open-meteo.com, CC BY 4.0) : météo actuelle (température, ciel, vent) aux coordonnées des bacs, rafraîchie toutes les 10 min ; la page envoie seulement ces coordonnées fixes, rien de personnel.</li>
-    <li><b>Marée et courant</b> : constantes harmoniques TICON-4 (Hart-Davis et al., 2025, SEANOE, CC BY 4.0), relayées par neaps/tide-database ; prédictions SHOM pour le calage de la marée. Tout est embarqué dans la page : aucun appel réseau pour la marée.</li>
+    <li><b>Marée et courant</b> : constantes harmoniques TICON-4 (Hart-Davis et al., 2025, SEANOE, CC BY 4.0), relayées par neaps/tide-database ; prédictions SHOM pour le calage de la marée ; Hydroportail (station M5300010, Loire à Montjean-sur-Loire) : débits moyens mensuels 1863-2026 pour le régime de débit ; tables de renverses du Grand Port Maritime de Nantes Saint-Nazaire pour le retard selon le débit. Tout est embarqué dans la page : aucun appel réseau pour la marée.</li>
     <li><b>Calibrage</b> : relevés enregistrés par le serveur du 13 au 18/11/2026 : ils ne servent qu'à fixer les paramètres du modèle hors ligne, la page ne les lit jamais.</li>
   </ul>
   <h3>Limites</h3>
   <ul>
-    <li>Courant : 12 renverses de référence seulement, toutes en mortes-eaux (coefficients 32 à 69) à débit 200–310 m³/s ; le retard fixe de 46 min ignore coefficient et débit, donc hors de ces conditions (vives-eaux, crue) l'erreur peut dépasser 30 min. Le sens du courant est déduit de la trajectoire du bac, pas d'une mesure directe. Sur 397 départs, aucun retard significatif n'a été relevé près des renverses (22 % d'écarts > 4 min dans ± 30 min, 19 % ailleurs) : le lien avec les retards reste à établir.</li>
+    <li>Courant : le régime vient de la date, pas du débit réel. Une année sèche en hiver ou humide en été est mal classée : en novembre 2026, le débit mesuré (≈ 310 m³/s) est la moitié de la moyenne du mois (775 m³/s) et un classement en « gros débits » aurait porté l'erreur de 14 à 20 min. Les 12 renverses de référence sont toutes en mortes-eaux (coefficients 32 à 69) à petits débits ; le régime gros débits et les vives-eaux ne sont pas validés. Le sens du courant est déduit de la trajectoire du bac, pas d'une mesure directe. Sur 397 départs, aucun retard significatif n'a été relevé près des renverses (22 % d'écarts > 4 min dans ± 30 min, 19 % ailleurs).</li>
     <li>Calibrage sur 6 jours seulement, dont 3 jours de semaine : décalages et fenêtres de rotation provisoires, vendredi et vacances non étudiés.</li>
     <li>Les causes d'un retard (autre bateau, vent) ne sont pas détectées en direct ; le changement de courant est anticipé par le calcul mais son effet n'est pas encore mesuré ; ils sont enregistrés à part pour une version ultérieure.</li>
     <li>À l'ouverture, la page rejoue 1 h de positions : le sens est connu tout de suite. Les sources AIS publiques se rafraîchissent environ chaque minute, avec ~1 min de retard : heures mesurées à ± 1 min, prévisions en retard d'autant. La copie GitHub dépend du relais du serveur : s'il tombe, elle n'est plus mise à jour (la situation est alors estimée par le modèle). Si aucune position n'arrive depuis 1 min en mouvement ou 5 min à quai, un bandeau rouge l'indique ; prévisions suspendues au-delà de 10 min en période de service (la nuit, une position ancienne est normale : « Hors service »). Si GitHub est injoignable : « Connexion perdue ».</li>
@@ -522,20 +522,28 @@ if (typeof module !== 'undefined') {
   module.exports = { astro, makeStation, blendStations, predict, extremes, coefficientAt, eventFeatures, table5At, dtAt, calculSite, SITES, siteStation, LAG_NANTES, MIN, HOUR };
 }
 
-// --- Renverses du courant à Lola (bac Indret / Basse-Indre) : prévision par la date -------------------
-// Règle simple : renverse = pleine mer / basse mer calculée à Lola (marée harmonique de courant-loire/src/core.js) + RETARD_MIN.
-// Pleine mer → début du jusant ; basse mer → début du flot. Les tables du Port (débit, coefficient) ne sont pas utilisées.
-const RETARD_MIN = 46;      // médiane de l'écart entre 12 renverses mesurées (trajectoire du bac, 13→19/11/2026, coef 32–69) et la marée calculée à Lola
-const INCERTITUDE_MIN = 20; // ± min : erreur moyenne ≈ 15 min (validation en laissant une mesure de côté), pire cas 51 min
+// --- Renverses du courant à Lola (bac Indret / Basse-Indre) : prévision par la DATE seule ------------------
+// Règle : renverse = pleine mer / basse mer calculée à Lola (marée harmonique, courant-loire/src/core.js) + retard(régime de débit, sens).
+// Pleine mer → début du jusant ; basse mer → début du flot. Le régime de débit est déduit du mois (climatologie de la Loire à Montjean,
+// QmM interannuels 1863-2026, Hydroportail M5300010 : juin–novembre 246 à 775 m³/s, décembre–mai 846 à 1 540 m³/s).
+// Retards = retard des tables du Port au débit moyen du régime (flot / jusant) + 20 min mesurés sur le bac à petits débits.
+const REGIMES = {
+  petits: { nom: 'petits débits (juin → novembre)', flot: 48, jusant: 48, incert: 20 }, // mesuré : 12 renverses, 13→19/11/2026 (débit 200–310 m³/s)
+  gros: { nom: 'gros débits (décembre → mai)', flot: 28, jusant: 58, incert: 30 },       // tables du Port + 20 min, jamais mesuré : incertitude élargie
+};
 const AVANT_MIN = 90;       // le changement à venir est annoncé 90 min avant
 const APRES_MIN = 45;       // et rappelé 45 min après (courant encore faible)
+const regimeDuMois = (t) => { const mo = new Date(t).getUTCMonth() + 1; return mo >= 6 && mo <= 11 ? 'petits' : 'gros'; };
 let cache = null;
-// Renverses [{t, type:'flot'|'jusant' (courant qui commence), coef}] autour de now, recalculées au plus une fois par heure.
+// Renverses [{t, type:'flot'|'jusant' (courant qui commence), coef, regime, incert (± min)}] autour de now, recalculées au plus une fois par heure.
 function renverses(now) {
   const h = Math.floor(now / HOUR);
   if (!cache || cache.h !== h) {
     const r = calculSite('lola', STATIONS, now - 14 * HOUR, now + 40 * HOUR, 260); // le débit n'intervient que dans les tables, ignorées ici
-    const liste = r.marees.map((m) => ({ t: m.t + RETARD_MIN * MIN, type: m.type === 'PM' ? 'jusant' : 'flot', coef: Math.round(m.coef) }));
+    const liste = r.marees.map((m) => {
+      const type = m.type === 'PM' ? 'jusant' : 'flot', rg = regimeDuMois(m.t), R = REGIMES[rg];
+      return { t: m.t + R[type] * MIN, type, coef: Math.round(m.coef), regime: rg, incert: R.incert };
+    });
     cache = { h, liste: liste.sort((a, b) => a.t - b.t) };
   }
   return cache.liste;
@@ -543,19 +551,19 @@ function renverses(now) {
 // État du courant à l'instant now : sens actuel, renverse précédente et suivante, phase d'anticipation.
 // phase : 'en_cours' (dans la fenêtre ± incertitude d'une renverse), 'avant', 'apres', 'calme'.
 function etatCourant(now) {
-  const L = renverses(now), U = INCERTITUDE_MIN * MIN;
+  const L = renverses(now);
   const prev = [...L].reverse().find((r) => r.t <= now), next = L.find((r) => r.t > now);
   if (!prev || !next) return null;
   let phase = 'calme', ref = next;
-  if (next.t - now <= U) phase = 'en_cours';
-  else if (now - prev.t <= U) { phase = 'en_cours'; ref = prev; }
+  if (next.t - now <= next.incert * MIN) phase = 'en_cours';
+  else if (now - prev.t <= prev.incert * MIN) { phase = 'en_cours'; ref = prev; }
   else if (next.t - now <= AVANT_MIN * MIN) phase = 'avant';
   else if (now - prev.t <= APRES_MIN * MIN) { phase = 'apres'; ref = prev; }
-  return { sens: prev.type, prev, next, phase, ref, u: U };
+  return { sens: prev.type, prev, next, phase, ref, regime: REGIMES[ref.regime] };
 }
 // Renverse dont la fenêtre ± incertitude contient l'instant t (null sinon).
-function renverseProche(t, now) { return renverses(now).find((r) => Math.abs(r.t - t) <= INCERTITUDE_MIN * MIN) || null; }
-return { etatCourant, renverseProche, renverses, INCERTITUDE_MIN, RETARD_MIN };
+function renverseProche(t, now) { return renverses(now).find((r) => Math.abs(r.t - t) <= r.incert * MIN) || null; }
+return { etatCourant, renverseProche, renverses, REGIMES };
 })();
 /*COURANT-FIN*/
 // ====================================================================
@@ -1041,9 +1049,9 @@ function ligneTraversee(r,fmt,now,cls){
 // Changement de courant (flot ⇄ jusant) : situation de perturbation anticipée par le calcul de marée, indépendante de la position AIS
 const SENS_COURANT={flot:"flot (vers Nantes)",jusant:"jusant (vers la mer)"};
 function rendreCourant(now){
-    const e=COURANT.etatCourant(now), el=$("courant"), u=COURANT.INCERTITUDE_MIN;
+    const e=COURANT.etatCourant(now), el=$("courant");
     if(!e){ el.className="c-calme"; el.innerHTML='<div class="titre">Courant : prévision indisponible</div>'; return; }
-    const autreSens=e.sens==="flot"?"jusant":"flot", r=e.ref;
+    const r=e.ref, u=r.incert;
     const fen=formatHM(r.t-u*60000)+"–"+formatHM(r.t+u*60000);
     let cls, titre, detail="", note="";
     if(e.phase==="en_cours"){
@@ -1060,6 +1068,7 @@ function rendreCourant(now){
     } else {
         cls="c-calme"; titre="Courant de "+SENS_COURANT[e.sens]+" · prochain changement vers "+formatHM(e.next.t)+jourTag(e.next.t,now)+" ➜ "+SENS_COURANT[e.next.type];
     }
+    note=(note?note+" ":"")+"Règle sur la date seule : régime "+e.regime.nom+" → renverse = marée + "+e.regime[r.type]+" min"+(r.regime==="gros"?" (non validé par des mesures)":"")+".";
     el.className=cls;
     el.innerHTML='<div class="titre">'+titre+'</div>'+(detail?'<div class="detail">'+detail+'</div>':"")+(note?'<div class="note">'+note+'</div>':"");
 }
