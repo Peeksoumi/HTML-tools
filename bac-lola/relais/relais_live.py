@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Relais sans mémoire pour la page bac-lola : les positions AIS de Lola des 30 dernières minutes, tenues en mémoire vive.
+"""Relais sans mémoire pour la page bac-lola : les positions AIS de Lola de la dernière heure, tenues en mémoire vive.
 
-- Aucune base de données ni fichier de relevés : une fenêtre glissante de 30 min en RAM, perdue au redémarrage.
+- Aucune base de données ni fichier de relevés : une fenêtre glissante de 60 min en RAM, perdue au redémarrage.
 - Toutes les 5 min, il publie cette fenêtre (positions.json) dans un dépôt GitHub public, en écrasant tout (un seul commit, aucun historique git) :
   la page bac-lola y relit les positions pour se resynchroniser. Variables : LOLA_RELAIS_REPO (ex. git@github.com:Peeksoumi/lola-relais.git) et la clé de dépôt `deploy_key` (systemd LoadCredential).
 - Ne lit JAMAIS les relevés enregistrés (releves_*.csv) : ceux-ci ne servent qu'à entraîner le modèle.
 - Interroge AISVesselTracker (source principale) puis Shiptrail (secours si AVT échoue ou a plus de 3 min de retard).
-- GET /positions -> {"maj": ms, "fenetre_min": 30, "n": N, "source": "avt|shiptrail", "samples": [[ts_ms, lat, lon, vitesse|null, cap|null], ...]}
+- GET /positions -> {"maj": ms, "fenetre_min": 60, "n": N, "source": "avt|shiptrail", "samples": [[ts_ms, lat, lon, vitesse|null, cap|null], ...]}
   (ts = heure de la position côté source ; les en-têtes CORS sont ajoutés par nginx.)
 Écoute sur 127.0.0.1:18791 ; nginx le publie sous /lola-direct/ (flux « direct » lu par la page, avec CORS).
 Autonome : aucune dépendance au dépôt privé (déployé sur le VPS depuis ce dépôt public).
@@ -120,7 +120,7 @@ def source_shiptrail():
 
 PAS = 15            # s entre deux interrogations
 RETARD_MAX = 180    # s : au-delà, on bascule sur la source de secours
-FENETRE_S = 30 * 60   # on ne conserve jamais plus de 30 minutes de positions
+FENETRE_S = 60 * 60   # on ne conserve jamais plus d'une heure de positions
 PUBLIER_S = 300       # publication GitHub toutes les 5 min
 RUN = os.environ.get("RUNTIME_DIRECTORY", "/run/lola-relais")  # tmpfs : en RAM
 REPO = os.environ.get("LOLA_RELAIS_REPO", "")
