@@ -8,6 +8,7 @@ Page autonome (aucun serveur du site) : `index.html`, avec bouton « Télécharg
 - **Filtres** : réseau du bordereau de retour (Mondial Relay coché par défaut), type (commerce / locker / bureau de poste), « ouvert maintenant ».
 - **Horaires** : balise OSM `opening_hours` (sous-ensemble courant, heure de Paris) + lien vers la fiche Google Maps pour recouper.
 - **Itinéraire** : bouton Google Maps (à pied, voiture, transports, vélo) ; départ = position actuelle de l'appareil, ou l'adresse saisie.
+- **Sites officiels** : liens Mondial Relay et Pickup / Chronopost ouverts avec le code postal et la ville du départ pré-remplis (Nominatim inverse). Paramètres Mondial Relay (`codePostal`, `ville`) non documentés : à vérifier en usage.
 - **Actualisation** : requête Overpass à chaque nouvelle zone, cache navigateur 24 h, bouton 🔄 pour forcer ; la date de la base OSM est affichée.
 
 ## Sources de données (⚙️ « Sources de données » dans la page)

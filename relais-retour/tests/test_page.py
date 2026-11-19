@@ -32,7 +32,7 @@ def main():
         def vu(r, body, status=200):
             reqs.append(r.request.url); r.fulfill(status=status, body=json.dumps(body), content_type="application/json")
         ctx.route("**/overpass**", lambda r: vu(r, ELEMENTS))
-        ctx.route("**/nominatim.openstreetmap.org/**", lambda r: vu(r, [{"lat":"47.2184","lon":"-1.5536"}]))
+        ctx.route("**/nominatim.openstreetmap.org/**", lambda r: vu(r, {"address":{"postcode":"44000","city":"Nantes"}} if "/reverse" in r.request.url else [{"lat":"47.2184","lon":"-1.5536"}]))
         def api_route(r):
             api["auth"] = r.request.headers.get("authorization")
             if api["mode"] == "ok": vu(r, {"points": API_POINTS})
@@ -52,7 +52,11 @@ def main():
 
         page.click("#geo"); page.wait_for_selector(".liste li[data-id]")
         assert not page.is_disabled("#ici") and not page.is_disabled("#refresh")
-        assert all("overpass" in u for u in reqs), reqs   # l'API est désactivée par défaut
+        assert all("overpass" in u or "nominatim" in u for u in reqs), reqs   # l'API est désactivée par défaut
+        page.wait_for_selector("#officiels a")
+        hs = page.eval_on_selector_all("#officiels a", "e => e.map(x => x.href)")
+        assert "mondialrelay.fr" in hs[0] and "codePostal=44000" in hs[0] and "ville=Nantes" in hs[0], hs
+        assert hs[1] == "https://map.pickup.fr/?pudo_keyword=44000%20Nantes&lang=fr", hs
         items = page.query_selector_all(".liste li[data-id]")
         assert len(items) == 2, len(items)               # Mondial seul : commerce + locker, « Trop loin » (> 3 km) exclu
         assert page.evaluate("window.__xss") is None      # nom OSM échappé

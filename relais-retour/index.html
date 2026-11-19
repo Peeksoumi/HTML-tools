@@ -100,6 +100,7 @@
 
   <div id="msg">Indique une position (adresse ou 📍) pour lancer la recherche : aucune requête n'est envoyée avant.</div>
   <div id="fraicheur"></div>
+  <div id="officiels" class="adr"></div>
   <div id="map"></div>
   <div class="mapbar">
     <button type="button" class="sec" id="ici" disabled>🔍 Chercher au centre de la carte</button>
@@ -117,17 +118,19 @@
       <li><b>Réseau</b> : déduit des étiquettes OSM (marque, opérateur, nom). <b>Type</b> : locker = <code>amenity=parcel_locker</code> ; bureau de poste = <code>amenity=post_office</code> ; sinon point relais en commerce.</li>
       <li><b>Mise à jour</b> : la base OSM est modifiée en continu ; la page recharge les données à chaque nouvelle zone et garde 24 h de cache dans ton navigateur (bouton « Actualiser » pour forcer).</li>
       <li><b>Horaires</b> : lus dans la balise <code>opening_hours</code> d'OSM et comparés à l'heure de Paris ; le bouton « Horaires » ouvre la fiche Google Maps du lieu pour recouper.</li>
+      <li><b>Sites officiels</b> : des liens vers la recherche Mondial Relay et Pickup / Chronopost s'ouvrent avec le code postal et la ville du départ pré-remplis (déduits de la position).</li>
       <li><b>Confidentialité</b> : ta position et ta recherche sont envoyées aux services listés ci-dessous, et à l'API relais si tu l'actives ; rien n'est envoyé à un serveur du site sans cela.</li>
     </ul>
     <h3>Sources de données</h3><ul>
       <li><b>OpenStreetMap via Overpass API</b> : emplacement, réseau, adresse, horaires des points (ODbL, © contributeurs OpenStreetMap).</li>
       <li><b>API relais (facultative)</b> : points d'un serveur que tu indiques (ex. Mondial Relay officiel) ; conditions de la source concernée.</li>
-      <li><b>Nominatim</b> : transformation d'une ville ou adresse en coordonnées.</li>
+      <li><b>Nominatim</b> : transformation d'une ville ou adresse en coordonnées, et l'inverse (code postal et ville du départ) ; liens sortants vers mondialrelay.fr et map.pickup.fr, qui reçoivent ce lieu quand tu cliques.</li>
       <li><b>Leaflet + tuiles OpenStreetMap</b> : affichage de la carte (chargé depuis unpkg.com).</li>
       <li><b>Google Maps</b> (liens uniquement) : itinéraire et fiche du lieu, ouverts sur ton action ; aucune clé ni donnée Google n'est lue par la page.</li>
     </ul>
     <h3>Limites</h3><ul>
       <li>Mondial Relay ne publie pas la liste de son réseau (son API répond à une recherche à la fois, avec identifiants client) : seuls les points <b>saisis dans OSM</b> apparaissent, donc la liste est incomplète.</li>
+      <li>Le pré-remplissage dépend des paramètres d'URL acceptés par chaque site officiel (non documentés) : si le lieu n'apparaît pas, saisis-le sur leur page.</li>
       <li>Les tailles de colis acceptées, la disponibilité d'un locker et les fermetures exceptionnelles ne sont pas connues ; vérifie sur ton bordereau ou la fiche Google Maps.</li>
       <li>Horaires OSM saisis par des bénévoles : parfois absents ou périmés. Jours fériés et vacances (<code>PH</code>, <code>SH</code>) ignorés ; heure de Paris supposée.</li>
     </ul>
@@ -337,6 +340,15 @@ function lienItineraire(p, mode, origine) {
   if (origine) u += `&origin=${origine.lat.toFixed(6)},${origine.lon.toFixed(6)}`;
   return u;
 }
+// Sites officiels de recherche de point relais, avec le lieu pré-rempli (lieu = { cp, ville }).
+function liensReseaux(lieu) {
+  if (!lieu || (!lieu.cp && !lieu.ville)) return [];
+  const mot = [lieu.cp, lieu.ville].filter(Boolean).join(' ');
+  return [
+    { nom: 'Mondial Relay', url: 'https://www.mondialrelay.fr/trouver-le-point-relais-le-plus-proche-de-chez-moi/?codePostal=' + encodeURIComponent(lieu.cp || '') + '&ville=' + encodeURIComponent(lieu.ville || '') },
+    { nom: 'Pickup / Chronopost', url: 'https://map.pickup.fr/?pudo_keyword=' + encodeURIComponent(mot) + '&lang=fr' },
+  ];
+}
 function lienFiche(p) {
   return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(`${p.nom} ${p.adresse || p.lat.toFixed(5) + ',' + p.lon.toFixed(5)}`);
 }
@@ -349,7 +361,7 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
 const TTL_CACHE = 24 * 3600 * 1000;
-const etat = { centre: null, gps: false, points: [], meta: null, statuts: [], map: null, couche: null, marqueurs: {} };
+const etat = { lieu: null, centre: null, gps: false, points: [], meta: null, statuts: [], map: null, couche: null, marqueurs: {} };
 const SRC_KEY = 'relais-retour:sources';
 function lireSources() {
   const def = { osm: true, api: false, apiUrl: '', apiToken: '' };
@@ -430,6 +442,24 @@ async function chargerDonnees(lat, lon, rayon, forcer) {
   throw new Error('serveur OpenStreetMap indisponible (' + (derniere && derniere.message) + ')');
 }
 
+// Code postal et ville du point de départ (Nominatim), pour pré-remplir les sites officiels ; ne bloque pas la recherche.
+async function majLieu(centre) {
+  etat.lieu = null; afficherOfficiels();
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&zoom=14&addressdetails=1&accept-language=fr&lat=${centre.lat}&lon=${centre.lon}`);
+    if (!r.ok) return;
+    const a = (await r.json()).address || {};
+    if (etat.centre !== centre) return;   // une recherche plus récente a pris le relais
+    etat.lieu = { cp: a.postcode || '', ville: a.city || a.town || a.village || a.municipality || '' };
+    afficherOfficiels();
+  } catch (e) {}
+}
+function afficherOfficiels() {
+  const l = liensReseaux(etat.lieu);
+  $('officiels').innerHTML = l.length ? 'Sites officiels (lieu pré-rempli : ' + esc([etat.lieu.cp, etat.lieu.ville].filter(Boolean).join(' ')) + ') : ' +
+    l.map(x => `<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.nom)} ↗</a>`).join(' · ') : '';
+}
+
 async function chargerApi(centre, rayon, s) {
   const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 20000);
   try {
@@ -445,6 +475,7 @@ async function chercher(centre, gps, forcer) {
   if (!centre || !Number.isFinite(centre.lat) || !Number.isFinite(centre.lon)) { msg('Indique d’abord une position de départ.', true); return; }
   const rayon = Number($('rayon').value), s = lireSources(), num = ++numRecherche;
   etat.centre = centre; etat.gps = gps;
+  majLieu(centre);
   $('ici').disabled = false; $('refresh').disabled = false;
   if (etat.map) etat.map.setView([centre.lat, centre.lon], rayon <= 1000 ? 15 : rayon <= 3000 ? 14 : rayon <= 5000 ? 13 : 12);
   const jobs = [];

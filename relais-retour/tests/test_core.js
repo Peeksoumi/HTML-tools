@@ -3,7 +3,7 @@ const fs = require('fs'), path = require('path'), vm = require('vm'), assert = r
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 const src = html.match(/<script id="core">([\s\S]*?)<\/script>/)[1];
 const ctx = { URL }; vm.createContext(ctx);
-vm.runInContext(src + '\nthis.api={RESEAUX,reseauDe,typeDe,normaliser,construireRequete,distanceM,parseHoraires,statutHoraires,semaineTexte,lienItineraire,lienFiche,urlApi,normaliserApi,fusionner};', ctx);
+vm.runInContext(src + '\nthis.api={RESEAUX,reseauDe,typeDe,normaliser,construireRequete,distanceM,parseHoraires,statutHoraires,semaineTexte,lienItineraire,lienFiche,liensReseaux,urlApi,normaliserApi,fusionner};', ctx);
 const a = ctx.api;
 
 // Réseaux et types
@@ -68,6 +68,10 @@ assert.deepStrictEqual([...sem[6]], ['dimanche', 'fermé']);
 const p = { lat: 47.2, lon: -1.5, nom: 'Tabac du Port', adresse: '4 rue X, 44000 Nantes' };
 assert.strictEqual(a.lienItineraire(p, 'walking', null), 'https://www.google.com/maps/dir/?api=1&destination=47.200000,-1.500000&travelmode=walking');
 assert.ok(a.lienItineraire(p, 'driving', { lat: 47.1, lon: -1.4 }).endsWith('&origin=47.100000,-1.400000'));
+assert.strictEqual(a.liensReseaux(null).length, 0);
+const lr = a.liensReseaux({ cp: '44000', ville: 'Nantes' });
+assert.ok(lr[0].url.includes('mondialrelay.fr') && lr[0].url.includes('codePostal=44000') && lr[0].url.includes('ville=Nantes'));
+assert.strictEqual(lr[1].url, 'https://map.pickup.fr/?pudo_keyword=44000%20Nantes&lang=fr');
 assert.ok(a.lienFiche(p).startsWith('https://www.google.com/maps/search/?api=1&query=Tabac%20du%20Port'));
 // API relais : URL, contrat JSON, valeurs hostiles
 assert.strictEqual(a.urlApi('https://x.fr/api/relais?k=1', 47.2, -1.5, 3000), 'https://x.fr/api/relais?k=1&lat=47.200000&lon=-1.500000&rayon=3000');
