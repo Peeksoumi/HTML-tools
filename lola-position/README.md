@@ -1,6 +1,6 @@
-# Lola — position AIS en direct (aisstream.io)
+# Lola — position AIS en direct (aisstream.io, AISVesselTracker, Shiptrail)
 
-Page autonome (un seul `index.html`) qui affiche la position du bac de Loire **Lola** (MMSI 227158520, Indret ⇄ Basse-Indre) à partir des **seules données d'aisstream.io** :
+Page autonome (un seul `index.html`) qui affiche la position du bac de Loire **Lola** (MMSI 227158520, Indret ⇄ Basse-Indre) à partir du relais du VPS, qui collecte **dans l'ordre aisstream.io, AISVesselTracker puis Shiptrail** :
 latitude, longitude, vitesse, cap, heure et âge du relevé, carte du chenal avec le bac.
 
 ## Où mettre la clé d'API
@@ -17,11 +17,12 @@ sudo systemctl restart lola-relais
 (Si le service charge déjà `deploy_key` par `LoadCredential=`, ajouter simplement une seconde ligne `LoadCredential=` pour `aisstream_key`.)
 
 ## Contrôle
-- `curl -s http://127.0.0.1:18791/aisstream` : le champ `ais` indique `ok`, `connecté, en attente d'une position`, `échec : …` (ex. clé refusée) ou `désactivé` (identifiant absent).
-- `https://peeksoumi.com/lola-direct/aisstream` doit renvoyer la même chose (nginx publie le préfixe `/lola-direct/`).
+- `curl -s http://127.0.0.1:18791/positions` : le champ `source` donne l'origine de la dernière position ; le champ `ais` indique `ok`, `connecté, en attente d'une position`, `échec : …` (ex. clé refusée) ou `désactivé` (identifiant absent).
+- `https://peeksoumi.com/lola-direct/positions` doit renvoyer la même chose (nginx publie le préfixe `/lola-direct/`).
 
 ## Méthode (page)
-1. Interroge `/lola-direct/aisstream` toutes les 5 s et affiche la dernière position reçue d'aisstream (heure AIS) ; une position plus ancienne que celle affichée est ignorée.
+1. Interroge `/lola-direct/positions` toutes les 5 s et affiche la dernière position (heure AIS, source indiquée) ; une position plus ancienne que celle affichée est ignorée.
+Côté relais : aisstream en continu ; si aisstream est muet depuis 20 s alors que le bac se déplace (vitesse ≥ 0,5 nd ou inconnue), AISVesselTracker puis Shiptrail sont interrogés toutes les 15 s ; à quai, seulement après 4 min de silence.
 2. Entre deux relevés : estimation en ligne droite d'après la vitesse et le cap (60 s au plus), lissée sur 0,7 s à l'arrivée du relevé suivant.
 3. Fraîcheur : « En direct » sous 2 min, avertissement jusqu'à 10 min, alerte rouge au-delà ; « Relais AIS injoignable » après deux échecs de suite (les dernières valeurs restent affichées). Après 3 échecs, les essais sont espacés.
 4. Tracé : aller = GTFS officiel « Bacs de Loire en Loire-Atlantique » ; retour = symétrique par rapport à l'axe nord-sud du chenal.
@@ -29,7 +30,7 @@ sudo systemctl restart lola-relais
 Pas de bouton « Télécharger la page » : l'outil n'a de sens qu'avec le relais du serveur.
 
 ## Limites
-- Rien ne s'affiche tant qu'aucun récepteur d'aisstream.io (réseau de bénévoles) ne capte l'estuaire : couverture à vérifier sur `aisstream.io/coverage`. Non testé contre le vrai aisstream.io au moment de l'écriture.
+- AISVesselTracker et Shiptrail rafraîchissent environ toutes les 30 à 80 s : une position toutes les 15 s n'est tenue que si aisstream capte l'estuaire (couverture à vérifier sur `aisstream.io/coverage`). Non testé contre les vraies sources au moment de l'écriture.
 - Un bac à quai n'émet qu'un relevé toutes les ~3 min ; la page ne peut pas être plus fraîche que la source.
 - L'estimation est rectiligne (fausse dans les virages et à l'accostage). L'âge se calcule avec l'horloge de l'appareil.
 

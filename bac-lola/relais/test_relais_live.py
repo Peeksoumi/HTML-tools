@@ -107,27 +107,35 @@ class TestReleve(unittest.TestCase):
 
 class TestRelais(unittest.TestCase):
     def setUp(self):
-        R.anneau.clear(); R.anneau_ais.clear(); R.nouveau.clear(); R.etat.update(source=None, erreur=None)
+        R.anneau.clear(); R.nouveau.clear(); R.etat.update(source=None, erreur=None, ais_dernier=0)
 
     def test_anneau_et_signal(self):
         now = int(time.time() * 1000)
-        R.ajouter([now, 47.2, -1.7, 5, 90], R.anneau_ais)
-        self.assertFalse(R.nouveau.is_set())          # l'anneau aisstream seul ne déclenche pas de publication
         R.ajouter([now, 47.2, -1.7, 5, 90])
         self.assertTrue(R.nouveau.is_set())
         R.ajouter([now + 1000, 47.2, -1.7, 5, 90])    # doublon (±2 s)
         self.assertEqual(len(R.anneau), 1)
 
-    def test_endpoint_aisstream_et_positions(self):
+    def test_secours_selon_mouvement(self):
         now = int(time.time() * 1000)
-        R.ajouter([now, 47.2, -1.7, 5, 90], R.anneau_ais)
-        R.ajouter([now + 60000, 47.3, -1.8, None, None])           # position d'une source de secours
+        R.etat["ais_dernier"] = time.time() - 30      # aisstream muet depuis 30 s
+        self.assertTrue(R.secours_necessaires())      # aucune position connue : on ne sait pas, on interroge
+        R.ajouter([now, 47.2, -1.7, 5.0, 90])
+        self.assertTrue(R.secours_necessaires())      # en mouvement : seuil de 20 s dépassé
+        R.anneau.clear(); R.ajouter([now, 47.2, -1.7, 0.1, 90])
+        self.assertFalse(R.secours_necessaires())     # à quai : seuil de 4 min
+        R.etat["ais_dernier"] = time.time() - 300
+        self.assertTrue(R.secours_necessaires())
+        R.anneau.clear(); R.ajouter([now, 47.2, -1.7, 5.0, 90]); R.etat["ais_dernier"] = time.time() - 5
+        self.assertFalse(R.secours_necessaires())     # aisstream récent : pas de secours
+
+    def test_endpoint_positions(self):
+        now = int(time.time() * 1000)
+        R.ajouter([now, 47.3, -1.8, None, None])
         srv = R.ThreadingHTTPServer(("127.0.0.1", 0), R.H)
         threading.Thread(target=srv.serve_forever, daemon=True).start()
         base = "http://127.0.0.1:%d" % srv.server_address[1]
-        a = json.load(urllib.request.urlopen(base + "/aisstream"))
         p = json.load(urllib.request.urlopen(base + "/positions"))
-        self.assertEqual((a["source"], a["n"]), ("aisstream", 1))
         self.assertEqual(p["n"], 1)
         with self.assertRaises(Exception):
             urllib.request.urlopen(base + "/autre")
@@ -135,7 +143,8 @@ class TestRelais(unittest.TestCase):
 
     def test_boucle_complete_depuis_faux_aisstream(self):
         def scenario(c, sub):
-            c.sendall(trame(1, msg_ais(lat=47.21, lon=-1.69).encode()))
+            maintenant = time.strftime("%Y-%m-%d %H:%M:%S.000000 +0000 UTC", time.gmtime())
+            c.sendall(trame(1, msg_ais(lat=47.21, lon=-1.69, t=maintenant).encode()))
             time.sleep(0.3)
         R.AIS_URL = faux_serveur(scenario)
         import os, tempfile
@@ -144,10 +153,10 @@ class TestRelais(unittest.TestCase):
         os.environ["CREDENTIALS_DIRECTORY"] = d
         threading.Thread(target=R.boucle_aisstream, daemon=True).start()
         for _ in range(50):
-            if R.anneau_ais:
+            if R.anneau:
                 break
             time.sleep(0.1)
-        self.assertEqual(len(R.anneau_ais), 1)
+        self.assertEqual(len(R.anneau), 1)
         self.assertEqual(R.anneau[0][1:3], [47.21, -1.69])
         self.assertEqual(R.etat["source"], "aisstream")
         self.assertTrue(R.nouveau.is_set())

@@ -17,7 +17,7 @@ const RD=Date;
 const FauxDate=class extends RD{constructor(...a){super(...(a.length?a:[horloge]))} static now(){return horloge} static parse(s){return RD.parse(s)}};
 
 // Réponse simulée du relais ; hs = réseau coupé, status = code HTTP, illisible = corps non JSON
-const rep={json:{ais:"connecté, en attente d'une position",samples:[]}};
+const rep={json:{source:null,ais:"connecté, en attente d'une position",samples:[]}};
 const ctx={
   document:doc, navigator:{}, window:{devicePixelRatio:1},
   ResizeObserver:class{observe(){}}, requestAnimationFrame:noop,
@@ -30,7 +30,7 @@ vm.runInContext(m[1]+"\nthis.__t={etat,src,interroger,declencher,extrapoler,majT
 
 const ok=(c,msg)=>{ if(!c){ console.error("ÉCHEC :",msg); process.exitCode=1; } else console.log("ok :",msg); };
 const attendre=()=>new Promise(r=>setTimeout(r,20));
-const releve=(ageS,lat,vit,cap)=>({ais:"ok",samples:[[T0-ageS*1000-60000,47.2,-1.67,1,1],[T0-ageS*1000,lat,-1.6725,vit,cap]]});
+const releve=(ageS,lat,vit,cap)=>({source:"avt",ais:"ok",samples:[[T0-ageS*1000-60000,47.2,-1.67,1,1],[T0-ageS*1000,lat,-1.6725,vit,cap]]});
 
 (async()=>{
   const t=ctx.__t;
@@ -38,15 +38,15 @@ const releve=(ageS,lat,vit,cap)=>({ais:"ok",samples:[[T0-ageS*1000-60000,47.2,-1
 
   // --- aucune donnée reçue par le relais ---
   t.majTextes(horloge);
-  ok(urls.length>=1 && urls.every(u=>/peeksoumi\.com\/lola-direct\/aisstream$/.test(u)),"une seule source interrogée : le relais AIS du VPS ("+urls[0]+")");
-  ok(els.statut.className==="warn" && /En attente du premier relevé aisstream\.io \(aisstream : connecté, en attente d'une position\)/.test(els.statutTexte.textContent),"relais connecté sans position : attente signalée avec l'état de connexion");
+  ok(urls.length>=1 && urls.every(u=>/peeksoumi\.com\/lola-direct\/positions$/.test(u)),"une seule source interrogée : le relais AIS du VPS ("+urls[0]+")");
+  ok(els.statut.className==="warn" && /En attente du premier relevé \(aisstream : connecté, en attente d'une position\)/.test(els.statutTexte.textContent),"relais connecté sans position : attente signalée avec l'état de connexion");
   ok(/◌ Relais AIS : aucun relevé/.test(els.sources.textContent),"ligne de source : aucun relevé");
 
   // --- premier relevé ---
   rep.json=releve(30,47.1969,3.0,95);
   await t.interroger(); t.majTextes(horloge);
   ok(t.etat.fix.lat===47.1969 && t.etat.fix.vit===3 && t.etat.fix.cap===95,"dernière position du relais retenue");
-  ok(els.statut.className==="ok" && /En direct · aisstream\.io/.test(els.statutTexte.textContent),"statut « En direct » : "+els.statutTexte.textContent);
+  ok(els.statut.className==="ok" && /En direct · avt/.test(els.statutTexte.textContent),"statut « En direct » : "+els.statutTexte.textContent);
   ok(els.vLat.textContent==="47.19690°" && els.vLon.textContent==="-1.67250°" && els.vVit.textContent==="3.0 nds" && els.vCap.textContent==="95°","latitude, longitude, vitesse et cap affichés");
   ok(els.vHeure.textContent==="09:39:30" && els.vAge.textContent==="30 s","heure du relevé (Paris) et âge : "+els.vHeure.textContent+" / "+els.vAge.textContent);
   ok(/● Relais AIS : relevé il y a 30 s/.test(els.sources.textContent),"ligne de source avec l'âge");
