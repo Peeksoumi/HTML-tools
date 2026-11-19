@@ -218,6 +218,25 @@ class TestRelais(unittest.TestCase):
         R.boucle_aisstream()    # doit rendre la main tout de suite, sans se connecter
         self.assertIn("désactivé", R.etat["ais"])
 
+    def test_avt_vitesse_cap_et_heure(self):
+        page = ('<meta name="geo.position" content="47.19542;-1.67445">'
+                '<p>Speed: 4.2 knots, Course: 233°</p>'
+                '"temporalCoverage":"2026-11-19T10:58:09Z" "timestamp":"$D2026-11-19T10:55:09.000Z"')
+        R.http = lambda url, *a, **k: (200, page)
+        self.assertEqual(R.source_avt(), ["47.19542", "-1.67445", "4.2", "233", "2026-11-19T10:58:09Z"])
+        page = '<meta name="geo.position" content="47.1;-1.6">Speed: 0 knots, Course: 175° Position last updated 19 Nov 2026, 10:58 UTC'
+        self.assertEqual(R.source_avt()[2:], ["0", "175", "2026-11-19T10:58:00Z"])
+
+    def test_doublon_meme_position_deux_sources(self):
+        R.anneau.clear()
+        t = int(time.time() * 1000)
+        R.ajouter([t, 47.2, -1.68, None, None])
+        R.ajouter([t + 6000, 47.200001, -1.680001, 3.0, 120.0])   # même position, 6 s plus tard, autre source
+        self.assertEqual(len(R.anneau), 1)
+        self.assertEqual(R.anneau[0], [t, 47.2, -1.68, 3.0, 120.0])
+        R.ajouter([t + 20000, 47.201, -1.68, 3.0, 120.0])          # vraie nouvelle position
+        self.assertEqual(len(R.anneau), 2)
+
 
 if __name__ == "__main__":
     unittest.main()

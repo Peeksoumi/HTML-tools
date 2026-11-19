@@ -10,3 +10,7 @@
 Test : `python3 test_relais_live.py` (client websocket contre un faux serveur, lecture des messages, anneaux, points d'accès).
 
 L'unité systemd (`lola-relais.service`) est maintenue côté serveur et pointe sur ce fichier.
+
+## Sources de secours : vitesse et doublons
+- AIS Vessel Tracker : vitesse (« Speed: X knots ») et cap (« Course: Y° ») lus sur la page ; heure = `temporalCoverage`, à défaut « Position last updated » (précision à la minute).
+- Une même position relevée par deux sources (≤ 2 m, ≤ 45 s d'écart) n'est gardée qu'une fois : on conserve l'heure la plus ancienne et on complète vitesse et cap manquants.
