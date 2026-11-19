@@ -67,18 +67,20 @@ vm.runInContext(m[1]+"\nthis.__t={rendre,lirePosition,lireMeteo,journal:()=>jour
   ok(/class="badge">~ à quai \?<\/div>/.test(els.quais.innerHTML)||/class="badge">~ en approche \?<\/div>/.test(els.quais.innerHTML),"badge « ~ … ? » sur le quai en hypothèse");
   horloge=J+250000; await ctx.__t.lirePosition();
   ok(/Aucune nouvelle position du bac depuis 5 min/.test(els.bandeau.innerHTML),"à quai : alerte rouge à partir de 5 min");
-  // en mouvement : seuil d'alerte à 1 min
+  // en mouvement : mesure < 2 min, alerte rouge à 3 min
   samples=samples.concat([pos(500000,47.1962,-1.6724,3.0)]);
   horloge=J+520000; await ctx.__t.lirePosition();
   ok(led.test(els.bandeau.innerHTML)&&!/class="alerte"/.test(els.bandeau.innerHTML),"en mouvement, position de 20 s : mesure, pas d'alerte");
   horloge=J+500000+90000; await ctx.__t.lirePosition();
-  ok(/Aucune nouvelle position du bac depuis 2 min|Aucune nouvelle position du bac depuis 90 s/.test(els.bandeau.innerHTML)&&/<span class="led creux">/.test(els.bandeau.innerHTML),"en mouvement, 90 s sans position : alerte rouge et hypothèse (à quai, la même ancienneté ne déclenche rien)");
+  ok(led.test(els.bandeau.innerHTML)&&!/class="alerte"/.test(els.bandeau.innerHTML),"en mouvement, position de 90 s : encore une mesure, pas d'alerte (cadence réelle 30-130 s)");
+  horloge=J+500000+200000; await ctx.__t.lirePosition();
+  ok(/Aucune nouvelle position du bac depuis 3 min/.test(els.bandeau.innerHTML)&&/<span class="led creux">/.test(els.bandeau.innerHTML),"en mouvement, 200 s sans position : alerte rouge et hypothèse (à quai, la même ancienneté ne déclenche rien)");
   // hors du chenal : position reçue mais situation non confirmée
-  samples=samples.concat([pos(700000,47.2100,-1.6000,0.1)]);
-  horloge=J+720000; await ctx.__t.lirePosition();
+  samples=samples.concat([pos(780000,47.2100,-1.6000,0.1)]);
+  horloge=J+800000; await ctx.__t.lirePosition();
   ok(/hors du chenal/.test(els.bandeau.innerHTML)&&/hors du chenal/.test(els.carte.innerHTML)&&/hypothèse du modèle/.test(els.carte.innerHTML),"position hors du chenal : signalée, situation en hypothèse");
   // plus de 10 min en service : indisponible
-  horloge=J+720000+11*60000; await ctx.__t.lirePosition();
+  horloge=J+800000+11*60000; await ctx.__t.lirePosition();
   ok(/Position AIS indisponible/.test(els.bandeau.innerHTML)&&/<span class="led off">/.test(els.bandeau.innerHTML),"en service, > 10 min : « indisponible », point rouge");
   ok((els.quais.innerHTML.match(/href="https:\/\/www\.google\.com\/maps\/dir\/\?api=1&amp;travelmode=driving&amp;destination=47\.19\d+,-1\.67\d+" target="_blank" rel="noopener">🧭 Itinéraire/g)||[]).length===2&&/destination=47\.1953/.test(els.quais.innerHTML)&&/destination=47\.1974/.test(els.quais.innerHTML),"un bouton « Itinéraire » Google Maps par quai (Indret au sud, Basse-Indre au nord)");
   // quota de l'API GitHub épuisé (403) : repli immédiat sur raw, sans alerte de connexion
