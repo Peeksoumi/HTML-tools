@@ -7,10 +7,10 @@
   Variables : LOLA_RELAIS_REPO (ex. git@github.com:Peeksoumi/lola-relais.git) et la clé de dépôt `deploy_key` (systemd LoadCredential).
 - Ne lit JAMAIS les relevés enregistrés (releves_*.csv) : ceux-ci ne servent qu'à entraîner le modèle.
 - Source principale : aisstream.io (websocket tenu ouvert, clé = identifiant systemd `aisstream_key`, jamais dans le dépôt).
-  Secours, interrogés seulement si aisstream n'a rien donné depuis 4 min : AISVesselTracker puis Shiptrail.
+  Ordre de collecte : aisstream, puis AISVesselTracker, puis Shiptrail. Les secours sont interrogés (toutes les 15 s) dès qu'aisstream n'a rien donné
+  depuis 20 s alors que le bac se déplace (vitesse ≥ 0,5 nd, ou vitesse inconnue), afin d'avoir une position tous les ~15 s ; à quai, seulement après 4 min de silence.
 - GET /positions -> {"maj": ms, "fenetre_min": 60, "n": N, "source": "aisstream|avt|shiptrail", "samples": [[ts_ms, lat, lon, vitesse|null, cap|null], ...]}
   (ts = heure de la position côté source ; les en-têtes CORS sont ajoutés par nginx.)
-- GET /aisstream -> même format, mais uniquement les positions reçues d'aisstream (page lola-position).
 Écoute sur 127.0.0.1:18791 ; nginx le publie sous /lola-direct/ (flux « direct » lu par la page, avec CORS).
 Autonome : aucune dépendance au dépôt privé (déployé sur le VPS depuis ce dépôt public).
 """
@@ -126,12 +126,13 @@ PAS = 15            # s entre deux interrogations
 RETARD_MAX = 180    # s : au-delà, on bascule sur la source de secours
 FENETRE_S = 60 * 60   # on ne conserve jamais plus d'une heure de positions
 PUBLIER_MIN_S = 15    # s minimum entre deux publications GitHub (≤ 4/min, sous les 6 pushes/min recommandés)
-AIS_FRAIS_S = 240     # s : tant qu'aisstream a donné une position plus récente, on n'interroge pas les sources de secours
+AIS_FRAIS_S = 240     # s : à quai, on n'interroge les sources de secours qu'après ce silence d'aisstream
+AIS_FRAIS_MOUVEMENT_S = 20   # s : même seuil quand le bac se déplace (cadence visée : une position toutes les ~15 s)
+VITESSE_MOUVEMENT = 0.5      # nœuds
 AIS_URL = os.environ.get("AISSTREAM_URL", "wss://stream.aisstream.io/v0/stream")
 RUN = os.environ.get("RUNTIME_DIRECTORY", "/run/lola-relais")  # tmpfs : en RAM
 REPO = os.environ.get("LOLA_RELAIS_REPO", "")
 anneau = []
-anneau_ais = []     # uniquement les positions d'aisstream (endpoint /aisstream)
 nouveau = threading.Event()   # posé quand une position inédite entre dans `anneau`
 etat = {"source": None, "erreur": None}
 verrou = threading.Lock()
@@ -162,20 +163,18 @@ def lire(nom, fonction):
     return [ts, float(champs[0]), float(champs[1]), flottant(champs[2]), flottant(champs[3])]
 
 
-def ajouter(s, ring=None):
+def ajouter(s):
     """Insère la position dans l'anneau, triée par heure et sans doublon (±2 s) : une position d'AVT, souvent en retard de ~30 s sur Shiptrail,
     n'est plus perdue quand la source de secours a déjà fourni une position plus récente."""
-    ring = anneau if ring is None else ring
     with verrou:
-        if any(abs(x[0] - s[0]) <= 2000 for x in ring):
+        if any(abs(x[0] - s[0]) <= 2000 for x in anneau):
             return
-        ring.append(s)
-        ring.sort(key=lambda x: x[0])
+        anneau.append(s)
+        anneau.sort(key=lambda x: x[0])
         limite = time.time() * 1000 - FENETRE_S * 1000
-        while ring and ring[0][0] < limite:
-            ring.pop(0)
-    if ring is anneau:
-        nouveau.set()
+        while anneau and anneau[0][0] < limite:
+            anneau.pop(0)
+    nouveau.set()
 
 
 def lire_avt():
@@ -206,22 +205,29 @@ def interroger():
                 etat["avt"] = "échec : " + str(e)[:150]
 
 
+def secours_necessaires():
+    """Vrai quand aisstream est muet depuis trop longtemps : 20 s si le bac bouge (ou si on ne sait pas), 4 min à quai."""
+    with verrou:
+        vit = anneau[-1][3] if anneau else None
+    bouge = vit is None or vit >= VITESSE_MOUVEMENT
+    return time.time() - etat.get("ais_dernier", 0) > (AIS_FRAIS_MOUVEMENT_S if bouge else AIS_FRAIS_S)
+
+
 def boucle():
     while True:
         try:
-            if time.time() - etat.get("ais_dernier", 0) > AIS_FRAIS_S:
+            if secours_necessaires():
                 interroger()
         except Exception as e:
             etat["erreur"] = str(e)[:200]
         time.sleep(PAS)
 
 
-def charge_utile(ring=None, source=None):
-    ring = anneau if ring is None else ring
+def charge_utile():
     with verrou:
         limite = time.time() * 1000 - FENETRE_S * 1000
-        return {"maj": int(time.time() * 1000), "fenetre_min": FENETRE_S // 60, "n": len(ring), "source": source or etat["source"],
-                "samples": [x for x in ring if x[0] >= limite]}
+        return {"maj": int(time.time() * 1000), "fenetre_min": FENETRE_S // 60, "n": len(anneau), "source": etat["source"],
+                "samples": [x for x in anneau if x[0] >= limite]}
 
 
 def publier(dernier):
@@ -385,7 +391,6 @@ def boucle_aisstream():
                 s = releve_aisstream(ws.recevoir())
                 if s:
                     etat["ais_dernier"], etat["source"], etat["ais"] = time.time(), "aisstream", "ok"
-                    ajouter(s, anneau_ais)
                     ajouter(s)
                     attente = 5
         except Exception as e:
@@ -417,14 +422,9 @@ def boucle_publication():
 
 class H(BaseHTTPRequestHandler):
     def do_GET(self):
-        chemin = self.path.split("?")[0]
-        if chemin == "/aisstream":
-            d = dict(charge_utile(anneau_ais, "aisstream"), ais=etat.get("ais"))
-        elif chemin in ("/positions", "/positions.json", "/"):
-            d = dict(charge_utile(), publication=etat.get("publication"), ais=etat.get("ais"), avt=etat.get("avt"), erreur=etat.get("erreur"))
-        else:
+        if self.path.split("?")[0] not in ("/positions", "/positions.json", "/"):
             self.send_error(404); return
-        corps = json.dumps(d).encode()
+        corps = json.dumps(dict(charge_utile(), publication=etat.get("publication"), ais=etat.get("ais"), avt=etat.get("avt"), erreur=etat.get("erreur"))).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Cache-Control", "no-store")

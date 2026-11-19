@@ -2,8 +2,8 @@
 
 `relais_live.py` : script autonome (Python 3, bibliothèque standard) exécuté en service systemd sur le VPS.
 
-- garde ouverte une connexion websocket vers **aisstream.io** (source principale, clé = identifiant systemd `aisstream_key`) ; AISVesselTracker puis Shiptrail ne sont interrogés (toutes les 15 s) que si aisstream n'a rien donné depuis 4 min ; garde **1 h maximum** de positions en mémoire vive (rien n'est écrit sur disque) ;
-- sert ces positions sur `127.0.0.1:18791/positions` (publié par nginx sous `/lola-direct/`, avec CORS) : c'est le « direct » lu par la page ; `/aisstream` ne renvoie que les positions d'aisstream (lu par la page `lola-position`) ;
+- garde ouverte une connexion websocket vers **aisstream.io** (source principale, clé = identifiant systemd `aisstream_key`) ; AISVesselTracker puis Shiptrail sont interrogés (toutes les 15 s) si aisstream est muet depuis 20 s alors que le bac se déplace, ou depuis 4 min à quai ; garde **1 h maximum** de positions en mémoire vive (rien n'est écrit sur disque) ;
+- sert ces positions sur `127.0.0.1:18791/positions` (publié par nginx sous `/lola-direct/`, avec CORS) : c'est le « direct » lu par la page (lu aussi par la page `lola-position`) ;
 - publie `positions.json` dans le dépôt public [Peeksoumi/lola-relais](https://github.com/Peeksoumi/lola-relais) dès qu'une position diffère de la dernière publiée, au plus toutes les 15 s (GitHub recommande ≤ 6 pushes/min/dépôt) : dépôt neuf, un seul commit, push forcé (aucun historique) ;
 - la clé d'écriture du dépôt (`deploy_key`) et la clé aisstream (`aisstream_key`) ne sont jamais dans ce dépôt : elles sont fournies par systemd (`LoadCredential`).
 
