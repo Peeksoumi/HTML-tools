@@ -371,7 +371,9 @@ def boucle_aisstream():
         with open(os.path.join(os.environ.get("CREDENTIALS_DIRECTORY", ""), "aisstream_key")) as f:
             cle = f.read().strip()
     except OSError:
-        etat["ais"] = "désactivé : identifiant systemd aisstream_key absent"
+        cle = ""
+    if not cle:
+        etat["ais"] = "désactivé : identifiant systemd aisstream_key absent ou vide"
         return
     attente = 5
     while True:
