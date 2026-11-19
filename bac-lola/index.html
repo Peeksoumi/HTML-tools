@@ -107,7 +107,7 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
   <h2>Fonctionnement et sources</h2>
   <h3>Fonctionnement</h3>
   <ul>
-    <li><b>Détection</b> : la page lit toutes les 15 s les 30 dernières minutes de positions AIS de Lola (projetées sur le chenal), en direct et via GitHub (voir sources). arrivée et départ à un quai sont confirmés par deux positions cohérentes (lieu et vitesse). Tout le calcul reste dans le navigateur.</li>
+    <li><b>Détection</b> : la page lit toutes les 15 s la dernière heure de positions AIS de Lola (projetées sur le chenal), en direct et via GitHub (voir sources). arrivée et départ à un quai sont confirmés par deux positions cohérentes (lieu et vitesse). Tout le calcul reste dans le navigateur.</li>
     <li><b>Entre deux mises à jour</b> : quand seule la copie GitHub répond, elle a jusqu'à ≈ 6 min d'âge (une traversée dure 3 min) ; le modèle déroule les départs et arrivées prévus déjà passés : la situation, le bateau (position interpolée) et les prévisions en sont déduits, signalés « estimé ». Les tableaux « changements mesurés » ne montrent que des mesures ; chaque mise à jour recale l'estimation.</li>
     <li><b>Nominal</b> : grille GTFS, un départ toutes les 20 min par quai (semaine : Basse-Indre 05:30→22:10, Indret 05:40→22:20 ; week-end et fériés : 06:30→21:30 et 06:40→21:20). Arrivée nominale = départ nominal + 3 min.</li>
     <li><b>Lecture</b> : chaque quai affiche son prochain départ prévu et la situation du bac (à quai ici, en traversée vers l'autre quai, à l'autre quai, en traversée vers ici) ; l'enchaînement complet des changements est listé une seule fois, une ligne par traversée, départ et arrivée ensemble, chacun dans la colonne de son quai (Indret à gauche, Basse-Indre à droite, comme le schéma) ; l'horaire officiel et l'écart Δ restent sur les cartes.</li>
@@ -119,7 +119,7 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
   <h3>Sources de données</h3>
   <ul>
     <li><b>GTFS « Horaires des bacs de Loire en Loire-Atlantique »</b> (Département de Loire-Atlantique, data.gouv.fr, Licence Ouverte) : créneaux nominaux et jours fériés.</li>
-    <li><b>Position AIS de Lola</b> (MMSI 227158520) : AISVesselTracker, repli Shiptrail (leurs serveurs refusent les appels d'une page web). Un script du dépôt (<i>bac-lola/relais</i>), exécuté sur le serveur du site, les interroge chaque minute et garde 30 min en mémoire vive. La page le lit de deux façons à la fois : en <b>direct</b> (peeksoumi.com, positions d'au plus ~2 min) et via la copie publique <b>GitHub</b> <i>Peeksoumi/lola-relais</i> (publiée toutes les 5 min, un seul commit, sans historique), qui resynchronise le modèle si le direct ne répond pas. Les positions sont fusionnées par heure. Aucune base de données, la page ne lit jamais les relevés d'entraînement ; ce sont deux des trois appels réseau de la page (avec Open-Meteo), rien n'y est envoyé.</li>
+    <li><b>Position AIS de Lola</b> (MMSI 227158520) : AISVesselTracker, repli Shiptrail (leurs serveurs refusent les appels d'une page web). Un script du dépôt (<i>bac-lola/relais</i>), exécuté sur le serveur du site, les interroge chaque minute et garde 1 h en mémoire vive. La page le lit de deux façons à la fois : en <b>direct</b> (peeksoumi.com, positions d'au plus ~2 min) et via la copie publique <b>GitHub</b> <i>Peeksoumi/lola-relais</i> (publiée toutes les 5 min, un seul commit, sans historique), qui resynchronise le modèle si le direct ne répond pas. Les positions sont fusionnées par heure. Aucune base de données, la page ne lit jamais les relevés d'entraînement ; ce sont deux des trois appels réseau de la page (avec Open-Meteo), rien n'y est envoyé.</li>
     <li><b>Open-Meteo</b> (open-meteo.com, CC BY 4.0) : météo actuelle (température, ciel, vent) aux coordonnées des bacs, rafraîchie toutes les 10 min ; la page envoie seulement ces coordonnées fixes, rien de personnel.</li>
     <li><b>Calibrage</b> : relevés enregistrés par le serveur du 13 au 18/11/2026 : ils ne servent qu'à fixer les paramètres du modèle hors ligne, la page ne les lit jamais.</li>
   </ul>
@@ -127,7 +127,7 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
   <ul>
     <li>Calibrage sur 6 jours seulement, dont 3 jours de semaine : décalages et fenêtres de rotation provisoires, vendredi et vacances non étudiés.</li>
     <li>Les causes d'un retard (autre bateau, changement de sens de la marée, vent) ne sont pas détectées en direct ; ils sont enregistrés à part pour une version ultérieure.</li>
-    <li>À l'ouverture, la page rejoue 30 min de positions : le sens est connu tout de suite. Les sources AIS publiques se rafraîchissent environ chaque minute, avec ~1 min de retard : heures mesurées à ± 1 min, prévisions en retard d'autant. Le direct dépend du serveur du site : s'il tombe, la page se rabat sur GitHub (positions jusqu'à ~6 min d'âge, situation estimée entre deux mises à jour, une perturbation y est vue avec retard). Si aucune position n'arrive depuis 3 min (direct) ou 12 min (GitHub seul), un bandeau rouge l'indique ; prévisions suspendues au-delà de 10 min (direct) ou 20 min (GitHub seul). Si les deux sources sont injoignables : « Connexion perdue ».</li>
+    <li>À l'ouverture, la page rejoue 1 h de positions : le sens est connu tout de suite. Les sources AIS publiques se rafraîchissent environ chaque minute, avec ~1 min de retard : heures mesurées à ± 1 min, prévisions en retard d'autant. Le direct dépend du serveur du site : s'il tombe, la page se rabat sur GitHub (positions jusqu'à ~6 min d'âge, situation estimée entre deux mises à jour, une perturbation y est vue avec retard). Si aucune position n'arrive depuis 3 min (direct) ou 12 min (GitHub seul), un bandeau rouge l'indique ; prévisions suspendues au-delà de 10 min (direct) ou 20 min (GitHub seul). Si les deux sources sont injoignables : « Connexion perdue ».</li>
     <li>Manœuvres hors service (positionnement de début ou de fin de journée) non prévues ; un arrêt est déclaré après 30 min sans mouvement en période de service.</li>
   </ul>
 </div>
@@ -491,7 +491,7 @@ const SEUIL_HORS_ZONE=0.0008; // écart au chenal (unités lat/lon) au-delà duq
 //  INTERFACE
 // ====================================================================
 // Positions AIS de Lola, deux lectures simultanées d'un même relais (script bac-lola/relais, jamais les relevés enregistrés) :
-//  - « direct » : le relais lui-même (mémoire vive, 30 min, remis à jour chaque minute) ; les sources AIS refusant les navigateurs, c'est le seul accès au direct ;
+//  - « direct » : le relais lui-même (mémoire vive, 1 h, remis à jour chaque minute) ; les sources AIS refusant les navigateurs, c'est le seul accès au direct ;
 //  - « GitHub » : copie publique du dépôt lola-relais, publiée toutes les 5 min ; sert à resynchroniser le modèle quand le direct ne répond pas.
 const URL_DIRECT = "https://peeksoumi.com/lola-direct/positions";
 const URL_GITHUB = "https://raw.githubusercontent.com/Peeksoumi/lola-relais/main/positions.json";
@@ -573,7 +573,7 @@ async function lirePosition(){
     if(git){ dernierGithub=maintenant; githubOk=true; } else if(git===null) githubOk=false;
     const tout=[].concat(dir||[],git||[]).sort((a,b)=>a[0]-b[0]);
     if(tout.length){
-        if(!detecteur){ journal=[]; detecteur=creerDetecteur(null,e=>{ journal.push(e); }); } // première lecture : rejeu des 30 dernières minutes
+        if(!detecteur){ journal=[]; detecteur=creerDetecteur(null,e=>{ journal.push(e); }); } // première lecture : rejeu de la dernière heure
         tout.filter(s=>s[0]>dernierTs).forEach(traiter);
     }
     directOk=!!dir; lecturesOk=!!dir||githubOk;
