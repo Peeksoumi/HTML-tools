@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Générateur d'icônes</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23db2777'/%3E%3Ctext x='50' y='70' font-size='60' text-anchor='middle'%3E🎨%3C/text%3E%3C/svg%3E">
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --txt:#1c2330; --mut:#667085; --pri:#db2777; --bd:#e4e7ec; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#10141b; --card:#1a202b; --txt:#e8ecf3; --mut:#98a2b3; --bd:#2b3442; } }
+  * { box-sizing:border-box; }
+  body { margin:0; font:16px/1.45 system-ui,sans-serif; background:var(--bg); color:var(--txt); }
+  main { max-width:980px; margin:0 auto; padding:12px; }
+  .top { display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; }
+  .top a { font-size:.85rem; color:var(--txt); text-decoration:none; border:1px solid var(--bd); background:var(--card); border-radius:8px; padding:5px 10px; }
+  h1 { font-size:1.35rem; margin:.5rem 0 .2rem; }
+  .lead { color:var(--mut); margin:0 0 .8rem; font-size:.92rem; }
+  .layout { display:grid; gap:12px; grid-template-columns:1fr; align-items:start; }
+  @media (min-width:820px) { .layout { grid-template-columns:340px 1fr; } .sticky { position:sticky; top:12px; } }
+  .card { background:var(--card); border:1px solid var(--bd); border-radius:12px; padding:12px; margin-bottom:12px; }
+  .card h2 { font-size:1rem; margin:0 0 8px; }
+  .stage { border-radius:10px; display:flex; justify-content:center; padding:14px; border:1px solid var(--bd); }
+  .stage.checker { background:conic-gradient(#d0d5dd 25%,#fff 0 50%,#d0d5dd 0 75%,#fff 0) 0 0/16px 16px; }
+  .stage.light { background:#fff; } .stage.dark { background:#111; }
+  #preview { width:256px; height:256px; max-width:100%; }
+  .minis { display:flex; align-items:flex-end; gap:14px; justify-content:center; margin:10px 0 2px; }
+  .minis figure { margin:0; text-align:center; font-size:.7rem; color:var(--mut); }
+  .minis canvas { display:block; margin:0 auto 2px; }
+  .row { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:8px; }
+  button, .btn, select, input[type=text], input[type=password] { font:inherit; font-size:.9rem; color:var(--txt); background:var(--card); border:1px solid var(--bd); border-radius:8px; padding:6px 10px; }
+  button { cursor:pointer; } button:hover { background:var(--bg); }
+  button.pri { background:var(--pri); border-color:var(--pri); color:#fff; font-weight:600; } button.pri:hover { filter:brightness(1.08); }
+  button:disabled { opacity:.45; cursor:default; }
+  .drop { display:block; border:2px dashed var(--bd); border-radius:10px; padding:14px; text-align:center; color:var(--mut); font-size:.9rem; cursor:pointer; }
+  .drop.over, .drop:hover { border-color:var(--pri); color:var(--txt); }
+  #file-input { display:none; }
+  .src { display:grid; gap:8px; }
+  .src label { font-size:.85rem; color:var(--mut); display:block; margin-bottom:2px; }
+  .src input[type=text] { width:100%; font-size:1.1rem; }
+  .ask { display:flex; gap:6px; } .ask input { flex:1; min-width:0; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .chips button { font-size:.8rem; border-radius:99px; padding:3px 10px; color:var(--mut); }
+  #log { margin-top:8px; font-size:.88rem; max-height:190px; overflow:auto; }
+  #log p { margin:3px 0; padding:4px 8px; border-radius:8px; background:var(--bg); }
+  #log p.me { background:transparent; color:var(--mut); text-align:right; }
+  .hint { color:var(--mut); font-size:.82rem; margin:6px 0 0; }
+  details > summary { cursor:pointer; font-weight:600; font-size:.95rem; }
+  .ctl { display:grid; grid-template-columns:150px 1fr; gap:4px 10px; align-items:center; margin-top:8px; font-size:.88rem; }
+  .ctl input[type=range], .ctl select { width:100%; } .ctl input[type=color] { width:44px; height:28px; padding:0; border:1px solid var(--bd); border-radius:6px; background:none; }
+  #tag-out { width:100%; height:64px; margin-top:8px; font:12px ui-monospace,monospace; display:none; border:1px solid var(--bd); border-radius:8px; background:var(--bg); color:var(--txt); }
+  .fonct { margin-top:24px; padding:14px 16px; border:1px solid var(--bd); border-radius:12px; background:var(--card); color:var(--txt); text-align:left; font-size:.88rem; line-height:1.45; }
+  .fonct h2 { font-size:1rem; margin:0 0 4px; }
+  .fonct h3 { font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; color:var(--mut); margin:12px 0 4px; }
+  .fonct ul { margin:0; padding-left:18px; } .fonct li { margin:2px 0; }
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <a href="https://github.com/Peeksoumi/HTML-tools/issues/new?title=%5Bgenerateur-icones%5D%20&amp;body=Outil%20concern%C3%A9%20%3A%20generateur-icones%20(http%3A%2F%2F141.227.151.70%3A8080%2Fgenerateur-icones%2F)%0A%0A**Ma%20suggestion%20ou%20le%20bug%20rencontr%C3%A9%20%3A**%0A%0A" target="_blank" rel="noopener">💡 Proposer une amélioration</a>
+    <a href="index.html" download="generateur-icones.html" title="Enregistrer la page (fonctionne hors ligne ; seule l'option IA facultative demande une connexion)">⬇️ Télécharger la page</a>
+  </div>
+  <h1>🎨 Générateur d'icônes</h1>
+  <p class="lead">Crée une icône à partir d'une image ou d'un texte, puis modifie-la en direct en écrivant ce que tu veux (« fond dégradé bleu vert, cercle, ajoute une ombre »).</p>
+
+  <div class="layout">
+    <div class="sticky">
+      <section class="card">
+        <div class="stage checker" id="stage"><canvas id="preview" width="512" height="512" aria-label="Aperçu de l'icône"></canvas></div>
+        <div class="minis" id="minis"></div>
+        <div class="row">
+          <button id="undo" disabled>↶ Annuler</button>
+          <button id="bg-cycle" title="Changer le fond de l'aperçu">Fond d'aperçu</button>
+        </div>
+      </section>
+      <section class="card">
+        <h2>Exporter</h2>
+        <div class="row">
+          <select id="sel-size" aria-label="Taille du PNG"></select>
+          <button class="pri" id="dl-png">⬇️ PNG</button>
+          <button id="dl-ico" title="favicon.ico multi-tailles (16 à 256 px)">⬇️ ICO</button>
+          <button id="dl-svg">⬇️ SVG</button>
+          <button id="dl-zip" title="Tous les PNG, favicon.ico et icon.svg">⬇️ ZIP</button>
+        </div>
+        <div class="row"><button id="copy-tag" title="Balise &lt;link rel=&quot;icon&quot;&gt; à coller dans le &lt;head&gt;">📋 Copier la balise favicon</button></div>
+        <textarea id="tag-out" readonly aria-label="Balise favicon"></textarea>
+      </section>
+    </div>
+
+    <div>
+      <section class="card">
+        <h2>1. Source</h2>
+        <div class="src">
+          <label class="drop" id="drop" for="file-input">🖼️ Glisse une image ici, colle-la (Ctrl+V) ou touche pour en choisir une</label>
+          <input type="file" id="file-input" accept="image/*">
+          <div class="row" style="margin:0"><button id="remove-img" hidden>✖ Retirer l'image</button><span id="img-info" class="hint" style="margin:0"></span></div>
+          <div><label for="k-text">…ou un texte / emoji (12 caractères max)</label><input type="text" id="k-text" data-k="text" maxlength="24" autocomplete="off"></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>2. Demande en direct</h2>
+        <form class="ask" id="ask-form">
+          <input type="text" id="ask" placeholder="ex. fond dégradé violet rose, cercle, texte blanc" autocomplete="off" aria-label="Demande de modification">
+          <button class="pri" id="ask-go" type="submit">Appliquer</button>
+        </form>
+        <div class="chips" id="chips"></div>
+        <div id="log" aria-live="polite"></div>
+        <p class="hint">Plusieurs demandes à la fois : sépare-les par des virgules. Mets le texte entre guillemets : écris « AB ».</p>
+        <details style="margin-top:8px">
+          <summary>IA Claude (facultatif) : demandes libres</summary>
+          <p class="hint">Sans clé, les demandes sont comprises par des règles intégrées (français). Avec ta clé API Anthropic, Claude interprète n'importe quelle demande (« une icône pour une appli météo »). Ta demande et les réglages actuels (jamais l'image) sont alors envoyés à api.anthropic.com depuis ton navigateur. La clé reste dans ce navigateur.</p>
+          <div class="row"><label><input type="checkbox" id="ai-on"> Utiliser Claude</label><input type="password" id="api-key" placeholder="sk-ant-…" autocomplete="off" style="flex:1;min-width:140px"></div>
+        </details>
+      </section>
+
+      <section class="card">
+        <details>
+          <summary>3. Réglages manuels</summary>
+          <div class="ctl" id="ctl"></div>
+        </details>
+      </section>
+    </div>
+  </div>
+
+  <div class="fonct" id="fonctionnement">
+    <h2>Fonctionnement et sources</h2>
+    <h3>Fonctionnement</h3><ul>
+      <li><b>Dessin</b> : l'icône est dessinée sur un canvas HTML (fond uni ou dégradé, forme, image ou texte, bordure, ombre, reflet) à partir d'une liste de réglages ; la même fonction produit l'aperçu et chaque taille exportée.</li>
+      <li><b>Demandes en direct</b> : une analyse par règles (français, sans accents ni majuscules) repère couleurs, forme, texte, taille, ombre, rotation…, et les traduit en changements de réglages ; les curseurs se mettent à jour.</li>
+      <li><b>Option IA</b> : si tu actives Claude avec ta clé, la demande et les réglages (pas l'image) partent vers api.anthropic.com ; Claude renvoie les réglages à modifier, vérifiés par la page avant application. Sinon rien ne quitte ton navigateur.</li>
+      <li><b>Exports</b> : PNG à la taille choisie, ICO multi-tailles (PNG intégrés), SVG (vectoriel, image incluse en base64), ZIP assemblé dans la page, balise favicon prête à coller.</li>
+    </ul>
+    <h3>Sources de données</h3><ul>
+      <li><b>Aucune donnée externe</b> : pas de bibliothèque ni de service tiers chargé par la page ; l'image importée reste dans ton navigateur (réduite à 512 px).</li>
+      <li><b>Claude (Anthropic)</b> : interrogé uniquement si tu actives l'option IA, avec ta propre clé.</li>
+    </ul>
+    <h3>Limites</h3><ul>
+      <li>Les polices et emojis viennent de ton système : le rendu peut différer d'un appareil à l'autre, surtout dans le SVG et le favicon copiés.</li>
+      <li>Les règles intégrées comprennent des demandes simples ; une phrase libre non reconnue est signalée, à reformuler ou à confier à Claude.</li>
+      <li>Une image est recadrée en carré (entière ou remplie) ; pas de détourage ni de retouche de l'image.</li>
+    </ul>
+  </div>
+</main>
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+
+/* ---------- Réglages : schéma, valeurs par défaut ---------- */
+const FONTS = {'Sans':'system-ui, sans-serif','Serif':'Georgia, serif','Mono':'ui-monospace, Menlo, monospace','Impact':'Impact, Haettenschweiler, sans-serif','Manuscrit':"'Brush Script MT', cursive"};
+const SCH = {
+  text:{t:'str'}, font:{t:'enum',v:Object.values(FONTS)}, weight:{t:'num',min:100,max:900},
+  textColor:{t:'color'}, textSize:{t:'num',min:.2,max:1}, textY:{t:'num',min:-.4,max:.4},
+  bgType:{t:'enum',v:['solid','gradient','transparent']}, c1:{t:'color'}, c2:{t:'color'}, angle:{t:'num',min:0,max:360},
+  shape:{t:'enum',v:['rounded','circle','squircle']}, radius:{t:'num',min:0,max:.5}, padding:{t:'num',min:0,max:.4},
+  borderW:{t:'num',min:0,max:.15}, borderColor:{t:'color'}, shadow:{t:'bool'}, gloss:{t:'bool'},
+  rotate:{t:'num',min:-180,max:180}, imageFit:{t:'enum',v:['contain','cover']}, imageScale:{t:'num',min:.2,max:2}
+};
+const DEF = {text:'A', font:FONTS.Sans, weight:700, textColor:'#ffffff', textSize:.62, textY:0,
+  bgType:'gradient', c1:'#6366f1', c2:'#a855f7', angle:135, shape:'rounded', radius:.22, padding:.12,
+  borderW:0, borderColor:'#000000', shadow:false, gloss:false, rotate:0, imageFit:'contain', imageScale:1};
+const MAN = [
+  ['font','Police','select',FONTS], ['weight','Graisse','range',100,900,100], ['textColor','Couleur du texte','color'],
+  ['textSize','Taille du texte','range',.2,1,.01], ['textY','Décalage vertical','range',-.4,.4,.01],
+  ['bgType','Fond','select',{'Dégradé':'gradient','Uni':'solid','Transparent':'transparent'}], ['c1','Couleur 1','color'], ['c2','Couleur 2 (dégradé)','color'], ['angle','Angle du dégradé','range',0,360,5],
+  ['shape','Forme','select',{'Carré arrondi':'rounded','Cercle':'circle','Squircle (iOS)':'squircle'}], ['radius','Arrondi des coins','range',0,.5,.01],
+  ['padding','Marge','range',0,.4,.01], ['rotate','Rotation du contenu','range',-180,180,1],
+  ['borderW','Épaisseur de bordure','range',0,.15,.005], ['borderColor','Couleur de bordure','color'],
+  ['imageFit','Image','select',{'Entière':'contain','Remplir le cadre':'cover'}], ['imageScale','Zoom de l\'image','range',.2,2,.01],
+  ['shadow','Ombre portée','check'], ['gloss','Reflet brillant','check']
+];
+const cc = document.createElement('canvas').getContext('2d');
+function normColor(v) {
+  if (typeof v !== 'string') return null;
+  cc.fillStyle = '#000'; cc.fillStyle = v.trim(); const r = cc.fillStyle;
+  if (r[0] === '#') return r.length === 7 ? r : null;
+  const m = r.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  return m ? '#' + [m[1], m[2], m[3]].map(x => (+x).toString(16).padStart(2, '0')).join('') : null;
+}
+function clean(patch) {           // ne garde que des valeurs valides du schéma
+  const o = {};
+  for (const [k, raw] of Object.entries(patch || {})) {
+    const s = SCH[k]; if (!s) continue; let v = raw;
+    if (s.t === 'num') { v = +v; if (!isFinite(v)) continue; v = Math.min(s.max, Math.max(s.min, v)); }
+    else if (s.t === 'bool') v = !!v;
+    else if (s.t === 'color') { v = normColor(v); if (!v) continue; }
+    else if (s.t === 'enum') { if (!s.v.includes(v)) continue; }
+    else { v = [...String(v)].slice(0, 12).join(''); }
+    o[k] = v;
+  }
+  return o;
+}
+
+/* ---------- État, historique ---------- */
+let cfg = {...DEF}, img = null, hist = [], lastCtl = ['', 0];
+const snap = () => ({cfg:{...cfg}, img});
+function pushHist() { hist.push(snap()); if (hist.length > 50) hist.shift(); $('#undo').disabled = false; }
+function undo() { const h = hist.pop(); $('#undo').disabled = !hist.length; if (!h) return false; cfg = h.cfg; setImg(h.img, true); sync(); render(); return true; }
+function apply(patch) {
+  const ch = clean(patch); if (!Object.keys(ch).length) return false;
+  pushHist();
+  if ('text' in ch && ch.text !== cfg.text && img) setImg(null);
+  Object.assign(cfg, ch); sync(); render(); return true;
+}
+
+/* ---------- Dessin ---------- */
+if (!CanvasRenderingContext2D.prototype.roundRect) CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+  this.moveTo(x + r, y); this.arcTo(x + w, y, x + w, y + h, r); this.arcTo(x + w, y + h, x, y + h, r);
+  this.arcTo(x, y + h, x, y, r); this.arcTo(x, y, x + w, y, r); this.closePath();
+};
+function squirclePts(x, y, w, N = 96) {
+  const p = [], n = 5;
+  for (let i = 0; i < N; i++) { const a = i / N * 2 * Math.PI, c = Math.cos(a), s = Math.sin(a);
+    p.push([x + w / 2 + Math.sign(c) * Math.pow(Math.abs(c), 2 / n) * w / 2, y + w / 2 + Math.sign(s) * Math.pow(Math.abs(s), 2 / n) * w / 2]); }
+  return p;
+}
+function shapePath(ctx, x, w, c) {
+  ctx.beginPath();
+  if (c.shape === 'circle') ctx.ellipse(x + w / 2, x + w / 2, w / 2, w / 2, 0, 0, 7);
+  else if (c.shape === 'squircle') { squirclePts(x, x, w).forEach(([a, b], i) => i ? ctx.lineTo(a, b) : ctx.moveTo(a, b)); ctx.closePath(); }
+  else ctx.roundRect(x, x, w, w, Math.min(c.radius * w, w / 2));
+}
+function gradPts(x, w, ang) {
+  const a = ang * Math.PI / 180, dx = Math.sin(a), dy = -Math.cos(a), L = (Math.abs(dx) + Math.abs(dy)) * w / 2, m = x + w / 2;
+  return [m - dx * L, m - dy * L, m + dx * L, m + dy * L];
+}
+function layout(ctx, c, s) {      // géométrie commune au canvas et au SVG
+  const m = c.shadow ? s * .05 : 0, w = s - 2 * m, bw = w * (1 - 2 * c.padding), L = {m, w, bw, s};
+  if (img) {
+    const iw = img.naturalWidth || 512, ih = img.naturalHeight || 512;
+    const k = (c.imageFit === 'cover' ? Math.max(bw / iw, bw / ih) : Math.min(bw / iw, bw / ih)) * c.imageScale;
+    L.img = {w: iw * k, h: ih * k, x: s / 2 - iw * k / 2, y: s / 2 - ih * k / 2};
+  } else if (c.text) {
+    let fs = c.textSize * w; ctx.font = `${c.weight} ${fs}px ${c.font}`;
+    const wd = ctx.measureText(c.text).width; if (wd > bw) { fs *= bw / wd; ctx.font = `${c.weight} ${fs}px ${c.font}`; }
+    const t = ctx.measureText(c.text), asc = t.actualBoundingBoxAscent || fs * .7, desc = t.actualBoundingBoxDescent || 0;
+    L.txt = {fs, y: s / 2 + (asc - desc) / 2 + c.textY * w};
+  }
+  return L;
+}
+function draw(ctx, s, c) {
+  const L = layout(ctx, c, s), {m, w} = L, cx = s / 2;
+  ctx.clearRect(0, 0, s, s);
+  if (c.bgType !== 'transparent') {
+    ctx.save();
+    if (c.shadow) { ctx.shadowColor = 'rgba(0,0,0,.4)'; ctx.shadowBlur = s * .03; ctx.shadowOffsetY = s * .02; }
+    if (c.bgType === 'gradient') { const [a, b, d, e] = gradPts(m, w, c.angle), g = ctx.createLinearGradient(a, b, d, e); g.addColorStop(0, c.c1); g.addColorStop(1, c.c2); ctx.fillStyle = g; }
+    else ctx.fillStyle = c.c1;
+    shapePath(ctx, m, w, c); ctx.fill(); ctx.restore();
+  }
+  ctx.save(); shapePath(ctx, m, w, c); ctx.clip();
+  ctx.save(); ctx.translate(cx, cx); ctx.rotate(c.rotate * Math.PI / 180); ctx.translate(-cx, -cx);
+  if (L.img) { ctx.imageSmoothingQuality = 'high'; ctx.drawImage(img, L.img.x, L.img.y, L.img.w, L.img.h); }
+  else if (L.txt) { ctx.font = `${c.weight} ${L.txt.fs}px ${c.font}`; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = c.textColor; ctx.fillText(c.text, cx, L.txt.y); }
+  ctx.restore();
+  if (c.gloss) { const g = ctx.createLinearGradient(0, m, 0, m + w * .55); g.addColorStop(0, 'rgba(255,255,255,.38)'); g.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = g; ctx.fillRect(m, m, w, w * .55); }
+  ctx.restore();
+  if (c.borderW > 0) { ctx.save(); shapePath(ctx, m, w, c); ctx.clip(); shapePath(ctx, m, w, c); ctx.lineWidth = 2 * c.borderW * w; ctx.strokeStyle = c.borderColor; ctx.stroke(); ctx.restore(); }
+}
+const esc = t => String(t).replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+function toSVG(c) {
+  const L = layout(cc, c, 100), {m, w} = L, f = n => +n.toFixed(2);
+  const shape = a => c.shape === 'circle' ? `<circle cx="50" cy="50" r="${f(w / 2)}" ${a}/>`
+    : c.shape === 'squircle' ? `<path d="M${squirclePts(m, w).map(p => p.map(f).join(' ')).join(' L')}Z" ${a}/>`
+    : `<rect x="${f(m)}" y="${f(m)}" width="${f(w)}" height="${f(w)}" rx="${f(Math.min(c.radius * w, w / 2))}" ${a}/>`;
+  const [x1, y1, x2, y2] = gradPts(m, w, c.angle).map(f);
+  let defs = `<clipPath id="c">${shape('')}</clipPath>`;
+  if (c.bgType === 'gradient') defs += `<linearGradient id="g" gradientUnits="userSpaceOnUse" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"><stop offset="0" stop-color="${c.c1}"/><stop offset="1" stop-color="${c.c2}"/></linearGradient>`;
+  if (c.shadow) defs += `<filter id="s" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="2" stdDeviation="1.5" flood-color="#000" flood-opacity=".4"/></filter>`;
+  if (c.gloss) defs += `<linearGradient id="l" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".38"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>`;
+  let b = '';
+  if (c.bgType !== 'transparent') b += shape(`fill="${c.bgType === 'gradient' ? 'url(#g)' : c.c1}"${c.shadow ? ' filter="url(#s)"' : ''}`);
+  let inner = '';
+  if (L.img) inner = `<image href="${img.src}" x="${f(L.img.x)}" y="${f(L.img.y)}" width="${f(L.img.w)}" height="${f(L.img.h)}" preserveAspectRatio="none"/>`;
+  else if (L.txt) inner = `<text x="50" y="${f(L.txt.y)}" font-family="${esc(c.font).replace(/&quot;/g, "'")}" font-size="${f(L.txt.fs)}" font-weight="${c.weight}" text-anchor="middle" fill="${c.textColor}">${esc(c.text)}</text>`;
+  b += `<g clip-path="url(#c)"><g transform="rotate(${c.rotate} 50 50)">${inner}</g>${c.gloss ? `<rect x="${f(m)}" y="${f(m)}" width="${f(w)}" height="${f(w * .55)}" fill="url(#l)"/>` : ''}</g>`;
+  if (c.borderW > 0) b += `<g clip-path="url(#c)">${shape(`fill="none" stroke="${c.borderColor}" stroke-width="${f(2 * c.borderW * w)}"`)}</g>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 100" width="512" height="512"><defs>${defs}</defs>${b}</svg>`;
+}
+
+/* ---------- Aperçu ---------- */
+const MINI = [16, 32, 48, 64], dpr = Math.max(1, Math.round(window.devicePixelRatio || 1));
+for (const n of MINI) {
+  const fg = document.createElement('figure'), cv = document.createElement('canvas');
+  cv.width = cv.height = n * dpr; cv.style.width = cv.style.height = n + 'px'; cv.dataset.n = n;
+  fg.append(cv, n + ' px'); $('#minis').append(fg);
+}
+let raf = 0;
+function render() {
+  cancelAnimationFrame(raf);
+  raf = requestAnimationFrame(() => {
+    draw($('#preview').getContext('2d'), 512, cfg);
+    for (const cv of document.querySelectorAll('#minis canvas')) draw(cv.getContext('2d'), cv.width, cfg);
+  });
+}
+const BGS = ['checker', 'light', 'dark']; let bgI = 0;
+$('#bg-cycle').onclick = () => { $('#stage').className = 'stage ' + BGS[++bgI % 3]; };
+
+/* ---------- Réglages manuels ---------- */
+const ctl = $('#ctl');
+for (const [k, label, type, a, b, st] of MAN) {
+  const l = document.createElement('label'); l.textContent = label; l.htmlFor = 'k-' + k;
+  let e;
+  if (type === 'select') { e = document.createElement('select'); for (const [n, v] of Object.entries(a)) e.add(new Option(n, v)); }
+  else { e = document.createElement('input'); e.type = type === 'check' ? 'checkbox' : type; if (type === 'range') { e.min = a; e.max = b; e.step = st; } }
+  e.id = 'k-' + k; e.dataset.k = k; ctl.append(l, e);
+}
+function sync() {
+  for (const e of document.querySelectorAll('[data-k]')) {
+    const v = cfg[e.dataset.k];
+    if (e.type === 'checkbox') e.checked = v; else if (e.value !== String(v)) e.value = v;
+  }
+}
+document.addEventListener('input', ev => {
+  const e = ev.target, k = e.dataset && e.dataset.k; if (!k) return;
+  const v = e.type === 'checkbox' ? e.checked : e.type === 'range' ? +e.value : e.value;
+  const now = Date.now(); if (lastCtl[0] !== k || now - lastCtl[1] > 1500) pushHist(); lastCtl = [k, now];
+  const ch = clean({[k]: v});
+  if (k === 'text' && img) setImg(null);
+  if (k in ch) cfg[k] = ch[k];
+  render();
+});
+
+/* ---------- Image ---------- */
+function setImg(im, quiet) {
+  img = im; $('#remove-img').hidden = !im;
+  $('#img-info').textContent = im ? `${im.naturalWidth} × ${im.naturalHeight} px` : '';
+  if (!quiet) render();
+}
+function loadFile(f) {
+  if (!f || !/^image\//.test(f.type)) return say('bot', "Ce fichier n'est pas une image.");
+  const u = URL.createObjectURL(f), im = new Image();
+  im.onload = () => {
+    const iw = im.naturalWidth || 512, ih = im.naturalHeight || 512, k = Math.min(1, 512 / Math.max(iw, ih));
+    const cv = document.createElement('canvas'); cv.width = Math.max(1, Math.round(iw * k)); cv.height = Math.max(1, Math.round(ih * k));
+    cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height); URL.revokeObjectURL(u);
+    const out = new Image(); out.onload = () => { pushHist(); setImg(out); say('bot', '🖼️ Image chargée. Dis-moi comment la mettre en forme.'); }; out.src = cv.toDataURL('image/png');
+  };
+  im.onerror = () => say('bot', "Impossible de lire cette image."); im.src = u;
+}
+$('#file-input').onchange = e => { loadFile(e.target.files[0]); e.target.value = ''; };
+$('#remove-img').onclick = () => { pushHist(); setImg(null); };
+const drop = $('#drop');
+['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => loadFile(e.dataTransfer.files[0]));
+document.addEventListener('paste', e => { const f = [...(e.clipboardData?.files || [])].find(x => /^image\//.test(x.type)); if (f) loadFile(f); });
+
+/* ---------- Demandes : analyse locale (français) ---------- */
+const COL = {rouge:'#ef4444',bleu:'#2563eb',vert:'#16a34a',jaune:'#facc15',orange:'#f97316',violet:'#7c3aed',mauve:'#a855f7',rose:'#ec4899',noir:'#111111',blanc:'#ffffff',gris:'#6b7280',marron:'#92400e',cyan:'#06b6d4',turquoise:'#14b8a6',indigo:'#4f46e5',bordeaux:'#7f1d1d',beige:'#f5e6c8',magenta:'#d946ef',corail:'#fb7185',kaki:'#78813b',marine:'#1e3a8a',ciel:'#38bdf8',dore:'#f5b301',argent:'#cbd5e1',
+  red:'#ef4444',blue:'#2563eb',green:'#16a34a',yellow:'#facc15',purple:'#7c3aed',pink:'#ec4899',black:'#111111',white:'#ffffff',gray:'#6b7280',grey:'#6b7280',brown:'#92400e'};
+const ROLE = {fond:'bg',arriere:'bg',plan:'bg',background:'bg',bg:'bg',texte:'text',lettre:'text',lettres:'text',ecriture:'text',police:'text',typo:'text',text:'text',symbole:'text',bordure:'border',contour:'border',cadre:'border',trait:'border'};
+const GRADS = [['#f59e0b','#ef4444'],['#06b6d4','#6366f1'],['#10b981','#3b82f6'],['#ec4899','#8b5cf6'],['#f97316','#eab308']];
+const EMO = /(?:\p{Extended_Pictographic}(?:️|‍\p{Extended_Pictographic}|\p{Emoji_Modifier})*)+/u;
+const strip = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[’']/g, ' ');
+const colWord = t => { for (const c of [t, t.replace(/(es|e|s)$/, ''), t.replace(/s$/, ''), t.replace(/(tte|te)$/, 't'), t.replace(/che$/, 'c')]) if (COL[c]) return COL[c]; return null; };
+const hex6 = h => h.length === 4 ? '#' + [...h.slice(1)].map(x => x + x).join('') : h;
+const mix = (a, b, k) => { const p = n => [1, 3, 5].map(i => parseInt(n.slice(i, i + 2), 16)), A = p(a), B = p(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * k).toString(16).padStart(2, '0')).join(''); };
+const NEG = /\b(sans|supprim\w*|enlev\w*|retir\w*|desactiv\w*|pas de|pas d|aucun\w*)\b/;
+
+function parse(input) {
+  const out = {patch:{}, done:[], bad:[], undo:false}, P = out.patch, get = k => k in P ? P[k] : cfg[k];
+  const R = (k, d) => Math.min(SCH[k].max, Math.max(SCH[k].min, +(get(k) + d).toFixed(3)));
+  const add = (k, v, lbl) => { P[k] = v; out.done.push(lbl); };
+  let s = input.trim(), m;
+  const q = s.match(/["«“]\s*([^"»”]+?)\s*["»”]/);
+  if (q) { P.text = [...q[1]].slice(0, 12).join(''); out.done.push(`texte « ${P.text} »`); s = s.replace(q[0], ' '); }
+  for (const o of s.split(/[,;.\n]+/).map(x => x.trim()).filter(Boolean)) {
+    const n = strip(o), before = out.done.length, neg = NEG.test(n);
+    if (/\b(reinitialis\w*|recommence\w*|par defaut|remets? a zero|efface tout)\b/.test(n)) { Object.assign(P, {...DEF, text:get('text')}); out.done.push('réinitialisation'); continue; }
+    if (/\b(annul\w*|undo|retour arriere|reviens en arriere)\b/.test(n)) { out.undo = true; out.done.push('annulation'); continue; }
+    // texte / emoji
+    if (!q && ((m = o.match(/(?:écris|ecris|affiche|inscris)\s+(?:le texte\s+|la lettre\s+|les lettres\s+)?(.+)/i)) || (m = o.match(/\btexte\s*:\s*(.+)/i)) || (m = o.match(/\blettres?\s+([^\s,]{1,3})\s*$/i)))) {
+      const t = m[1].replace(/\s+(?:en|avec|sur|dans|de couleur)\s.*$/i, '').trim(); if (t) add('text', [...t].slice(0, 12).join(''), `texte « ${t} »`);
+    }
+    if (!('text' in P) && (m = o.match(EMO))) add('text', m[0], `emoji ${m[0]}`);
+    // forme et arrondi
+    let done = false;
+    if (/\b(arrondi\w*|coins?|rayon)\b/.test(n) && !/\bcercle\b/.test(n)) {
+      done = true; P.shape = 'rounded'; out.done.push('coins');
+      if (/\b(moins|reduis\w*|diminu\w*|droits?|carres?)\b/.test(n)) P.radius = R('radius', -.08);
+      else if (/\b(plus|augment\w*|accentu\w*|grands?)\b/.test(n)) P.radius = R('radius', .08);
+      else P.radius = .28;
+    }
+    if (/\b(cercle|rond|ronde|circulaire)\b/.test(n)) add('shape', 'circle', 'forme : cercle');
+    else if (/\b(squircle|ios|app store|superellipse)\b/.test(n)) add('shape', 'squircle', 'forme : squircle');
+    else if (!done && /\bcarres?\b/.test(n)) { P.shape = 'rounded'; add('radius', 0, 'forme : carré'); }
+    // marge, taille
+    if (/\b(marges?|espace|espacement)\b/.test(n)) {
+      if (/\bsans\b/.test(n)) add('padding', 0, 'sans marge');
+      else if (/\b(moins|reduis\w*|diminu\w*|petit\w*)\b/.test(n)) add('padding', R('padding', -.04), 'marge réduite');
+      else if (/\b(plus|augment\w*|grand\w*)\b/.test(n)) add('padding', R('padding', .04), 'marge augmentée');
+    } else if (!done) {
+      const k = img ? 'imageScale' : 'textSize';
+      if (/\b(plus grand\w*|agrandi\w*|grossi\w*|gros|grosse|augment\w*)\b/.test(n)) add(k, Math.min(SCH[k].max, get(k) * 1.15), 'plus grand');
+      else if (/\b(plus petit\w*|reduis\w*|reduit\w*|diminu\w*|retrecis\w*|petit\w*)\b/.test(n)) add(k, Math.max(SCH[k].min, get(k) / 1.15), 'plus petit');
+    }
+    // ombre, reflet, rotation, position
+    if (/\bombre\b/.test(n)) add('shadow', !neg, neg ? 'sans ombre' : 'ombre');
+    if (/\b(reflet|brillan\w*|gloss\w*|effet verre)\b/.test(n)) add('gloss', !neg, neg ? 'sans reflet' : 'reflet brillant');
+    if (/\b(incline\w*|rotation|tourne\w*|pivote\w*|penche\w*)\b/.test(n)) {
+      let d = (m = n.match(/(-?\d+)\s*(?:°|deg)/)) ? +m[1] : 10; if (/gauche/.test(n)) d = -Math.abs(d);
+      add('rotate', /\b(tourne\w*|pivote\w*)\b/.test(n) ? Math.max(-180, Math.min(180, get('rotate') + d)) : d, `rotation ${d}°`);
+    }
+    if (/\b(monte|remonte|vers le haut|en haut)\b/.test(n)) add('textY', R('textY', -.05), 'texte plus haut');
+    if (/\b(descend\w*|vers le bas|en bas)\b/.test(n)) add('textY', R('textY', .05), 'texte plus bas');
+    // graisse, police, image
+    if (!/\b(bordure|contour|cadre)\b/.test(n)) {
+      if (/\b(gras|bold|epais\w*)\b/.test(n)) add('weight', 900, 'gras');
+      else if (/\b(fin|fine|leger\w*|light)\b/.test(n)) add('weight', 300, 'fin');
+      else if (/\bnormal\w*\b/.test(n)) add('weight', 400, 'graisse normale');
+    }
+    if (/sans[- ]?serif|\bsans\b|moderne/.test(n)) add('font', FONTS.Sans, 'police sans empattement');
+    else if (/\b(serif|empattement\w*)\b/.test(n)) add('font', FONTS.Serif, 'police serif');
+    else if (/\b(mono\w*|code|machine a ecrire)\b/.test(n)) add('font', FONTS.Mono, 'police mono');
+    else if (/\b(manuscrit\w*|cursive|script|calligraph\w*)\b/.test(n)) add('font', FONTS.Manuscrit, 'police manuscrite');
+    else if (/\b(impact|condense\w*)\b/.test(n)) add('font', FONTS.Impact, 'police Impact');
+    if (/\b(remplis\w*|cover|plein cadre|rogne\w*|recadre\w*)\b/.test(n)) add('imageFit', 'cover', 'image remplie');
+    else if (/\b(contain|en entier|entiere?)\b/.test(n)) add('imageFit', 'contain', 'image entière');
+    // couleurs
+    const toks = n.replace(/bleu marine/g, 'marine').replace(/bleu ciel/g, 'ciel').match(/#[0-9a-f]{6}\b|#[0-9a-f]{3}\b|[a-z]+/g) || [];
+    const cols = {bg:[], text:[], border:[]}; let role = 'bg', grad = false, trans = false;
+    for (let i = 0; i < toks.length; i++) {
+      const t = toks[i];
+      if (ROLE[t]) { role = ROLE[t]; continue; }
+      if (/^degrade/.test(t) || t === 'gradient') { grad = true; role = 'bg'; continue; }
+      if (/^transparent/.test(t)) { trans = true; continue; }
+      let c = t[0] === '#' ? hex6(t) : colWord(t);
+      if (!c) continue;
+      if (/^(clair|claire|pale|pastel)$/.test(toks[i + 1])) { c = mix(c, '#ffffff', .45); i++; }
+      else if (/^(fonce|foncee|sombre)$/.test(toks[i + 1])) { c = mix(c, '#000000', .35); i++; }
+      cols[role].push(c);
+    }
+    if (cols.bg.length || grad) {
+      if (cols.bg.length >= 2 || grad) {
+        const [a, b] = cols.bg.length ? [cols.bg[0], cols.bg[1] || mix(cols.bg[0], '#000000', .4)] : GRADS[Math.floor(Math.random() * GRADS.length)];
+        P.bgType = 'gradient'; P.c1 = a; P.c2 = b;
+        out.done.push(`fond dégradé ${a} → ${b}`);
+      } else { P.bgType = 'solid'; P.c1 = cols.bg[0]; out.done.push(`fond ${cols.bg[0]}`); }
+    } else if (trans) add('bgType', 'transparent', 'fond transparent');
+    if (/\b(horizontal\w*|vertical\w*|diagonal\w*)\b/.test(n)) add('angle', /horizontal/.test(n) ? 90 : /vertical/.test(n) ? 180 : 135, 'angle du dégradé');
+    if (cols.text.length) add('textColor', cols.text.at(-1), `texte ${cols.text.at(-1)}`);
+    if (/\b(bordure|contour|cadre)\b/.test(n)) {
+      if (neg) add('borderW', 0, 'sans bordure');
+      else {
+        if (cols.border.length) add('borderColor', cols.border.at(-1), `bordure ${cols.border.at(-1)}`);
+        if (/\b(moins|fin|fine|mince)\b/.test(n)) add('borderW', R('borderW', -.015), 'bordure plus fine');
+        else if (/\b(plus|epais\w*|grosse?)\b/.test(n)) add('borderW', get('borderW') ? R('borderW', .015) : .05, 'bordure plus épaisse');
+        else if (!get('borderW')) add('borderW', .04, 'bordure');
+      }
+    }
+    if (out.done.length === before) out.bad.push(o);
+  }
+  return out;
+}
+
+/* ---------- IA facultative (Claude) ---------- */
+const SYS = `Tu modifies la configuration JSON d'un générateur d'icônes carrées. Réponds UNIQUEMENT par un objet JSON : seulement les clés à changer, plus "message" (une phrase courte en français décrivant ce que tu as fait). Clés possibles :
+text (texte ou emoji, 12 caractères max ; remplace l'image), font (une de : ${Object.values(FONTS).join(' | ')}), weight (100-900), textColor (#rrggbb), textSize (0.2-1, part de la largeur), textY (-0.4 à 0.4), bgType (solid|gradient|transparent), c1, c2 (#rrggbb ; c2 sert au dégradé), angle (0-360, 90 = gauche vers droite, 180 = haut vers bas), shape (rounded|circle|squircle), radius (0-0.5, arrondi si shape=rounded), padding (0-0.4), borderW (0-0.15), borderColor, shadow (bool), gloss (bool), rotate (-180 à 180), imageFit (contain|cover), imageScale (0.2-2).
+Pour « une icône pour X », choisis un emoji pertinent, des couleurs harmonieuses et un bon contraste.`;
+async function askClaude(req) {
+  const r = await fetch('https://api.anthropic.com/v1/messages', {method:'POST',
+    headers:{'content-type':'application/json','x-api-key':$('#api-key').value.trim(),'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:'claude-haiku-5-5', max_tokens:500, system:SYS, messages:[{role:'user', content:`Réglages actuels : ${JSON.stringify(cfg)}\nImage importée : ${img ? 'oui' : 'non'}\nDemande : ${req}`}]})});
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const j = await r.json(), t = (j.content || []).map(c => c.text || '').join(''), m = t.match(/\{[\s\S]*\}/);
+  if (!m) throw new Error('réponse inattendue'); return JSON.parse(m[0]);
+}
+try { $('#api-key').value = localStorage.getItem('icones.key') || ''; $('#ai-on').checked = localStorage.getItem('icones.ai') === '1'; } catch (e) {}
+const saveAI = () => { try { localStorage.setItem('icones.key', $('#api-key').value.trim()); localStorage.setItem('icones.ai', $('#ai-on').checked ? '1' : '0'); } catch (e) {} };
+$('#api-key').onchange = $('#ai-on').onchange = saveAI;
+
+/* ---------- Discussion ---------- */
+function say(who, text) {
+  const p = document.createElement('p'); p.className = who === 'me' ? 'me' : 'bot'; p.textContent = text;
+  const log = $('#log'); log.append(p); while (log.children.length > 12) log.firstChild.remove(); log.scrollTop = log.scrollHeight;
+}
+function local(req) {
+  const o = parse(req);
+  if (o.undo) { say('bot', undo() ? '↶ Annulé.' : "Rien à annuler."); return; }
+  const ok = apply(o.patch);
+  if (ok || o.done.length) say('bot', '✅ ' + o.done.join(' · ') + (o.bad.length ? ` — non compris : « ${o.bad.join(' / ')} »` : ''));
+  else say('bot', `Je n'ai pas compris « ${req} ». Essaie : « fond rouge », « cercle », « texte blanc gras », « ajoute une ombre »… ou active l'IA Claude pour les demandes libres.`);
+}
+async function submit(req) {
+  req = req.trim(); if (!req) return; say('me', req);
+  if ($('#ai-on').checked && $('#api-key').value.trim()) {
+    $('#ask-go').disabled = true;
+    try { const p = await askClaude(req), msg = p.message; delete p.message; say('bot', (apply(p) ? '✨ ' : '') + (msg || 'Fait.')); }
+    catch (e) { say('bot', `IA indisponible (${e.message}), j'essaie avec les règles intégrées.`); local(req); }
+    finally { $('#ask-go').disabled = false; }
+  } else local(req);
+}
+$('#ask-form').onsubmit = e => { e.preventDefault(); const i = $('#ask'); submit(i.value); i.value = ''; };
+for (const t of ['fond dégradé bleu vert', 'cercle', 'texte blanc, gras', 'ajoute une ombre', 'reflet brillant', 'bordure blanche', 'plus d\'arrondi', 'incline de 15°', 'fond transparent', 'annule'])
+  { const b = document.createElement('button'); b.type = 'button'; b.textContent = t; b.onclick = () => submit(t); $('#chips').append(b); }
+$('#undo').onclick = () => undo();
+
+/* ---------- Exports ---------- */
+const SIZES = [16, 32, 48, 64, 128, 180, 192, 256, 512];
+for (const n of [512, 256, 192, 180, 128, 64, 48, 32, 16]) $('#sel-size').add(new Option(`${n} × ${n}`, n));
+function canvasAt(n) { const c = document.createElement('canvas'); c.width = c.height = n; draw(c.getContext('2d'), n, cfg); return c; }
+const pngBytes = n => new Promise(r => canvasAt(n).toBlob(b => b.arrayBuffer().then(a => r(new Uint8Array(a))), 'image/png'));
+function save(name, data, type) { const a = document.createElement('a'), u = URL.createObjectURL(new Blob([data], {type})); a.href = u; a.download = name; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); }
+function ico(list) {                // list : [[taille, octets PNG]]
+  const head = 6 + 16 * list.length, tot = head + list.reduce((s, [, d]) => s + d.length, 0), b = new Uint8Array(tot), v = new DataView(b.buffer);
+  v.setUint16(2, 1, true); v.setUint16(4, list.length, true); let off = head;
+  list.forEach(([n, d], i) => { const e = 6 + 16 * i; b[e] = n === 256 ? 0 : n; b[e + 1] = n === 256 ? 0 : n; v.setUint16(e + 4, 1, true); v.setUint16(e + 6, 32, true); v.setUint32(e + 8, d.length, true); v.setUint32(e + 12, off, true); b.set(d, off); off += d.length; });
+  return b;
+}
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+const crc32 = d => { let c = ~0; for (const x of d) c = CRC[(c ^ x) & 255] ^ (c >>> 8); return ~c >>> 0; };
+function zip(files) {               // archive « stockée » (sans compression)
+  const enc = new TextEncoder(), parts = [], cen = []; let off = 0;
+  for (const [name, d] of files) {
+    const nm = enc.encode(name), crc = crc32(d), h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(10, 0, true); h.setUint16(12, 0x21, true); h.setUint32(14, crc, true); h.setUint32(18, d.length, true); h.setUint32(22, d.length, true); h.setUint16(26, nm.length, true);
+    const c = new DataView(new ArrayBuffer(46));
+    c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(14, 0x21, true); c.setUint32(16, crc, true); c.setUint32(20, d.length, true); c.setUint32(24, d.length, true); c.setUint16(28, nm.length, true); c.setUint32(42, off, true);
+    parts.push(new Uint8Array(h.buffer), nm, d); cen.push(new Uint8Array(c.buffer), nm); off += 30 + nm.length + d.length;
+  }
+  const size = cen.reduce((s, x) => s + x.length, 0), e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, size, true); e.setUint32(16, off, true);
+  return new Blob([...parts, ...cen, new Uint8Array(e.buffer)], {type:'application/zip'});
+}
+$('#dl-png').onclick = async () => { const n = +$('#sel-size').value; save(`icon-${n}.png`, await pngBytes(n), 'image/png'); };
+$('#dl-ico').onclick = async () => save('favicon.ico', ico(await Promise.all([16, 32, 48, 64, 128, 256].map(async n => [n, await pngBytes(n)]))), 'image/x-icon');
+$('#dl-svg').onclick = () => save('icon.svg', toSVG(cfg), 'image/svg+xml');
+$('#dl-zip').onclick = async () => {
+  const files = await Promise.all(SIZES.map(async n => [`icon-${n}.png`, await pngBytes(n)]));
+  files.push(['favicon.ico', ico(await Promise.all([16, 32, 48, 64, 128, 256].map(async n => [n, await pngBytes(n)])))], ['icon.svg', new TextEncoder().encode(toSVG(cfg))]);
+  save('icones.zip', zip(files), 'application/zip');
+};
+$('#copy-tag').onclick = async () => {
+  const href = img ? canvasAt(64).toDataURL('image/png') : 'data:image/svg+xml,' + toSVG(cfg).replace(/ width="512" height="512"/, '').replace(/"/g, "'").replace(/%/g, '%25').replace(/#/g, '%23').replace(/</g, '%3C').replace(/>/g, '%3E');
+  const tag = `<link rel=\"icon\" href=\"${href}\">`, o = $('#tag-out'); o.value = tag; o.style.display = 'block'; o.select();
+  try { await navigator.clipboard.writeText(tag); $('#copy-tag').textContent = '✅ Copié'; setTimeout(() => $('#copy-tag').textContent = '📋 Copier la balise favicon', 1800); } catch (e) {}
+};
+
+sync(); render(); say('bot', "Bonjour ! Importe une image ou tape un texte, puis écris ce que tu veux changer.");
+</script>
+</body>
+</html>
