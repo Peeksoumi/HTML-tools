@@ -62,7 +62,7 @@
     </ul>
     <h3>Limites</h3><ul>
       <li>Le contrôle vérifie que l'adresse répond, pas que la carte s'affiche : un site peut changer sa page sans que l'adresse tombe en erreur.</li>
-      <li>Certains sites refusent les robots : leur lien est alors marqué « non vérifiable » sans alerte.</li>
+      <li>Mondial Relay, UPS et Vinted Go refusent les robots, même derrière un navigateur : le serveur ne peut pas contrôler leur lien (« non vérifiable », sans alerte), il faut l'essayer soi-même.</li>
       <li>Les paramètres de lieu pré-rempli ne sont pas documentés par les réseaux et peuvent cesser de fonctionner : saisis alors le lieu sur leur page.</li>
       <li>Tailles de colis acceptées, disponibilité d'un locker et fermetures exceptionnelles : à vérifier sur ton bordereau ou la fiche du point.</li>
     </ul>
@@ -78,12 +78,12 @@
     ] },
   { "id": "relaiscolis", "nom": "Relais Colis", "couleur": "#0a7d3b", "desc": "Relais commerçants Relais Colis.",
     "liens": [
-      { "id": "relaiscolis-site", "libelle": "Site Relais Colis", "url": "https://www.relaiscolis.com/" }
+      { "id": "relaiscolis-carte", "libelle": "Trouver un Relais Colis", "url": "https://relaiscolis.com/relais/trouver" }
     ] },
   { "id": "pickup", "nom": "Pickup / Chronopost", "couleur": "#c26a00", "desc": "Relais commerçants et consignes Pickup, réseau des envois Chronopost Shop2Shop.",
     "liens": [
       { "id": "pickup-carte", "libelle": "Carte Pickup", "url": "https://map.pickup.fr/", "lieu": "pickup" },
-      { "id": "chronopost-relais", "libelle": "Chronopost : points de proximité", "url": "https://www.chronopost.fr/fr/relais-pickup", "sec": true }
+      { "id": "chronopost-relais", "libelle": "Chronopost : points de proximité", "url": "https://www.chronopost.fr/expeditionAvanceeSec/ounoustrouver.html", "sec": true }
     ] },
   { "id": "colissimo", "nom": "La Poste / Colissimo", "couleur": "#1f4e9c", "desc": "Bureaux de poste, relais et consignes Pickup.",
     "liens": [
@@ -95,7 +95,7 @@
     ] },
   { "id": "dpd", "nom": "DPD", "couleur": "#b4175f", "desc": "Relais Pickup DPD (même réseau que Pickup).",
     "liens": [
-      { "id": "dpd-site", "libelle": "Site DPD France", "url": "https://www.dpd.fr/" }
+      { "id": "dpd-carte", "libelle": "Trouver mon point Pickup DPD", "url": "https://www.dpdgroup.com/fr/mydpd/parcel-shops/search" }
     ] },
   { "id": "vinted", "nom": "Vinted Go", "couleur": "#067f87", "desc": "Lockers et relais Vinted Go.",
     "liens": [
