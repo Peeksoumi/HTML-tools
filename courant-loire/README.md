@@ -16,6 +16,10 @@ et inversement, au **bac Lola** (Indret / Basse-Indre) et à **l'île de Nantes*
 5. **Correction à Lola** : + 20 min sur les renverses (médiane de l'écart à 12 renverses mesurées par la trajectoire du bac, 13→19/11/2026, mortes-eaux ; erreur moyenne ≈ 15 min après correction). Pas de correction à l'île de Nantes. Même valeur que `bac-lola`.
 6. **Débit** : lu à Montjean-sur-Loire (station M530001010) via l'API Hub'Eau, ou saisi à la main.
 
+## Affichage
+- **Graphique** (un par site) : niveau d'eau du jour, PM/BM avec heure, marnage et coefficient, renverses avec heure et incertitude (barre au pied du trait), bandes flot/jusant avec vitesse maximale, trait « maintenant ».
+- **Carte** (Leaflet + OpenStreetMap, connexion requise) : les deux sites, flèches jusant (aval, ouest) et flot (amont, est) aux caps approximatifs du chenal ; la flèche pleine indique le sens actuel ; un clic sur un repère ouvre l'état et les prochains changements.
+
 ## Précision
 Réaliste : **± 10 à 20 min**. Les tables du Port donnent des fourchettes de 10 à 30 min et l'étale est calée à ± 3 / ± 7 min ; vent, pression,
 affluents et morte-eau (coefficient < 45, étale de 1 à 3 h) ajoutent de l'incertitude. Pour descendre vers ± 5 min il faudrait caler le modèle

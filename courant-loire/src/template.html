@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Courant de la Loire — renverses au bac Lola et à l'île de Nantes</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231d6fb8'/%3E%3Ctext x='50' y='70' font-size='60' text-anchor='middle'%3E🌊%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
   :root { --bg:#f3f4f6; --card:#fff; --ink:#111827; --mute:#6b7280; --line:#e5e7eb; --acc:#4f46e5;
           --flot:#1d6fb8; --flot-bg:#dbeafe; --jus:#b45309; --jus-bg:#fde7c8; }
@@ -45,6 +46,11 @@
   summary { cursor:pointer; font-weight:600; }
   details ul { margin:8px 0 0; padding-left:20px; }
   .warn { font-size:.85rem; color:#7c2d12; background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; padding:8px 10px; margin-top:10px; }
+  #carte { height:380px; border-radius:10px; overflow:hidden; border:1px solid var(--line); }
+  .ic { background:none; border:0; }
+  .tt { font-weight:700; font-size:.8rem; line-height:1.3; text-align:center; }
+  .leg { background:#fffffff0; border-radius:8px; padding:6px 9px; font-size:.78rem; line-height:1.5; box-shadow:0 1px 4px rgba(0,0,0,.25); }
+  .leg b.j { color:var(--jus); } .leg b.f { color:var(--flot); }
   .fonct { margin-top:24px; padding:14px 16px; border:1px solid var(--line); border-radius:12px; background:var(--card); color:var(--ink); text-align:left; font-size:.88rem; line-height:1.45; }
   .fonct h2 { font-size:1rem; margin:0 0 4px; }
   .fonct h3 { font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; color:var(--mute); margin:12px 0 4px; }
@@ -55,7 +61,7 @@
 <div class="wrap">
   <div class="top">
     <a href="https://github.com/Peeksoumi/HTML-tools/issues/new?title=%5Bcourant-loire%5D%20&amp;body=Outil%20concern%C3%A9%20%3A%20courant-loire%20(http%3A%2F%2F141.227.151.70%3A8080%2Fcourant-loire%2F)%0A%0A**Ma%20suggestion%20ou%20le%20bug%20rencontr%C3%A9%20%3A**%0A%0A" target="_blank" rel="noopener">💡 Proposer une amélioration</a>
-    <a href="index.html" download="courant-loire.html" title="Enregistrer la page : le calcul fonctionne hors ligne ; seule la lecture automatique du débit (Hub'Eau) demande une connexion">⬇️ Télécharger la page</a>
+    <a href="index.html" download="courant-loire.html" title="Enregistrer la page : le calcul fonctionne hors ligne ; la lecture automatique du débit (Hub'Eau) et la carte (Leaflet, OpenStreetMap) demandent une connexion">⬇️ Télécharger la page</a>
   </div>
 
   <h1>Courant de la Loire : changements de sens</h1>
@@ -77,14 +83,21 @@
 
   <div class="sites" id="sites"></div>
 
+  <section class="panel">
+    <h2>Carte : sens du courant en ce moment</h2>
+    <div id="carte"></div>
+    <p class="hint" style="margin:8px 0 0">Touche un repère pour voir l'état du courant et les prochains changements. Flèche pleine = sens actuel, flèche pâle = sens à venir. Les caps des flèches suivent l'axe du chenal (approximatifs). Indique toujours l'instant présent, quel que soit le jour choisi.</p>
+  </section>
+
   <div class="fonct" id="fonctionnement">
     <h2>Fonctionnement et sources</h2>
-    <h3>Fonctionnement</h3><ul><li><b>Marée</b> : analyse harmonique des constantes REFMAR (Saint-Nazaire, Le Pellerin, Nantes Usine Brûlée et Salorges), interpolée pour Lola, calée sur 58 marées publiées par le SHOM ; coefficient d'après le marnage calculé à Brest.</li><li><b>Renverse du courant</b> = étale + décalage lu dans la table 5 du Port (Nantes Usine Brûlée, Cordemais), interpolé selon le coefficient, le débit et la position (Lola ≈ 15 % du trajet Nantes → Cordemais).</li><li>Courant de flot &lt; 0,3 nœud (crue) : aucune renverse annoncée.</li><li><b>Correction à Lola</b> : + 20 min, médiane de l'écart entre 12 renverses mesurées par la trajectoire du bac (13→19/11/2026) et les tables ; erreur moyenne ≈ 15 min après correction. Île de Nantes : sans correction.</li></ul>
-    <h3>Sources de données</h3><ul><li><b>Constantes harmoniques</b> : TICON-4, Hart-Davis, Dettmering &amp; Seitz (2025), SEANOE, doi 10.17882/109129 (CC BY 4.0).</li><li><b>Corrections de renverse</b> : Grand Port Maritime de Nantes Saint-Nazaire, « Horaires des marées – Tables de corrections » (table 5).</li><li><b>Calage</b> : SHOM (prédictions de marée). <b>Débit</b> : Vigicrues via Hub'Eau, station de Montjean-sur-Loire (saisie manuelle possible).</li></ul>
-    <h3>Limites</h3><ul><li><b>Précision réaliste : ± 10 à 20 min</b> (étale calée à ± 3 min en pleine mer, ± 7 min en basse mer ; tables du Port en fourchettes de 10 à 30 min).</li><li>Vent, pression, affluents et morte-eau (coefficient &lt; 45, étale de 1 à 3 h) peuvent décaler la réalité ; retard du débit (14 à 72 h) non géré ; positions de Lola et de l'île de Nantes approximatives.</li><li>Correction de Lola calée sur 12 renverses en mortes-eaux (coefficients 32 à 69, débit 200–310 m³/s) : à vérifier en vives-eaux et en crue.</li><li>Outil indicatif : ne remplace ni les avis à la batellerie ni la prudence du navigateur.</li></ul>
+    <h3>Fonctionnement</h3><ul><li><b>Marée</b> : analyse harmonique des constantes REFMAR (Saint-Nazaire, Le Pellerin, Nantes Usine Brûlée et Salorges), interpolée pour Lola, calée sur 58 marées publiées par le SHOM ; coefficient d'après le marnage calculé à Brest.</li><li><b>Renverse du courant</b> = étale + décalage lu dans la table 5 du Port (Nantes Usine Brûlée, Cordemais), interpolé selon le coefficient, le débit et la position (Lola ≈ 15 % du trajet Nantes → Cordemais).</li><li>Courant de flot &lt; 0,3 nœud (crue) : aucune renverse annoncée.</li><li><b>Graphique</b> : niveau d'eau du site sur la journée, avec les pleines et basses mers (heure, marnage, coefficient), les renverses (heure ± incertitude), le sens du courant et sa vitesse maximale.</li><li><b>Carte</b> : les deux sites sont placés avec le sens actuel du courant ; les flèches suivent l'axe du chenal (cap approximatif).</li><li><b>Correction à Lola</b> : + 20 min, médiane de l'écart entre 12 renverses mesurées par la trajectoire du bac (13→19/11/2026) et les tables ; erreur moyenne ≈ 15 min après correction. Île de Nantes : sans correction.</li></ul>
+    <h3>Sources de données</h3><ul><li><b>Constantes harmoniques</b> : TICON-4, Hart-Davis, Dettmering &amp; Seitz (2025), SEANOE, doi 10.17882/109129 (CC BY 4.0).</li><li><b>Corrections de renverse</b> : Grand Port Maritime de Nantes Saint-Nazaire, « Horaires des marées – Tables de corrections » (table 5).</li><li><b>Calage</b> : SHOM (prédictions de marée). <b>Débit</b> : Vigicrues via Hub'Eau, station de Montjean-sur-Loire (saisie manuelle possible).</li><li><b>Carte</b> : fond © contributeurs OpenStreetMap (ODbL), bibliothèque Leaflet 1.9.4 (BSD-2) chargée depuis unpkg : connexion requise, tuiles demandées aux serveurs d'OpenStreetMap.</li></ul>
+    <h3>Limites</h3><ul><li><b>Précision réaliste : ± 10 à 20 min</b> (étale calée à ± 3 min en pleine mer, ± 7 min en basse mer ; tables du Port en fourchettes de 10 à 30 min).</li><li>Vent, pression, affluents et morte-eau (coefficient &lt; 45, étale de 1 à 3 h) peuvent décaler la réalité ; retard du débit (14 à 72 h) non géré ; positions de Lola et de l'île de Nantes et caps des flèches approximatifs.</li><li>Correction de Lola calée sur 12 renverses en mortes-eaux (coefficients 32 à 69, débit 200–310 m³/s) : à vérifier en vives-eaux et en crue.</li><li>Outil indicatif : ne remplace ni les avis à la batellerie ni la prudence du navigateur.</li></ul>
   </div>
 </div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 /*CORE*/
 
@@ -125,10 +138,11 @@ function incertitude(r) {
 // Intervalles flot / jusant à partir des renverses (les flots « absents » laissent le jusant se poursuivre).
 function etats(renverses) {
   const ev = renverses.filter((r) => !r.absent).sort((a, b) => a.t - b.t);
-  return ev.map((r, i) => ({ dir: r.type, from: r.t, to: ev[i + 1] ? ev[i + 1].t : Infinity }));
+  return ev.map((r, i) => ({ dir: r.type, from: r.t, to: ev[i + 1] ? ev[i + 1].t : Infinity, v: r.v }));
 }
 
 let debit = 250;
+const etat = {}; // état du courant à l'instant présent, par site (pour la carte)
 // Lola : les renverses mesurées par la trajectoire du bac (12 renverses, 13→19/11/2026, mortes-eaux) arrivent en médiane 20 min après celles des tables.
 const CORRECTION_LOLA_MIN = 20; // même valeur que bac-lola/src/courant-wrapper.js
 
@@ -146,8 +160,10 @@ function render() {
     if (id === 'lola') r.renverses.forEach((x) => { x.t += CORRECTION_LOLA_MIN * MIN; x.tMin += CORRECTION_LOLA_MIN * MIN; x.tMax += CORRECTION_LOLA_MIN * MIN; });
     const ev = etats(r.renverses);
     out.push(carte(id, r, ev, day0, day1, now));
+    etat[id] = { cur: ev.find((e) => e.from <= now && now < e.to), next: ev.filter((e) => e.from > now).slice(0, 3) };
   }
   $('sites').innerHTML = out.join('');
+  majCarte();
 }
 
 function carte(id, r, ev, day0, day1, now) {
@@ -163,27 +179,11 @@ function carte(id, r, ev, day0, day1, now) {
       : '';
     nowHtml = `<div class="now ${cur.dir}"><span class="big">${isFlot ? '⬆️ Flot en cours' : '⬇️ Jusant en cours'}</span><span>depuis ${fmtT(cur.from)} · ${nextTxt}</span></div>`;
   }
-  // renverses du jour
-  const rows = r.renverses.filter((x) => x.t >= day0 && x.t < day1).sort((a, b) => a.t - b.t);
-  const lignes = rows.map((x) => {
-    const tag = x.type === 'flot' ? '<span class="tag flot">⬆️ Début du flot</span>' : '<span class="tag jusant">⬇️ Début du jusant</span>';
-    if (x.absent) {
-      return `<tr><td class="t mute">≈ ${fmtT(x.t)}</td><td>${tag}</td><td colspan="2" class="mute">Pas de renverse : le courant reste au jusant (débit élevé)</td></tr>`;
-    }
-    const etale = x.type === 'flot' ? 'BM' : 'PM';
-    const m = r.marees.reduce((best, y) => (y.type === etale && Math.abs(y.t - x.t) < Math.abs((best || { t: Infinity }).t - x.t) ? y : best), null);
-    return `<tr><td class="t">${fmtT(x.t)}<span class="mute" style="font-weight:400"> ± ${incertitude(x)} min</span></td>`
-      + `<td>${tag}</td><td>${etale} ${m ? fmtT(m.t) : ''}${x.neap ? ' <span class="mute">(morte-eau)</span>' : ''}</td>`
-      + `<td>≈ ${num1(x.v)} nœud${x.v >= 2 ? 's' : ''}</td></tr>`;
-  }).join('');
-  const tides = r.marees.filter((m) => m.t >= day0 && m.t < day1).sort((a, b) => a.t - b.t)
-    .map((m) => `${m.type === 'PM' ? 'Pleine mer' : 'Basse mer'} ${fmtT(m.t)}${m.marnage != null ? ` (marnage ${num1(m.marnage)} m)` : ''}`).join(' · ');
-  const coefs = r.marees.filter((m) => m.type === 'PM' && m.t >= day0 - 3 * HOUR && m.t < day1).map((m) => Math.round(m.coef));
-  return `<section class="panel"><h2>${site.nom}</h2>${nowHtml}`
-    + `<table><thead><tr><th>Heure</th><th>Changement</th><th>Étale</th><th>Courant max</th></tr></thead><tbody>${lignes || '<tr><td colspan="4" class="mute">Aucun changement ce jour-là.</td></tr>'}</tbody></table>`
-    + `<p class="tides">${tides}${coefs.length ? ` · coefficient ${coefs.join(' / ')}` : ''}</p>`
+  const neap = r.marees.some((m) => m.type === 'PM' && m.t >= day0 - 3 * HOUR && m.t < day1 && m.coef < 45);
+  return `<section class="panel" id="site-${id}"><h2>${site.nom}</h2>${nowHtml}`
     + graphique(r, ev, day0, day1, now)
-    + (coefs.some((c) => c < 45) ? '<p class="warn">Morte-eau : la pleine mer et la basse mer durent 1 à 3 h, l\'heure de renverse est moins sûre.</p>' : '')
+    + '<p class="hint" style="margin:6px 0 0">PM / BM : pleine / basse mer (marnage, C = coefficient). ≈ n nd : vitesse maximale du courant. Barre au pied d\'un trait : incertitude de la renverse. Trait rouge : maintenant.</p>'
+    + (neap ? '<p class="warn">Morte-eau : la pleine mer et la basse mer durent 1 à 3 h, l\'heure de renverse est moins sûre.</p>' : '')
     + '</section>';
 }
 
@@ -193,7 +193,7 @@ function dur(ms) {
 }
 
 function graphique(r, ev, day0, day1, now) {
-  const W = 640, H = 180, L = 8, R = 8, T = 26, B = 24;
+  const W = 360, H = 318, L = 8, R = 8, TOP = 50, BOT = 244, YH = 84, YB = 210;
   const x = (t) => L + ((t - day0) / (day1 - day0)) * (W - L - R);
   const pts = [];
   let lo = Infinity, hi = -Infinity;
@@ -202,22 +202,115 @@ function graphique(r, ev, day0, day1, now) {
     pts.push([t, h]);
     lo = Math.min(lo, h); hi = Math.max(hi, h);
   }
-  const y = (h) => T + (1 - (h - lo) / (hi - lo || 1)) * (H - T - B);
-  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Niveau d'eau et sens du courant sur la journée">`;
+  const y = (h) => YH + (1 - (h - lo) / (hi - lo || 1)) * (YB - YH);
+  const yAt = (t) => y(predict(r.station, t));
+  const ancre = (px) => (px < 42 ? ['start', L] : px > W - 42 ? ['end', W - R] : ['middle', px]);
+  const txt = (px, py, str, size, fill, weight) => {
+    const [anchor, tx] = ancre(px);
+    return `<text x="${tx.toFixed(1)}" y="${py}" text-anchor="${anchor}" font-size="${size}" font-weight="${weight || 400}" fill="${fill}" stroke="#ffffffcc" stroke-width="3" paint-order="stroke">${str}</text>`;
+  };
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Niveau d'eau, marées, renverses et sens du courant sur la journée">`;
+  // bandes flot / jusant, avec sens et vitesse maximale
   for (const e of ev) {
     const a = Math.max(e.from, day0), b = Math.min(e.to, day1);
     if (b <= a) continue;
-    const fill = e.dir === 'flot' ? '#dbeafe' : '#fde7c8';
-    s += `<rect x="${x(a).toFixed(1)}" y="${T - 18}" width="${(x(b) - x(a)).toFixed(1)}" height="${H - T - B + 18}" fill="${fill}"/>`;
-    if (x(b) - x(a) > 70) s += `<text x="${((x(a) + x(b)) / 2).toFixed(1)}" y="${T - 5}" text-anchor="middle" font-size="14" fill="${e.dir === 'flot' ? '#0b3a66' : '#5a2a02'}">${e.dir === 'flot' ? '⬆ flot' : '⬇ jusant'}</text>`;
+    const flot = e.dir === 'flot';
+    const w = x(b) - x(a), cx = (x(a) + x(b)) / 2, col = flot ? '#0b3a66' : '#5a2a02';
+    s += `<rect x="${x(a).toFixed(1)}" y="4" width="${w.toFixed(1)}" height="${BOT - 4}" fill="${flot ? '#dbeafe' : '#fde7c8'}"/>`;
+    if (w >= 64) {
+      s += `<text x="${cx.toFixed(1)}" y="21" text-anchor="middle" font-size="13" font-weight="700" fill="${col}">${flot ? '⬆ flot' : '⬇ jusant'}</text>`;
+      if (e.v != null) s += `<text x="${cx.toFixed(1)}" y="37" text-anchor="middle" font-size="12" fill="${col}">≈ ${num1(e.v)} nd</text>`;
+    } else if (w >= 30) {
+      s += `<text x="${cx.toFixed(1)}" y="21" text-anchor="middle" font-size="14" fill="${col}">${flot ? '⬆' : '⬇'}</text>`;
+      if (e.v != null) s += `<text x="${cx.toFixed(1)}" y="36" text-anchor="middle" font-size="10" fill="${col}">${num1(e.v)} nd</text>`;
+    }
   }
+  // grille horaire
   for (let h = 0; h <= 24; h += 3) {
     const tx = L + (h / 24) * (W - L - R);
-    s += `<line x1="${tx}" x2="${tx}" y1="${T}" y2="${H - B}" stroke="#00000014"/><text x="${tx}" y="${H - 7}" text-anchor="middle" font-size="13" fill="#6b7280">${h}h</text>`;
+    s += `<line x1="${tx}" x2="${tx}" y1="${TOP}" y2="${BOT}" stroke="#00000014"/><text x="${tx}" y="${H - 6}" text-anchor="${h === 0 ? 'start' : h === 24 ? 'end' : 'middle'}" font-size="11" fill="#6b7280">${h}h</text>`;
   }
-  s += `<polyline fill="none" stroke="#111827" stroke-width="1.6" points="${pts.map((p) => `${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join(' ')}"/>`;
-  if (now >= day0 && now < day1) s += `<line x1="${x(now).toFixed(1)}" x2="${x(now).toFixed(1)}" y1="${T - 18}" y2="${H - B}" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+  s += `<line x1="${L}" x2="${W - R}" y1="${BOT}" y2="${BOT}" stroke="#9ca3af"/>`;
+  // courbe de marée
+  s += `<polyline fill="none" stroke="#111827" stroke-width="1.8" points="${pts.map((p) => `${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join(' ')}"/>`;
+  // pleines et basses mers : heure, marnage, coefficient
+  for (const m of r.marees.filter((q) => q.t >= day0 && q.t < day1)) {
+    const px = x(m.t), py = yAt(m.t), pm = m.type === 'PM';
+    s += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="3.5" fill="#111827"/>`;
+    const mar = m.marnage != null ? `${num1(m.marnage)} m` : '';
+    s += txt(px, (pm ? py - 20 : py + 17).toFixed(1), `${m.type} ${fmtT(m.t)}`, 12, '#111827', 700);
+    s += txt(px, (pm ? py - 7 : py + 30).toFixed(1), pm ? `${mar}${mar ? ' · ' : ''}C ${Math.round(m.coef)}` : mar, 11, '#4b5563');
+  }
+  // renverses : trait, barre d'incertitude, heure
+  for (const q of r.renverses.filter((v) => v.t >= day0 && v.t < day1)) {
+    const px = x(q.t), flot = q.type === 'flot', col = flot ? '#1d6fb8' : '#b45309';
+    if (q.absent) {
+      s += `<line class="rv" x1="${px.toFixed(1)}" x2="${px.toFixed(1)}" y1="4" y2="${BOT}" stroke="#6b7280" stroke-dasharray="3 3"/>`;
+      s += txt(px, BOT + 16, `≈ ${fmtT(q.t)}`, 12, '#6b7280', 700) + txt(px, BOT + 29, 'sans flot', 10, '#6b7280');
+      continue;
+    }
+    const inc = incertitude(q), half = (inc * MIN / (day1 - day0)) * (W - L - R);
+    s += `<line class="rv" x1="${px.toFixed(1)}" x2="${px.toFixed(1)}" y1="4" y2="${BOT}" stroke="${col}" stroke-width="1.5"/>`;
+    s += `<rect x="${(px - half).toFixed(1)}" y="${BOT - 8}" width="${(2 * half).toFixed(1)}" height="8" fill="${col}" opacity=".45"/>`;
+    s += txt(px, BOT + 16, `${flot ? '⬆' : '⬇'} ${fmtT(q.t)}`, 13, col, 700) + txt(px, BOT + 29, `± ${inc} min`, 10, '#6b7280');
+  }
+  // maintenant
+  if (now >= day0 && now < day1) {
+    const nx = x(now);
+    s += `<line x1="${nx.toFixed(1)}" x2="${nx.toFixed(1)}" y1="4" y2="${BOT + 38}" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+    s += `<circle cx="${nx.toFixed(1)}" cy="${yAt(now).toFixed(1)}" r="4" fill="#dc2626"/>`;
+    s += txt(nx, BOT + 50, `▲ ${fmtT(now)}`, 11, '#dc2626', 700);
+  }
   return s + '</svg>';
+}
+
+// ---------------------------------------------------------------- Carte
+// Cap (° depuis le nord, sens horaire) de l'écoulement vers l'aval (jusant) ; le flot va à l'opposé. Approximatif.
+const CAP_JUSANT = { lola: 258, nantes: 255 };
+let carteL = null;
+const reperes = {};
+
+function iconeSite(id, dirActuelle) {
+  const S = 170, C = S / 2;
+  const fleche = (cap, dir) => {
+    const col = dir === 'flot' ? '#1d6fb8' : '#b45309', actif = dir === dirActuelle, a = (cap * Math.PI) / 180;
+    return `<g transform="rotate(${cap} ${C} ${C})" opacity="${actif ? 1 : 0.45}"><line x1="${C}" y1="${C - 12}" x2="${C}" y2="${C - 38}" stroke="${col}" stroke-width="${actif ? 7 : 4}"${actif ? '' : ' stroke-dasharray="5 4"'}/><polygon points="${C},${C - 50} ${C - 11},${C - 34} ${C + 11},${C - 34}" fill="${col}"/></g>`
+      + `<text x="${(C + 66 * Math.sin(a)).toFixed(1)}" y="${(C - 66 * Math.cos(a) + 4).toFixed(1)}" text-anchor="middle" font-size="12" font-weight="700" fill="${col}" stroke="#fff" stroke-width="3" paint-order="stroke">${dir === 'flot' ? 'flot' : 'jusant'}</text>`;
+  };
+  const cap = CAP_JUSANT[id];
+  const centre = dirActuelle === 'flot' ? '#1d6fb8' : dirActuelle === 'jusant' ? '#b45309' : '#6b7280';
+  return L.divIcon({
+    className: 'ic', iconSize: [S, S], iconAnchor: [C, C],
+    html: `<svg width="${S}" height="${S}" viewBox="0 0 ${S} ${S}">${fleche(cap, 'jusant')}${fleche(cap + 180, 'flot')}<circle cx="${C}" cy="${C}" r="8" fill="${centre}" stroke="#fff" stroke-width="3"/></svg>`,
+  });
+}
+
+function majCarte() {
+  const el = $('carte');
+  if (typeof L === 'undefined') { el.innerHTML = '<p class="hint" style="padding:12px">Carte indisponible : connexion requise (Leaflet, OpenStreetMap).</p>'; return; }
+  if (!carteL) {
+    carteL = L.map(el, { scrollWheelZoom: false });
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(carteL);
+    carteL.fitBounds(Object.values(SITES).map((s) => [s.lat, s.lon]), { padding: [60, 60] });
+    const leg = L.control({ position: 'bottomleft' });
+    leg.onAdd = () => { const d = L.DomUtil.create('div', 'leg'); d.innerHTML = '<b class="j">⬇ Jusant</b> : vers l\'aval, la mer (ouest)<br><b class="f">⬆ Flot</b> : vers l\'amont, Nantes (est)'; return d; };
+    leg.addTo(carteL);
+  }
+  for (const id of Object.keys(SITES)) {
+    const e = etat[id];
+    if (!e) continue;
+    const dir = e.cur ? e.cur.dir : null;
+    const suiv = e.next.map((n) => `${n.dir === 'flot' ? '⬆ flot' : '⬇ jusant'} à <b>${fmtT(n.from)}</b>`).join('<br>');
+    const etatTxt = dir ? `${dir === 'flot' ? '⬆️ Flot' : '⬇️ Jusant'} en cours depuis ${fmtT(e.cur.from)}` : 'Sens du courant indéterminé';
+    const court = dir ? `${dir === 'flot' ? '⬆ Flot' : '⬇ Jusant'}${e.next[0] ? ` · change à ${fmtT(e.next[0].from)}` : ''}` : '';
+    const popup = `<b>${SITES[id].nom}</b><br>${etatTxt}${suiv ? `<br><span class="mute">Ensuite :</span><br>${suiv}` : ''}<br><a href="#site-${id}">Voir le graphique ↓</a>`;
+    if (!reperes[id]) {
+      reperes[id] = L.marker([SITES[id].lat, SITES[id].lon], { icon: iconeSite(id, dir), keyboard: true, title: SITES[id].nom }).addTo(carteL)
+        .bindPopup(popup).bindTooltip(`${SITES[id].nom}<br>${court}`, { permanent: true, direction: 'bottom', offset: [0, 14], className: 'tt' });
+    } else {
+      reperes[id].setIcon(iconeSite(id, dir)).setPopupContent(popup).setTooltipContent(`${SITES[id].nom}<br>${court}`);
+    }
+  }
 }
 
 async function chargerDebit() {
