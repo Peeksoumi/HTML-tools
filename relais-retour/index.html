@@ -5,51 +5,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Relais de retour colis</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23d97706'/%3E%3Ctext x='50' y='70' font-size='60' text-anchor='middle'%3E📦%3C/text%3E%3C/svg%3E">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-  :root { --bg:#f6f7f9; --card:#fff; --txt:#1c2330; --mut:#667085; --ok:#12a150; --ko:#d92d20; --warn:#dc6803; --pri:#2563eb; --bd:#e4e7ec; }
+  :root { --bg:#f6f7f9; --card:#fff; --txt:#1c2330; --mut:#667085; --pri:#2563eb; --bd:#e4e7ec; }
   @media (prefers-color-scheme: dark) { :root { --bg:#10141b; --card:#1a202b; --txt:#e8ecf3; --mut:#98a2b3; --bd:#2b3442; } }
   * { box-sizing:border-box; }
   body { margin:0; font:16px/1.45 system-ui,sans-serif; background:var(--bg); color:var(--txt); }
-  main { max-width:960px; margin:0 auto; padding:12px; }
+  main { max-width:760px; margin:0 auto; padding:12px; }
   .top { display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; }
   .top a { font-size:.85rem; color:var(--txt); text-decoration:none; border:1px solid var(--bd); background:var(--card); border-radius:8px; padding:5px 10px; }
   h1 { font-size:1.35rem; margin:.5rem 0 .2rem; }
   .lead { color:var(--mut); margin:0 0 .7rem; font-size:.92rem; }
   .card { background:var(--card); border:1px solid var(--bd); border-radius:12px; padding:12px; margin-bottom:10px; }
-  form { display:flex; flex-wrap:wrap; gap:8px; }
-  input[type=search], select, button { font:inherit; padding:9px 11px; border-radius:9px; border:1px solid var(--bd); background:var(--card); color:var(--txt); }
-  input[type=search] { flex:1 1 240px; }
-  button { cursor:pointer; background:var(--pri); color:#fff; border:0; }
-  button.sec { background:var(--card); color:var(--txt); border:1px solid var(--bd); }
-  .filtres { display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:10px; font-size:.9rem; }
-  .filtres h3 { width:100%; margin:4px 0 0; font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--mut); }
-  .filtres label { display:inline-flex; align-items:center; gap:5px; cursor:pointer; }
-  .pt { width:10px; height:10px; border-radius:50%; display:inline-block; }
-  #msg { margin:.5rem 0; color:var(--mut); min-height:1.3em; font-size:.92rem; }
-  #msg.err { color:var(--ko); }
-  #fraicheur { color:var(--mut); font-size:.8rem; margin:0 0 8px; }
-  #map { height:360px; border-radius:12px; border:1px solid var(--bd); }
-  .mapbar { display:flex; flex-wrap:wrap; gap:8px; margin:8px 0; align-items:center; }
-  ul.liste { list-style:none; padding:0; margin:0; display:grid; gap:8px; }
-  .liste li { background:var(--card); border:1px solid var(--bd); border-radius:10px; padding:10px 12px; }
-  .liste li.sel { border-color:var(--pri); }
-  .l1 { display:flex; justify-content:space-between; gap:10px; align-items:baseline; }
-  .l1 b { font-size:1rem; }
-  .dist { white-space:nowrap; font-weight:600; }
-  .adr { color:var(--mut); font-size:.88rem; }
-  .badge { display:inline-block; font-size:.72rem; border:1px solid var(--bd); border-radius:99px; padding:0 7px; margin-right:4px; color:var(--mut); }
-  .badge.res { color:#fff; border:0; }
-  .ok { color:var(--ok); } .ko { color:var(--ko); } .w { color:var(--warn); }
-  .actions { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
-  .actions a { font-size:.88rem; text-decoration:none; border-radius:8px; padding:6px 10px; border:1px solid var(--bd); color:var(--txt); }
-  .actions a.go { background:var(--pri); color:#fff; border-color:var(--pri); }
-  details.card > summary { cursor:pointer; color:var(--mut); }
-  details.h { margin-top:6px; font-size:.86rem; }
-  details.h summary { cursor:pointer; color:var(--mut); }
-  details.h table { border-collapse:collapse; margin-top:4px; }
-  details.h td { padding:1px 10px 1px 0; }
-  .hide { display:none; }
+  .lieu label { display:block; font-size:.9rem; margin-bottom:6px; }
+  input[type=search] { width:100%; font:inherit; padding:9px 11px; border-radius:9px; border:1px solid var(--bd); background:var(--card); color:var(--txt); }
+  .hint { color:var(--mut); font-size:.82rem; margin:6px 0 0; }
+  .res h2 { font-size:1.05rem; margin:0 0 2px; display:flex; align-items:center; gap:8px; }
+  .pt { width:11px; height:11px; border-radius:50%; display:inline-block; flex:none; }
+  .res .desc { color:var(--mut); font-size:.88rem; margin:0 0 8px; }
+  .liens { display:flex; flex-wrap:wrap; gap:6px; }
+  .liens a { font-size:.92rem; text-decoration:none; border-radius:9px; padding:8px 12px; border:1px solid var(--pri); background:var(--pri); color:#fff; }
+  .liens a.sec { background:var(--card); color:var(--txt); border-color:var(--bd); }
   .fonct { margin-top:24px; padding:14px 16px; border:1px solid var(--bd); border-radius:12px; background:var(--card); color:var(--txt); text-align:left; font-size:.88rem; line-height:1.45; }
   .fonct h2 { font-size:1rem; margin:0 0 4px; }
   .fonct h3 { font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; color:var(--mut); margin:12px 0 4px; }
@@ -60,525 +35,108 @@
 <main>
   <div class="top">
     <a href="https://github.com/Peeksoumi/HTML-tools/issues/new?title=%5Brelais-retour%5D%20&amp;body=Outil%20concern%C3%A9%20%3A%20relais-retour%20(http%3A%2F%2F141.227.151.70%3A8080%2Frelais-retour%2F)%0A%0A**Ma%20suggestion%20ou%20le%20bug%20rencontr%C3%A9%20%3A**%0A%0A" target="_blank" rel="noopener">💡 Proposer une amélioration</a>
-    <a href="index.html" download="relais-retour.html" title="Enregistrer la page (connexion internet requise : carte Leaflet, données OpenStreetMap, recherche d'adresse)">⬇️ Télécharger la page</a>
+    <a href="index.html" download="relais-retour.html" title="Enregistrer la page (connexion internet requise pour ouvrir les cartes des réseaux)">⬇️ Télécharger la page</a>
   </div>
   <h1>📦 Où rapporter mon colis ?</h1>
-  <p class="lead">Points Mondial Relay (commerces et lockers) et autres réseaux de dépôt autour de toi, avec horaires et itinéraire.</p>
+  <p class="lead">Un lien vers la carte des points relais et lockers de chaque réseau, sur son site officiel. Choisis le réseau de ton bordereau de retour.</p>
 
-  <div class="card">
-    <form id="f">
-      <input type="search" id="q" placeholder="Ville, adresse… ou « 47.2184, -1.5536 »" autocomplete="off">
-      <select id="rayon" title="Rayon de recherche">
-        <option value="1000">1 km</option><option value="3000" selected>3 km</option>
-        <option value="5000">5 km</option><option value="10000">10 km</option>
-      </select>
-      <button type="submit">Chercher</button>
-      <button type="button" class="sec" id="geo">📍 Ma position</button>
-    </form>
-    <div class="filtres">
-      <h3>Réseau du bordereau de retour</h3>
-      <span id="fres"></span>
-      <h3>Type de point</h3>
-      <span id="ftype"></span>
-      <h3>Affichage</h3>
-      <label><input type="checkbox" id="fouvert"> Ouvert maintenant uniquement</label>
-      <label>Itinéraire :
-        <select id="mode"><option value="walking">à pied</option><option value="driving">en voiture</option><option value="transit">en transports</option><option value="bicycling">à vélo</option></select>
-      </label>
-    </div>
+  <div class="card lieu">
+    <label for="q">Ville ou code postal <span class="hint">(facultatif)</span></label>
+    <input type="search" id="q" placeholder="Ex. 44000 ou Nantes" autocomplete="off">
+    <p class="hint">Si tu le renseignes, les liens marqués « lieu pré-rempli » ouvrent la carte déjà centrée sur ce lieu.</p>
   </div>
 
-  <details class="card" id="sources">
-    <summary>⚙️ Sources de données</summary>
-    <div class="filtres">
-      <label><input type="checkbox" id="s-osm" checked> OpenStreetMap (en direct, sans clé)</label>
-      <label><input type="checkbox" id="s-api"> API relais (serveur)</label>
-      <input type="search" id="s-url" placeholder="https://…/api/relais  (reçoit ?lat=&amp;lon=&amp;rayon=)" style="flex:1 1 280px">
-      <input type="search" id="s-token" placeholder="Jeton Bearer (facultatif)" autocomplete="off" style="flex:1 1 180px">
-      <span class="adr" style="width:100%">L'API reçoit la position de départ et le rayon. Le jeton reste dans ce navigateur et n'est envoyé qu'à cette URL. Format attendu : voir le README. Les clés Mondial Relay, DPD ou Sendcloud ne doivent jamais être saisies ici : elles restent sur le serveur qui expose cette API.</span>
-    </div>
-  </details>
-
-  <div id="msg">Indique une position (adresse ou 📍) pour lancer la recherche : aucune requête n'est envoyée avant.</div>
-  <div id="fraicheur"></div>
-  <div id="officiels" class="adr"></div>
-  <div id="map"></div>
-  <div class="mapbar">
-    <button type="button" class="sec" id="ici" disabled>🔍 Chercher au centre de la carte</button>
-    <button type="button" class="sec" id="refresh" disabled title="Ignorer le cache et recharger la base OpenStreetMap">🔄 Actualiser les données</button>
-    <span id="nb" style="color:var(--mut);font-size:.9rem"></span>
-  </div>
-  <ul class="liste" id="liste"></ul>
+  <div id="reseaux"></div>
 
   <div class="fonct" id="fonctionnement">
     <h2>Fonctionnement et sources</h2>
     <h3>Fonctionnement</h3><ul>
-      <li><b>Recherche</b> : rien n'est envoyé tant que la position de départ n'est pas connue ; ensuite chaque source activée est interrogée en parallèle autour de cette position (rayon au choix).</li>
-      <li><b>Fusion</b> : les points d'un même réseau et type à moins de 40 m sont regroupés ; l'API relais, si elle est activée, l'emporte et est complétée par OpenStreetMap.</li>
-      <li><b>API relais</b> : toute API (Mondial Relay, DPD, Sendcloud…) se branche via un petit serveur qui garde la clé et renvoie le format du README ; l'URL se règle dans « Sources de données ».</li>
-      <li><b>Réseau</b> : déduit des étiquettes OSM (marque, opérateur, nom). <b>Type</b> : locker = <code>amenity=parcel_locker</code> ; bureau de poste = <code>amenity=post_office</code> ; sinon point relais en commerce.</li>
-      <li><b>Mise à jour</b> : la base OSM est modifiée en continu ; la page recharge les données à chaque nouvelle zone et garde 24 h de cache dans ton navigateur (bouton « Actualiser » pour forcer).</li>
-      <li><b>Horaires</b> : lus dans la balise <code>opening_hours</code> d'OSM et comparés à l'heure de Paris ; le bouton « Horaires » ouvre la fiche Google Maps du lieu pour recouper.</li>
-      <li><b>Sites officiels</b> : des liens vers la recherche Mondial Relay et Pickup / Chronopost s'ouvrent avec le code postal et la ville du départ pré-remplis (déduits de la position).</li>
-      <li><b>Confidentialité</b> : ta position et ta recherche sont envoyées aux services listés ci-dessous, et à l'API relais si tu l'actives ; rien n'est envoyé à un serveur du site sans cela.</li>
+      <li><b>Liens</b> : chaque réseau a un ou plusieurs liens vers la carte de son propre site ; un clic ouvre le site officiel dans un nouvel onglet.</li>
+      <li><b>Lieu pré-rempli</b> : si tu saisis une ville ou un code postal, il est ajouté en paramètre d'URL pour Mondial Relay et Pickup ; les autres sites se remplissent sur leur page.</li>
+      <li><b>Vérification des liens</b> : un contrôleur tourne sur le serveur du site toutes les 6 h, teste chaque lien de cette page (réponse HTTP) et envoie une alerte push si l'un d'eux reste en panne.</li>
+      <li><b>Sur ton appareil</b> : la liste est dans la page (aucune requête avant ton clic) ; ta saisie n'est envoyée qu'au site du réseau que tu ouvres.</li>
     </ul>
     <h3>Sources de données</h3><ul>
-      <li><b>OpenStreetMap via Overpass API</b> : emplacement, réseau, adresse, horaires des points (ODbL, © contributeurs OpenStreetMap).</li>
-      <li><b>API relais (facultative)</b> : points d'un serveur que tu indiques (ex. Mondial Relay officiel) ; conditions de la source concernée.</li>
-      <li><b>Nominatim</b> : transformation d'une ville ou adresse en coordonnées, et l'inverse (code postal et ville du départ) ; liens sortants vers mondialrelay.fr et map.pickup.fr, qui reçoivent ce lieu quand tu cliques.</li>
-      <li><b>Leaflet + tuiles OpenStreetMap</b> : affichage de la carte (chargé depuis unpkg.com).</li>
-      <li><b>Google Maps</b> (liens uniquement) : itinéraire et fiche du lieu, ouverts sur ton action ; aucune clé ni donnée Google n'est lue par la page.</li>
+      <li><b>Sites officiels des réseaux</b> : Mondial Relay, Relais Colis, Pickup / Chronopost, La Poste / Colissimo, UPS Access Point, DPD, Vinted Go ; chaque carte et ses données appartiennent à son réseau et suivent ses conditions.</li>
+      <li><b>Aucune autre donnée externe</b> : pas de bibliothèque ni de service tiers chargé par la page.</li>
     </ul>
     <h3>Limites</h3><ul>
-      <li>Mondial Relay ne publie pas la liste de son réseau (son API répond à une recherche à la fois, avec identifiants client) : seuls les points <b>saisis dans OSM</b> apparaissent, donc la liste est incomplète.</li>
-      <li>Le pré-remplissage dépend des paramètres d'URL acceptés par chaque site officiel (non documentés) : si le lieu n'apparaît pas, saisis-le sur leur page.</li>
-      <li>Les tailles de colis acceptées, la disponibilité d'un locker et les fermetures exceptionnelles ne sont pas connues ; vérifie sur ton bordereau ou la fiche Google Maps.</li>
-      <li>Horaires OSM saisis par des bénévoles : parfois absents ou périmés. Jours fériés et vacances (<code>PH</code>, <code>SH</code>) ignorés ; heure de Paris supposée.</li>
+      <li>Le contrôle vérifie que l'adresse répond, pas que la carte s'affiche : un site peut changer sa page sans que l'adresse tombe en erreur.</li>
+      <li>Certains sites refusent les robots : leur lien est alors marqué « non vérifiable » sans alerte.</li>
+      <li>Les paramètres de lieu pré-rempli ne sont pas documentés par les réseaux et peuvent cesser de fonctionner : saisis alors le lieu sur leur page.</li>
+      <li>Tailles de colis acceptées, disponibilité d'un locker et fermetures exceptionnelles : à vérifier sur ton bordereau ou la fiche du point.</li>
     </ul>
   </div>
 </main>
 
-<script id="core">
-// ---- Logique pure (testée dans relais-retour/tests/test_core.js) ----
-const RESEAUX = {
-  mondial:    { nom: 'Mondial Relay',        couleur: '#d9261c', re: /mondial\s*-?\s*relay|mondialrelay/i },
-  relaiscolis:{ nom: 'Relais Colis',         couleur: '#0a7d3b', re: /relais\s*-?\s*colis/i },
-  pickup:     { nom: 'Pickup / Chronopost',  couleur: '#c26a00', re: /pick\s*-?\s*up|chrono\s*-?\s*relais|chronopost/i },
-  colissimo:  { nom: 'La Poste / Colissimo', couleur: '#1f4e9c', re: /colissimo|la\s*poste/i },
-  ups:        { nom: 'UPS Access Point',     couleur: '#6b4a1b', re: /(^|[^a-z])ups([^a-z]|$)/i },
-  dpd:        { nom: 'DPD',                  couleur: '#b4175f', re: /(^|[^a-z])dpd([^a-z]|$)/i },
-  vinted:     { nom: 'Vinted Go',            couleur: '#067f87', re: /vinted/i },
-  autre:      { nom: 'Autres réseaux',       couleur: '#667085', re: null },
-};
-const TYPES = {
-  commerce: 'Point Relais (commerce)',
-  locker: 'Locker (consigne automatique)',
-  poste: 'Bureau de poste',
-};
-const REGEX_OVERPASS = 'mondial ?-?relay|mondialrelay|relais ?-?colis|pick ?-?up|chrono ?-?relais|chronopost|colissimo|vinted|(^|[^a-z])(ups|dpd)([^a-z]|$)';
+<!-- Source unique des liens : lue par la page ET par le contrôleur du serveur (private/relais_liens/check_liens.py). Un lien = id, libelle, url ; "lieu" = pré-remplissage (mondial | pickup). -->
+<script type="application/json" id="liens">
+[
+  { "id": "mondial", "nom": "Mondial Relay", "couleur": "#d9261c", "desc": "Points Relais (commerces) et Lockers.",
+    "liens": [
+      { "id": "mondial-carte", "libelle": "Carte Mondial Relay", "url": "https://www.mondialrelay.fr/trouver-le-point-relais-le-plus-proche-de-chez-moi/", "lieu": "mondial" }
+    ] },
+  { "id": "relaiscolis", "nom": "Relais Colis", "couleur": "#0a7d3b", "desc": "Relais commerçants Relais Colis.",
+    "liens": [
+      { "id": "relaiscolis-site", "libelle": "Site Relais Colis", "url": "https://www.relaiscolis.com/" }
+    ] },
+  { "id": "pickup", "nom": "Pickup / Chronopost", "couleur": "#c26a00", "desc": "Relais commerçants et consignes Pickup, réseau des envois Chronopost Shop2Shop.",
+    "liens": [
+      { "id": "pickup-carte", "libelle": "Carte Pickup", "url": "https://map.pickup.fr/", "lieu": "pickup" },
+      { "id": "chronopost-relais", "libelle": "Chronopost : points de proximité", "url": "https://www.chronopost.fr/fr/relais-pickup", "sec": true }
+    ] },
+  { "id": "colissimo", "nom": "La Poste / Colissimo", "couleur": "#1f4e9c", "desc": "Bureaux de poste, relais et consignes Pickup.",
+    "liens": [
+      { "id": "laposte-localiser", "libelle": "Localiser un bureau ou un point de retrait", "url": "https://localiser.laposte.fr/" }
+    ] },
+  { "id": "ups", "nom": "UPS Access Point", "couleur": "#6b4a1b", "desc": "Commerces de proximité UPS Access Point.",
+    "liens": [
+      { "id": "ups-depot", "libelle": "Dépôts et Access Points UPS", "url": "https://www.ups.com/dropoff?loc=fr_FR" }
+    ] },
+  { "id": "dpd", "nom": "DPD", "couleur": "#b4175f", "desc": "Relais Pickup DPD (même réseau que Pickup).",
+    "liens": [
+      { "id": "dpd-site", "libelle": "Site DPD France", "url": "https://www.dpd.fr/" }
+    ] },
+  { "id": "vinted", "nom": "Vinted Go", "couleur": "#067f87", "desc": "Lockers et relais Vinted Go.",
+    "liens": [
+      { "id": "vinted-site", "libelle": "Site Vinted Go", "url": "https://vintedgo.com/fr" }
+    ] }
+]
+</script>
 
-function construireRequete(lat, lon, rayon) {
-  const a = `(around:${Math.round(rayon)},${lat.toFixed(5)},${lon.toFixed(5)})`;
-  const par = ['brand', 'operator', 'post_office:brand', 'name']
-    .map(k => `nwr${a}["${k}"~"${REGEX_OVERPASS}",i]["amenity"!="post_box"];`).join('');
-  return `[out:json][timeout:25];(${par}nwr${a}["amenity"="parcel_locker"];nwr${a}["amenity"="post_office"];nwr${a}["post_office"="post_partner"];);out center tags;`;
-}
+<script id="app">
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const RESEAUX = JSON.parse($('liens').textContent);
 
-function reseauDe(t) {
-  const texte = [t.brand, t.operator, t.name, t['post_office:brand'], t['post_office:service_provider']].filter(Boolean).join(' | ');
-  for (const k of ['mondial', 'relaiscolis', 'pickup', 'vinted', 'colissimo', 'ups', 'dpd']) {
-    if (RESEAUX[k].re.test(texte)) return k;
+// URL du lien, avec le lieu saisi pré-rempli quand le site officiel l'accepte (lieu = « 44000 » ou « Nantes »).
+function urlLien(lien, lieu) {
+  const t = (lieu || '').trim();
+  if (!t || !lien.lieu) return lien.url;
+  const u = new URL(lien.url);
+  if (lien.lieu === 'mondial') {
+    const cp = t.match(/\b\d{5}\b/), ville = t.replace(/\b\d{5}\b/, '').replace(/\s+/g, ' ').trim();
+    u.searchParams.set('codePostal', cp ? cp[0] : '');
+    u.searchParams.set('ville', ville);
+  } else if (lien.lieu === 'pickup') {
+    u.searchParams.set('pudo_keyword', t);
+    u.searchParams.set('lang', 'fr');
   }
-  if (t.amenity === 'post_office' && !texte) return 'colissimo';
-  return 'autre';
-}
-
-function typeDe(t) {
-  if (t.amenity === 'parcel_locker') return 'locker';
-  if (t.amenity === 'post_office') return 'poste';
-  return 'commerce';
-}
-
-function normaliser(elements) {
-  const out = [];
-  for (const e of elements || []) {
-    const t = e.tags || {};
-    if (t.amenity === 'post_box') continue;
-    const lat = e.lat ?? (e.center && e.center.lat), lon = e.lon ?? (e.center && e.center.lon);
-    if (typeof lat !== 'number' || typeof lon !== 'number') continue;
-    const reseau = reseauDe(t), type = typeDe(t);
-    // Un « autre » sans locker ni point postal partenaire n'est pas un point de dépôt
-    if (reseau === 'autre' && type === 'commerce' && t.post_office !== 'post_partner') continue;
-    const rue = [t['addr:housenumber'], t['addr:street']].filter(Boolean).join(' ');
-    const ville = [t['addr:postcode'], t['addr:city']].filter(Boolean).join(' ');
-    out.push({
-      id: `${e.type}/${e.id}`, lat, lon, reseau, type,
-      nom: t.name || t.brand || t.operator || RESEAUX[reseau].nom,
-      adresse: [rue, ville].filter(Boolean).join(', '),
-      horaires: t.opening_hours || '', sources: ['osm'],
-    });
-  }
-  return out;
-}
-
-function distanceM(lat1, lon1, lat2, lon2) {
-  const r = Math.PI / 180, R = 6371000;
-  const dLat = (lat2 - lat1) * r, dLon = (lon2 - lon1) * r;
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * r) * Math.cos(lat2 * r) * Math.sin(dLon / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(h));
-}
-
-// --- opening_hours (sous-ensemble courant) ---
-const J = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
-const JOURS_FR = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
-const hm = s => { const [h, m] = s.split(':').map(Number); return h * 60 + m; };
-
-function parseHoraires(s) {
-  if (!s) return null;
-  s = s.trim();
-  if (/^24\/7$/.test(s)) return Array.from({ length: 7 }, () => [[0, 1440]]);
-  const sem = Array.from({ length: 7 }, () => null);
-  const debord = Array.from({ length: 7 }, () => []);
-  for (const brut of s.split(';')) {
-    const r = brut.trim(); if (!r) continue;
-    const m = r.match(/^([A-Za-z,\- ]*?)\s*((?:\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}[\s,]*)+|off|closed)$/i);
-    if (!m) return null;
-    const jours = new Set();
-    let seulementFerie = false;
-    const sel = m[1].trim();
-    if (!sel) J.forEach((_, i) => jours.add(i));
-    else {
-      let ferie = 0, tot = 0;
-      for (const tok of sel.split(',').map(x => x.trim()).filter(Boolean)) {
-        tot++;
-        if (/^(PH|SH)$/i.test(tok)) { ferie++; continue; }
-        const mm = tok.match(/^([A-Za-z]{2})(?:\s*-\s*([A-Za-z]{2}))?$/);
-        if (!mm) return null;
-        const a = J.findIndex(x => x.toLowerCase() === mm[1].toLowerCase());
-        const b = mm[2] ? J.findIndex(x => x.toLowerCase() === mm[2].toLowerCase()) : a;
-        if (a < 0 || b < 0) return null;
-        for (let i = a; ; i = (i + 1) % 7) { jours.add(i); if (i === b) break; }
-      }
-      seulementFerie = ferie === tot;
-    }
-    if (seulementFerie) continue;
-    const plages = [];
-    if (!/^(off|closed)$/i.test(m[2])) {
-      for (const p of m[2].split(',').map(x => x.trim()).filter(Boolean)) {
-        const [d, f] = p.split('-').map(x => x.trim());
-        const a = hm(d), b = hm(f);
-        if (!(a >= 0 && a <= 1440 && b >= 0 && b <= 1440)) return null;
-        plages.push(b > a ? [a, b] : [a, 1440, b]);
-      }
-    }
-    for (const i of jours) {
-      sem[i] = plages.map(p => [p[0], p[1]]);
-      debord[(i + 1) % 7] = debord[(i + 1) % 7].concat(plages.filter(p => p.length === 3).map(p => [0, p[2]]));
-    }
-  }
-  return sem.map((p, i) => (p || []).concat(debord[i]));
-}
-
-function parisMaintenant(date) {
-  const p = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Paris', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
-    .formatToParts(date).reduce((o, x) => (o[x.type] = x.value, o), {});
-  return { jour: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].indexOf(p.weekday), min: Number(p.hour) * 60 + Number(p.minute) };
-}
-const fmtHeure = m => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}h${String(m % 60).padStart(2, '0')}`;
-
-// Retourne { etat: 'ouvert'|'ferme'|'inconnu', texte }
-function statutHoraires(brut, date = new Date()) {
-  const sem = parseHoraires(brut);
-  if (!sem) return { etat: 'inconnu', texte: brut ? 'Horaires non lisibles' : 'Horaires non renseignés' };
-  const { jour, min } = parisMaintenant(date);
-  const cur = sem[jour].find(([a, b]) => min >= a && min < b);
-  if (cur) return { etat: 'ouvert', texte: cur[1] >= 1440 ? 'Ouvert (jusqu’à minuit)' : `Ouvert jusqu’à ${fmtHeure(cur[1])}` };
-  for (let d = 0; d < 8; d++) {
-    const j = (jour + d) % 7;
-    const a = sem[j].map(p => p[0]).filter(x => d > 0 || x > min).sort((x, y) => x - y)[0];
-    if (a !== undefined) {
-      const q = d === 0 ? '' : d === 1 ? 'demain ' : JOURS_FR[j] + ' ';
-      return { etat: 'ferme', texte: `Fermé, ouvre ${q}à ${fmtHeure(a)}` };
-    }
-  }
-  return { etat: 'ferme', texte: 'Fermé' };
-}
-
-function semaineTexte(brut) {
-  const sem = parseHoraires(brut);
-  if (!sem) return null;
-  return sem.map((pl, i) => [JOURS_FR[i], pl.length ? pl.slice().sort((a, b) => a[0] - b[0]).map(([a, b]) => `${fmtHeure(a)}–${b >= 1440 ? '24h00' : fmtHeure(b)}`).join(', ') : 'fermé']);
-}
-
-// --- Sources de données ---
-// Contrat d'une API « relais » (serveur du site ou tiers) : GET <url>?lat=&lon=&rayon=  →  [ {point}, … ]  ou  { "points": [ {point}, … ] }
-// point = { id, lat, lon, nom, adresse, reseau (clé de RESEAUX), type ('commerce'|'locker'|'poste'), horaires (syntaxe OSM opening_hours) }
-function urlApi(base, lat, lon, rayon) {
-  const u = new URL(base);
-  if (u.protocol !== 'https:' && u.protocol !== 'http:') throw new Error('URL de l’API invalide');
-  u.searchParams.set('lat', lat.toFixed(6));
-  u.searchParams.set('lon', lon.toFixed(6));
-  u.searchParams.set('rayon', String(Math.round(rayon)));
   return u.toString();
 }
 
-function normaliserApi(json, source) {
-  const liste = Array.isArray(json) ? json : (json && Array.isArray(json.points) ? json.points : []);
-  const out = [];
-  for (const e of liste) {
-    if (!e) continue;
-    const lat = Number(e.lat), lon = Number(e.lon);
-    if (e.lat == null || e.lon == null || !Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) continue;
-    const reseau = Object.hasOwn(RESEAUX, e.reseau) ? e.reseau : 'autre';
-    const type = Object.hasOwn(TYPES, e.type) ? e.type : 'commerce';
-    out.push({
-      id: `${source}/${e.id ?? out.length}`, lat, lon, reseau, type,
-      nom: String(e.nom || RESEAUX[reseau].nom).slice(0, 120),
-      adresse: String(e.adresse || '').slice(0, 200),
-      horaires: String(e.horaires || '').slice(0, 300),
-      sources: [source],
-    });
-  }
-  return out;
-}
-
-// Regroupe les points d'un même réseau et d'un même type à moins de 40 m ; la première liste l'emporte et est complétée par les suivantes.
-function fusionner(listes, seuilM = 40) {
-  const res = [];
-  for (const liste of listes) for (const p of liste) {
-    const d = res.find(q => q.reseau === p.reseau && q.type === p.type && distanceM(q.lat, q.lon, p.lat, p.lon) < seuilM);
-    if (d) {
-      if (!d.horaires && p.horaires) d.horaires = p.horaires;
-      if (!d.adresse && p.adresse) d.adresse = p.adresse;
-      d.sources = [...new Set([...d.sources, ...p.sources])];
-    } else res.push({ ...p, sources: [...p.sources] });
-  }
-  return res;
-}
-
-function lienItineraire(p, mode, origine) {
-  let u = `https://www.google.com/maps/dir/?api=1&destination=${p.lat.toFixed(6)},${p.lon.toFixed(6)}&travelmode=${mode}`;
-  if (origine) u += `&origin=${origine.lat.toFixed(6)},${origine.lon.toFixed(6)}`;
-  return u;
-}
-// Sites officiels de recherche de point relais, avec le lieu pré-rempli (lieu = { cp, ville }).
-function liensReseaux(lieu) {
-  if (!lieu || (!lieu.cp && !lieu.ville)) return [];
-  const mot = [lieu.cp, lieu.ville].filter(Boolean).join(' ');
-  return [
-    { nom: 'Mondial Relay', url: 'https://www.mondialrelay.fr/trouver-le-point-relais-le-plus-proche-de-chez-moi/?codePostal=' + encodeURIComponent(lieu.cp || '') + '&ville=' + encodeURIComponent(lieu.ville || '') },
-    { nom: 'Pickup / Chronopost', url: 'https://map.pickup.fr/?pudo_keyword=' + encodeURIComponent(mot) + '&lang=fr' },
-  ];
-}
-function lienFiche(p) {
-  return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(`${p.nom} ${p.adresse || p.lat.toFixed(5) + ',' + p.lon.toFixed(5)}`);
-}
-</script>
-
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script id="app">
-// ---- Interface ----
-const $ = id => document.getElementById(id);
-const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
-const TTL_CACHE = 24 * 3600 * 1000;
-const etat = { lieu: null, centre: null, gps: false, points: [], meta: null, statuts: [], map: null, couche: null, marqueurs: {} };
-const SRC_KEY = 'relais-retour:sources';
-function lireSources() {
-  const def = { osm: true, api: false, apiUrl: '', apiToken: '' };
-  try { return { ...def, ...JSON.parse(localStorage.getItem(SRC_KEY)) }; } catch (e) { return def; }
-}
-function majSources() {
-  const s = { osm: $('s-osm').checked, api: $('s-api').checked, apiUrl: $('s-url').value.trim(), apiToken: $('s-token').value.trim() };
-  try { localStorage.setItem(SRC_KEY, JSON.stringify(s)); } catch (e) {}
-  if (etat.centre) chercher(etat.centre, etat.gps, false);
-}
-function initSources() {
-  const s = lireSources();
-  $('s-osm').checked = s.osm; $('s-api').checked = s.api; $('s-url').value = s.apiUrl; $('s-token').value = s.apiToken;
-  ['s-osm', 's-api'].forEach(id => $(id).addEventListener('change', majSources));
-  ['s-url', 's-token'].forEach(id => $(id).addEventListener('change', majSources));
-}
-
-function msg(t, err) { $('msg').textContent = t || ''; $('msg').className = err ? 'err' : ''; }
-
-function initFiltres() {
-  const saved = (() => { try { return JSON.parse(localStorage.getItem('relais-retour:filtres')) || {}; } catch (e) { return {}; } })();
-  const cases = (obj, nom, def) => Object.keys(obj).map(k => {
-    const on = (saved[nom] || def)[k] ?? (def[k] || false);
-    const pastille = nom === 'res' ? `<span class="pt" style="background:${RESEAUX[k].couleur}"></span>` : '';
-    return `<label><input type="checkbox" data-${nom}="${k}" ${on ? 'checked' : ''}>${pastille}${esc(nom === 'res' ? RESEAUX[k].nom : TYPES[k])}</label>`;
-  }).join('');
-  $('fres').innerHTML = cases(RESEAUX, 'res', { mondial: true });
-  $('ftype').innerHTML = cases(TYPES, 'type', { commerce: true, locker: true, poste: true });
-  document.querySelectorAll('.filtres input, #mode').forEach(el => el.addEventListener('change', () => { sauverFiltres(); afficher(); }));
-}
-function lireFiltres() {
-  const get = nom => { const o = {}; document.querySelectorAll(`[data-${nom}]`).forEach(el => o[el.dataset[nom]] = el.checked); return o; };
-  return { res: get('res'), type: get('type'), ouvert: $('fouvert').checked, mode: $('mode').value };
-}
-function sauverFiltres() { try { const f = lireFiltres(); localStorage.setItem('relais-retour:filtres', JSON.stringify({ res: f.res, type: f.type })); } catch (e) {} }
-
-function initCarte() {
-  if (typeof L === 'undefined') { msg('Carte indisponible (Leaflet non chargé) : la liste reste utilisable.', true); return; }
-  etat.map = L.map('map').setView([46.6, 2.5], 6);
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(etat.map);
-  etat.couche = L.layerGroup().addTo(etat.map);
-}
-
-async function geocoder(texte) {
-  const m = texte.match(/^\s*(-?\d+(?:[.,]\d+)?)\s*[,; ]\s*(-?\d+(?:[.,]\d+)?)\s*$/);
-  if (m) return { lat: parseFloat(m[1].replace(',', '.')), lon: parseFloat(m[2].replace(',', '.')) };
-  const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=fr&accept-language=fr&q=' + encodeURIComponent(texte));
-  if (!r.ok) throw new Error('recherche d’adresse indisponible');
-  const j = await r.json();
-  if (!j.length) throw new Error('adresse introuvable');
-  return { lat: parseFloat(j[0].lat), lon: parseFloat(j[0].lon) };
-}
-
-// La requête part d'un centre arrondi à 0,01° (≈ 1 km) avec une marge de 1,5 km : deux recherches voisines partagent le même cache.
-async function chargerDonnees(lat, lon, rayon, forcer) {
-  const qlat = Math.round(lat * 100) / 100, qlon = Math.round(lon * 100) / 100;
-  const cle = `relais-retour:${qlat},${qlon},${rayon}`;
-  if (!forcer) {
-    try {
-      const c = JSON.parse(localStorage.getItem(cle));
-      if (c && Date.now() - c.t < TTL_CACHE) return { ...c, cache: true };
-    } catch (e) {}
-  }
-  const corps = 'data=' + encodeURIComponent(construireRequete(qlat, qlon, rayon + 1500));
-  let derniere;
-  for (const url of OVERPASS) {
-    try {
-      const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 30000);
-      const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: corps, signal: ctl.signal });
-      clearTimeout(to);
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      const j = await r.json();
-      const res = { t: Date.now(), osm: j.osm3s && j.osm3s.timestamp_osm_base, elements: j.elements || [] };
-      try { localStorage.setItem(cle, JSON.stringify(res)); } catch (e) {}
-      return { ...res, cache: false };
-    } catch (e) { derniere = e; }
-  }
-  throw new Error('serveur OpenStreetMap indisponible (' + (derniere && derniere.message) + ')');
-}
-
-// Code postal et ville du point de départ (Nominatim), pour pré-remplir les sites officiels ; ne bloque pas la recherche.
-async function majLieu(centre) {
-  etat.lieu = null; afficherOfficiels();
-  try {
-    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&zoom=14&addressdetails=1&accept-language=fr&lat=${centre.lat}&lon=${centre.lon}`);
-    if (!r.ok) return;
-    const a = (await r.json()).address || {};
-    if (etat.centre !== centre) return;   // une recherche plus récente a pris le relais
-    etat.lieu = { cp: a.postcode || '', ville: a.city || a.town || a.village || a.municipality || '' };
-    afficherOfficiels();
-  } catch (e) {}
-}
-function afficherOfficiels() {
-  const l = liensReseaux(etat.lieu);
-  $('officiels').innerHTML = l.length ? 'Sites officiels (lieu pré-rempli : ' + esc([etat.lieu.cp, etat.lieu.ville].filter(Boolean).join(' ')) + ') : ' +
-    l.map(x => `<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.nom)} ↗</a>`).join(' · ') : '';
-}
-
-async function chargerApi(centre, rayon, s) {
-  const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 20000);
-  try {
-    const r = await fetch(urlApi(s.apiUrl, centre.lat, centre.lon, rayon), { headers: s.apiToken ? { Authorization: 'Bearer ' + s.apiToken } : {}, signal: ctl.signal });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    return normaliserApi(await r.json(), 'api');
-  } finally { clearTimeout(to); }
-}
-
-// Aucune requête n'est faite tant que la position de départ n'est pas connue : toutes les recherches passent par ici.
-let numRecherche = 0;
-async function chercher(centre, gps, forcer) {
-  if (!centre || !Number.isFinite(centre.lat) || !Number.isFinite(centre.lon)) { msg('Indique d’abord une position de départ.', true); return; }
-  const rayon = Number($('rayon').value), s = lireSources(), num = ++numRecherche;
-  etat.centre = centre; etat.gps = gps;
-  majLieu(centre);
-  $('ici').disabled = false; $('refresh').disabled = false;
-  if (etat.map) etat.map.setView([centre.lat, centre.lon], rayon <= 1000 ? 15 : rayon <= 3000 ? 14 : rayon <= 5000 ? 13 : 12);
-  const jobs = [];
-  if (s.api) jobs.push({ nom: 'API relais', p: s.apiUrl ? chargerApi(centre, rayon, s) : Promise.reject(new Error('URL non renseignée')) });
-  if (s.osm) jobs.push({ nom: 'OpenStreetMap', p: chargerDonnees(centre.lat, centre.lon, rayon, forcer).then(d => { etat.meta = d; return normaliser(d.elements); }) });
-  if (!jobs.length) { msg('Active au moins une source de données (⚙️ Sources de données).', true); return; }
-  msg('Recherche des points autour de la position…');
-  const res = await Promise.allSettled(jobs.map(j => j.p));
-  if (num !== numRecherche) return;   // une recherche plus récente a pris le relais
-  etat.statuts = res.map((r, i) => ({ nom: jobs[i].nom, ok: r.status === 'fulfilled', n: r.status === 'fulfilled' ? r.value.length : 0, err: r.status === 'rejected' ? r.reason.message : '' }));
-  const listes = res.filter(r => r.status === 'fulfilled').map(r => r.value);
-  if (!listes.length) { msg('Erreur : ' + etat.statuts.map(x => `${x.nom} (${x.err})`).join(' ; '), true); return; }
-  if (!s.osm) etat.meta = null;
-  etat.points = fusionner(listes).map(p => ({ ...p, dist: distanceM(centre.lat, centre.lon, p.lat, p.lon) }))
-    .filter(p => p.dist <= rayon).sort((a, b) => a.dist - b.dist);
-  msg(etat.statuts.some(x => !x.ok) ? 'Source en erreur : ' + etat.statuts.filter(x => !x.ok).map(x => `${x.nom} (${x.err})`).join(' ; ') : '', etat.statuts.some(x => !x.ok));
-  afficher();
-}
-
 function afficher() {
-  const f = lireFiltres();
-  const maintenant = new Date();
-  let pts = etat.points.filter(p => f.res[p.reseau] && f.type[p.type]).map(p => ({ ...p, st: statutHoraires(p.horaires, maintenant) }));
-  if (f.ouvert) pts = pts.filter(p => p.st.etat === 'ouvert');
-  const meta = etat.meta;
-  const parts = etat.statuts.map(x => `${x.nom} ${x.ok ? '✓ ' + x.n : '✗'}`);
-  if (meta) {
-    const age = Math.round((Date.now() - meta.t) / 60000);
-    const osm = meta.osm ? new Date(meta.osm).toLocaleString('fr-FR', { timeZone: 'Europe/Paris', dateStyle: 'short', timeStyle: 'short' }) : '?';
-    parts.push(`base OpenStreetMap du ${osm}, récupérée il y a ${age < 1 ? 'moins d’1' : age} min${meta.cache ? ' (cache local)' : ''}`);
-  }
-  $('fraicheur').textContent = parts.join(' · ');
-  $('nb').textContent = etat.meta ? `${pts.length} point${pts.length > 1 ? 's' : ''} affiché${pts.length > 1 ? 's' : ''} sur ${etat.points.length} trouvé${etat.points.length > 1 ? 's' : ''}` : '';
-  const aff = pts.slice(0, 100);
-  const origine = etat.gps ? null : etat.centre;
-  $('liste').innerHTML = aff.map(p => {
-    const R = RESEAUX[p.reseau], sem = semaineTexte(p.horaires);
-    const cl = p.st.etat === 'ouvert' ? 'ok' : p.st.etat === 'ferme' ? 'ko' : 'w';
-    const dist = p.dist < 1000 ? Math.round(p.dist) + ' m' : (p.dist / 1000).toFixed(1).replace('.', ',') + ' km';
-    return `<li data-id="${esc(p.id)}">
-      <div class="l1"><b>${esc(p.nom)}</b><span class="dist">${dist}</span></div>
-      <div><span class="badge res" style="background:${R.couleur}">${esc(R.nom)}</span><span class="badge">${esc(TYPES[p.type])}</span></div>
-      <div class="adr">${esc(p.adresse || 'Adresse non renseignée')} · <i>${p.sources.map(x => x === 'api' ? 'API relais' : 'OSM').join(' + ')}</i></div>
-      <div class="${cl}">${esc(p.st.texte)}</div>
-      ${sem ? `<details class="h"><summary>Horaires de la semaine</summary><table>${sem.map(([j, h]) => `<tr><td>${j}</td><td>${esc(h)}</td></tr>`).join('')}</table></details>` : (p.horaires ? `<div class="adr">OSM : ${esc(p.horaires)}</div>` : '')}
-      <div class="actions">
-        <a class="go" href="${esc(lienItineraire(p, f.mode, origine))}" target="_blank" rel="noopener">🧭 Itinéraire Google Maps</a>
-        <a href="${esc(lienFiche(p))}" target="_blank" rel="noopener">🕒 Horaires (Google Maps)</a>
-      </div></li>`;
-  }).join('') || (etat.meta ? '<li>Aucun point pour ces filtres. Élargis le rayon ou coche d’autres réseaux/types (la base OSM est incomplète).</li>' : '');
-  if (pts.length > 100) $('liste').insertAdjacentHTML('beforeend', '<li>Seuls les 100 points les plus proches sont listés.</li>');
-  dessiner(aff, f, origine);
+  const lieu = $('q').value;
+  $('reseaux').innerHTML = RESEAUX.map(r => `<section class="card res">
+    <h2><span class="pt" style="background:${esc(r.couleur)}"></span>${esc(r.nom)}</h2>
+    <p class="desc">${esc(r.desc)}</p>
+    <div class="liens">${r.liens.map(l => {
+      const pre = l.lieu && lieu.trim() ? ' · lieu pré-rempli' : '';
+      return `<a class="${l.sec ? 'sec' : ''}" href="${esc(urlLien(l, lieu))}" target="_blank" rel="noopener">🗺️ ${esc(l.libelle)}${pre} ↗</a>`;
+    }).join('')}</div></section>`).join('');
 }
-
-function dessiner(pts, f, origine) {
-  if (!etat.map) return;
-  etat.couche.clearLayers(); etat.marqueurs = {};
-  if (etat.centre) L.circleMarker([etat.centre.lat, etat.centre.lon], { radius: 7, color: '#fff', weight: 2, fillColor: '#111', fillOpacity: 1 }).bindTooltip('Centre de la recherche').addTo(etat.couche);
-  for (const p of pts) {
-    const R = RESEAUX[p.reseau];
-    const m = L.circleMarker([p.lat, p.lon], { radius: 9, color: '#fff', weight: 2, fillColor: R.couleur, fillOpacity: .95 })
-      .bindPopup(`<b>${esc(p.nom)}</b><br>${esc(R.nom)} · ${esc(TYPES[p.type])}<br>${esc(p.st.texte)}<br><a href="${esc(lienItineraire(p, f.mode, origine))}" target="_blank" rel="noopener">🧭 Itinéraire</a>`)
-      .on('click', () => surligner(p.id)).addTo(etat.couche);
-    etat.marqueurs[p.id] = m;
-  }
-}
-function surligner(id) {
-  document.querySelectorAll('.liste li').forEach(li => li.classList.toggle('sel', li.dataset.id === id));
-  const li = document.querySelector(`.liste li[data-id="${CSS.escape(id)}"]`);
-  if (li) li.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-}
-
-$('liste').addEventListener('click', e => {
-  const li = e.target.closest('li[data-id]'); if (!li || e.target.closest('a,summary')) return;
-  const m = etat.marqueurs[li.dataset.id];
-  if (m && etat.map) { etat.map.setView(m.getLatLng(), Math.max(etat.map.getZoom(), 16)); m.openPopup(); }
-  surligner(li.dataset.id);
-});
-
-$('f').addEventListener('submit', async e => {
-  e.preventDefault();
-  const q = $('q').value.trim(); if (!q) { msg('Saisis une ville, une adresse ou utilise « Ma position ».', true); return; }
-  try { msg('Recherche de l’adresse…'); await chercher(await geocoder(q), false, false); } catch (err) { msg('Erreur : ' + err.message, true); }
-});
-$('geo').addEventListener('click', () => {
-  if (!navigator.geolocation) { msg('Géolocalisation non disponible sur cet appareil.', true); return; }
-  msg('Localisation en cours…');
-  navigator.geolocation.getCurrentPosition(
-    pos => { $('q').value = ''; chercher({ lat: pos.coords.latitude, lon: pos.coords.longitude }, true, false); },
-    err => msg(err.code === 1 ? 'Position refusée : autorise la localisation ou saisis une adresse.' : 'Position introuvable : saisis une adresse.', true),
-    { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
-});
-$('ici').addEventListener('click', () => {
-  if (!etat.map || !etat.centre) return; const c = etat.map.getCenter(); chercher({ lat: c.lat, lon: c.lng }, false, false);
-});
-$('refresh').addEventListener('click', () => {
-  if (!etat.centre) { msg('Lance d’abord une recherche.', true); return; } chercher(etat.centre, etat.gps, true);
-});
-
-initFiltres();
-initSources();
-initCarte();
+$('q').addEventListener('input', afficher);
+afficher();
 </script>
 </body>
 </html>
