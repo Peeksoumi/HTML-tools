@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Éditeur d'image</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%239333ea'/%3E%3Ctext x='50' y='70' font-size='60' text-anchor='middle'%3E🪄%3C/text%3E%3C/svg%3E">
+<style>
+  :root { --primary:#9333ea; --primary-hover:#7e22ce; --bg:#f3f4f6; --card:#fff; --line:#e5e7eb; --text:#111827; --muted:#6b7280; }
+  * { box-sizing:border-box; }
+  body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--text); margin:0; padding:16px; }
+  .wrap { max-width:900px; margin:0 auto; }
+  .top { display:flex; flex-wrap:wrap; gap:8px 16px; justify-content:flex-end; font-size:.9rem; margin-bottom:6px; }
+  .top a { color:var(--primary); text-decoration:none; } .top a:hover { text-decoration:underline; }
+  h1 { font-size:1.6rem; margin:0 0 4px; } .lead { color:var(--muted); margin:0 0 16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:14px; }
+  .drop { border:2px dashed #9ca3af; text-align:center; cursor:pointer; padding:26px 14px; }
+  .drop.over, .drop:hover { border-color:var(--primary); background:#faf5ff; }
+  .drop p { margin:0; font-weight:500; } .drop small { color:var(--muted); }
+  #file { display:none; }
+  .stage { position:relative; display:inline-block; max-width:100%; line-height:0; border-radius:8px; overflow:hidden;
+    background:repeating-conic-gradient(#e5e7eb 0 25%, #fff 0 50%) 0 0/20px 20px; }
+  .stage canvas { max-width:100%; height:auto; }
+  #maskView { position:absolute; inset:0; width:100%; height:100%; opacity:.5; pointer-events:none; touch-action:none; }
+  #maskView.on { pointer-events:auto; cursor:crosshair; }
+  .center { text-align:center; }
+  .bar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:10px; }
+  button, .btn { font:inherit; border:1px solid var(--line); background:#fff; border-radius:8px; padding:8px 12px; cursor:pointer; color:var(--text); text-decoration:none; display:inline-block; }
+  button.primary { background:var(--primary); border-color:var(--primary); color:#fff; } button.primary:hover { background:var(--primary-hover); }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  .tabs { display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; }
+  .tabs button { flex:1; min-width:120px; } .tabs button.on { background:var(--primary); border-color:var(--primary); color:#fff; }
+  .panel { display:none; } .panel.on { display:block; }
+  input[type=text], input[type=password] { font:inherit; padding:8px; border:1px solid var(--line); border-radius:8px; width:100%; }
+  label { font-size:.9rem; color:var(--muted); display:flex; gap:8px; align-items:center; }
+  .hint { color:var(--muted); font-size:.85rem; margin:6px 0; }
+  .warn { background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:8px 10px; font-size:.85rem; margin:8px 0; }
+  #status { margin:8px 0; font-size:.9rem; min-height:1.2em; } #status.err { color:#b91c1c; }
+  progress { width:100%; height:10px; } progress[hidden] { display:none; }
+  .results { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; margin-top:12px; }
+  .res { border:1px solid var(--line); border-radius:8px; overflow:hidden; font-size:.78rem; background:#fff; }
+  .res img { width:100%; height:130px; object-fit:cover; display:block; background:#eee; }
+  .res div { padding:6px; } .res a { color:var(--primary); word-break:break-word; }
+  .fonct { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-top:20px; font-size:.9rem; }
+  .fonct h2 { margin:0 0 6px; font-size:1.1rem; } .fonct h3 { margin:12px 0 4px; font-size:.95rem; } .fonct ul { margin:0; padding-left:20px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a href="https://github.com/Peeksoumi/HTML-tools/issues/new?title=%5Bediteur-image%5D%20&amp;body=Outil%20concern%C3%A9%20%3A%20editeur-image%20(http%3A%2F%2F141.227.151.70%3A8080%2Fediteur-image%2F)%0A%0A**Ma%20suggestion%20ou%20le%20bug%20rencontr%C3%A9%20%3A**%0A%0A" target="_blank" rel="noopener">💡 Proposer une amélioration</a>
+    <a href="index.html" download="editeur-image.html" title="Enregistrer la page (connexion internet requise : modèles de détourage et d'IA, AI Horde, Openverse, Wikimedia Commons)">⬇️ Télécharger la page</a>
+  </div>
+  <h1>🪄 Éditeur d'image</h1>
+  <p class="lead">Détourer le fond, modifier une zone avec une phrase, trouver des images proches.</p>
+
+  <label class="card drop" id="drop" for="file">
+    <p>Dépose une image, clique ici ou colle-la (Ctrl+V)</p><small>PNG, JPEG, WebP — ouverte dans ton navigateur uniquement</small>
+  </label>
+  <input type="file" id="file" accept="image/*">
+
+  <div id="work" hidden>
+    <div class="card center">
+      <div class="stage" id="stage"><canvas id="view"></canvas><canvas id="maskView"></canvas></div>
+      <div class="bar" style="justify-content:center">
+        <button id="undo" disabled>↩️ Annuler</button>
+        <button id="dl">⬇️ Télécharger PNG</button>
+      </div>
+    </div>
+
+    <div class="tabs" role="tablist">
+      <button data-tab="bg" class="on">✂️ Détourer</button>
+      <button data-tab="edit">🖌️ Modifier une zone</button>
+      <button data-tab="sim">🔎 Images similaires</button>
+    </div>
+    <div id="status" role="status"></div><progress id="prog" hidden max="100"></progress>
+
+    <div class="card panel on" id="p-bg">
+      <p class="hint" style="margin-top:0">Rend le fond transparent. Tout se passe dans ton navigateur ; le modèle (~40 Mo) est téléchargé la première fois.</p>
+      <button class="primary" id="goBg">Retirer le fond</button>
+    </div>
+
+    <div class="card panel" id="p-edit">
+      <p class="hint" style="margin-top:0">1) Peins en rouge la zone à modifier. 2) Décris ce qu'elle doit devenir (de préférence en anglais).</p>
+      <div class="bar" style="margin:0 0 10px">
+        <label>Pinceau <input type="range" id="brush" min="1" max="20" value="5"></label>
+        <button id="eraser">Gomme : non</button>
+        <button id="clearMask">Effacer la zone</button>
+      </div>
+      <input type="text" id="prompt" placeholder="ex. a red wooden door · ou « clean empty wall » pour supprimer un objet">
+      <div class="warn">⚠️ La génération passe par <b>AI Horde</b> (service communautaire gratuit) : l'image envoyée (réduite à ~512 px, avec la zone en transparence) et ta phrase sont traitées par des ordinateurs de volontaires. Ne l'utilise pas pour des documents confidentiels. File d'attente possible (de quelques secondes à plusieurs minutes).</div>
+      <label>Clé AI Horde (facultative, accélère la file) <input type="password" id="hordeKey" placeholder="vide = accès anonyme"></label>
+      <div class="bar"><button class="primary" id="goEdit">Générer</button><button id="cancel" hidden>Annuler la génération</button></div>
+    </div>
+
+    <div class="card panel" id="p-sim">
+      <p class="hint" style="margin-top:0">Décris l'image en quelques mots (anglais conseillé), ou laisse l'IA le faire. Recherche dans Openverse et Wikimedia Commons (images libres). Seuls ces mots sont envoyés, jamais l'image.</p>
+      <div class="bar" style="margin:0 0 8px"><button id="caption">Décrire automatiquement (~200 Mo la 1<sup>re</sup> fois)</button></div>
+      <input type="text" id="query" placeholder="ex. golden retriever on a couch">
+      <label style="margin-top:8px"><input type="checkbox" id="rank" checked> Classer par ressemblance visuelle (modèle CLIP, ~90 Mo)</label>
+      <div class="bar"><button class="primary" id="goSim">Chercher</button></div>
+      <div class="results" id="results"></div>
+      <p class="hint">Recherche inversée sur un moteur (copie l'image, puis colle-la dans la page ouverte) :</p>
+      <div class="bar">
+        <button id="copyImg">📋 Copier l'image</button>
+        <a class="btn" href="https://lens.google.com/" target="_blank" rel="noopener">Google Lens</a>
+        <a class="btn" href="https://tineye.com/" target="_blank" rel="noopener">TinEye</a>
+        <a class="btn" href="https://yandex.com/images/" target="_blank" rel="noopener">Yandex</a>
+        <a class="btn" href="https://www.bing.com/visualsearch" target="_blank" rel="noopener">Bing</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="fonct" id="fonctionnement">
+    <h2>Fonctionnement et sources</h2>
+    <h3>Fonctionnement</h3>
+    <ul>
+      <li><b>Détourage</b> : segmentation par réseau de neurones (ONNX, WebAssembly) exécutée dans le navigateur ; le fond devient transparent (PNG).</li>
+      <li><b>Modification par texte</b> : tu peins un masque ; l'image réduite (~512 px) part à AI Horde avec la zone en transparence (inpainting Stable Diffusion). Le résultat n'est recopié que dans la zone peinte, bords adoucis.</li>
+      <li><b>Images similaires</b> : légende de l'image (ViT-GPT2) ou mots saisis → recherche Openverse + Wikimedia Commons → classement par similarité cosinus des vecteurs CLIP (tout en local).</li>
+    </ul>
+    <h3>Sources de données</h3>
+    <ul>
+      <li><b>@imgly/background-removal</b> (jsDelivr, modèle sur staticimgly.com) : détourage ; licence AGPL pour la bibliothèque.</li>
+      <li><b>AI Horde</b> (aihorde.net) : calcul d'inpainting par des volontaires ; reçoit l'image réduite et ta phrase.</li>
+      <li><b>Transformers.js</b> (jsDelivr) et modèles Xenova sur Hugging Face : légende et CLIP, mis en cache par le navigateur.</li>
+      <li><b>Openverse</b> et <b>Wikimedia Commons</b> : images sous licences libres ; reçoivent seulement les mots de recherche.</li>
+    </ul>
+    <h3>Limites</h3>
+    <ul>
+      <li>Détourage : cheveux, transparences et sujets au fond proche peuvent être mal découpés.</li>
+      <li>Inpainting : qualité « Stable Diffusion 1.5 » à ~512 px, résultat flou si la zone est grande ; prompts anglais bien meilleurs ; file d'attente anonyme parfois longue.</li>
+      <li>Similaires : la recherche passe par des mots, pas par l'image elle-même ; le classement CLIP n'est possible que si la miniature est lisible (CORS), sinon l'ordre d'origine est gardé.</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const view = $('#view'), maskView = $('#maskView'), status = $('#status'), prog = $('#prog');
+const MAX_SIDE = 3000;
+let cur = null, hist = [], cancelled = false;
+
+/* ---------- utilitaires ---------- */
+const say = (t, err) => { status.textContent = t || ''; status.className = err ? 'err' : ''; };
+const progress = v => { prog.hidden = v == null; if (v != null) prog.value = v; };
+const toBlob = (c, type = 'image/png') => new Promise(r => c.toBlob(r, type));
+const mk = (w, h) => Object.assign(document.createElement('canvas'), { width: w, height: h });
+function blobToCanvas(blob) {
+  return new Promise((ok, ko) => {
+    const url = URL.createObjectURL(blob), img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = mk(Math.round(img.naturalWidth * k), Math.round(img.naturalHeight * k));
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); ok(c);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); ko(new Error('Image illisible')); };
+    img.src = url;
+  });
+}
+function render() {
+  view.width = cur.width; view.height = cur.height;
+  view.getContext('2d').drawImage(cur, 0, 0);
+  if (maskView.width !== cur.width || maskView.height !== cur.height) { maskView.width = cur.width; maskView.height = cur.height; }
+  $('#undo').disabled = !hist.length;
+  $('#work').hidden = false;
+}
+function setImage(c, keep = true) { if (cur && keep) hist.push(cur); cur = c; render(); }
+async function load(file) {
+  try { hist = []; cur = null; maskView.getContext('2d').clearRect(0, 0, 1e5, 1e5); setImage(await blobToCanvas(file), false); say(''); }
+  catch (e) { say(e.message, true); }
+}
+const busy = (b) => document.querySelectorAll('#work button').forEach(x => { if (x.id !== 'cancel') x.disabled = b || (x.id === 'undo' && !hist.length); });
+async function run(fn) { busy(true); say('…'); try { await fn(); } catch (e) { say('Erreur : ' + (e.message || e), true); } finally { busy(false); progress(null); } }
+
+/* ---------- chargement, onglets, export ---------- */
+$('#file').onchange = e => e.target.files[0] && load(e.target.files[0]);
+const drop = $('#drop');
+['dragover', 'dragenter'].forEach(n => drop.addEventListener(n, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach(n => drop.addEventListener(n, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => e.dataTransfer.files[0] && load(e.dataTransfer.files[0]));
+document.addEventListener('paste', e => { const f = [...(e.clipboardData?.files || [])].find(f => f.type.startsWith('image/')); if (f) load(f); });
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('on', p.id === 'p-' + b.dataset.tab));
+  maskView.classList.toggle('on', b.dataset.tab === 'edit'); say('');
+});
+$('#undo').onclick = () => { if (hist.length) { cur = hist.pop(); render(); } };
+$('#dl').onclick = async () => { const a = document.createElement('a'); a.href = URL.createObjectURL(await toBlob(cur)); a.download = 'image-editee.png'; a.click(); };
+
+/* ---------- 1) détourage ---------- */
+$('#goBg').onclick = () => run(async () => {
+  say('Chargement du modèle…');
+  const { removeBackground } = await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.5/+esm');
+  const out = await removeBackground(await toBlob(cur), {
+    output: { format: 'image/png' },
+    progress: (key, done, total) => { say(key.startsWith('fetch') ? 'Téléchargement du modèle…' : 'Détourage…'); progress(total ? 100 * done / total : null); }
+  });
+  setImage(await blobToCanvas(out)); say('Fond retiré. (Annuler pour revenir en arrière.)');
+});
+
+/* ---------- 2) modification d'une zone (AI Horde) ---------- */
+const mctx = maskView.getContext('2d');
+let erase = false, last = null;
+$('#eraser').onclick = e => { erase = !erase; e.target.textContent = 'Gomme : ' + (erase ? 'oui' : 'non'); };
+$('#clearMask').onclick = () => mctx.clearRect(0, 0, maskView.width, maskView.height);
+const pt = e => { const r = maskView.getBoundingClientRect(); return [(e.clientX - r.left) * maskView.width / r.width, (e.clientY - r.top) * maskView.height / r.height]; };
+function stroke(a, b) {
+  mctx.globalCompositeOperation = erase ? 'destination-out' : 'source-over';
+  mctx.strokeStyle = '#ff2d55'; mctx.lineCap = mctx.lineJoin = 'round';
+  mctx.lineWidth = maskView.width * $('#brush').value / 100;
+  mctx.beginPath(); mctx.moveTo(...a); mctx.lineTo(...b); mctx.stroke();
+}
+maskView.addEventListener('pointerdown', e => { maskView.setPointerCapture(e.pointerId); last = pt(e); stroke(last, last); });
+maskView.addEventListener('pointermove', e => { if (!last) return; const p = pt(e); stroke(last, p); last = p; });
+['pointerup', 'pointercancel'].forEach(n => maskView.addEventListener(n, () => last = null));
+const maskEmpty = () => !mctx.getImageData(0, 0, maskView.width, maskView.height).data.some((v, i) => i % 4 === 3 && v > 0);
+try { $('#hordeKey').value = localStorage.getItem('hordeKey') || ''; } catch (e) {}
+
+const HORDE = 'https://aihorde.net/api/v2';
+const hordeFetch = async (path, opt = {}) => {
+  const r = await fetch(HORDE + path, { ...opt, headers: { 'Content-Type': 'application/json', apikey: $('#hordeKey').value.trim() || '0000000000', 'Client-Agent': 'peeksoumi-html-tools:1:editeur-image' } });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.message || ('AI Horde : HTTP ' + r.status));
+  return j;
+};
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function loadImg(src) { return new Promise((ok, ko) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ko(new Error('Image générée illisible')); i.src = src; }); }
+
+$('#goEdit').onclick = () => run(async () => {
+  const prompt = $('#prompt').value.trim();
+  if (!prompt) throw new Error('Écris d\'abord ce que la zone doit devenir.');
+  if (maskEmpty()) throw new Error('Peins d\'abord la zone à modifier sur l\'image.');
+  try { localStorage.setItem('hordeKey', $('#hordeKey').value.trim()); } catch (e) {}
+  const W = cur.width, H = cur.height, k = 512 / Math.max(W, H);
+  const w = Math.max(64, Math.round(W * k / 64) * 64), h = Math.max(64, Math.round(H * k / 64) * 64);
+  const src = mk(w, h), sc = src.getContext('2d');
+  sc.drawImage(cur, 0, 0, w, h); sc.globalCompositeOperation = 'destination-out'; sc.drawImage(maskView, 0, 0, w, h); // zone à refaire = transparente
+  const body = {
+    prompt, models: ['stable_diffusion_inpainting'], source_processing: 'inpainting', r2: false, shared: false, slow_workers: true,
+    source_image: src.toDataURL('image/webp', 0.95).split(',')[1],
+    params: { sampler_name: 'k_euler_a', cfg_scale: 7.5, denoising_strength: 1, steps: 25, width: w, height: h, n: 1 }
+  };
+  cancelled = false; $('#cancel').hidden = false;
+  try {
+    say('Envoi à AI Horde…');
+    const { id } = await hordeFetch('/generate/async', { method: 'POST', body: JSON.stringify(body) });
+    $('#cancel').onclick = async () => { cancelled = true; try { await hordeFetch('/generate/status/' + id, { method: 'DELETE' }); } catch (e) {} };
+    for (;;) {
+      if (cancelled) throw new Error('Génération annulée.');
+      const c = await hordeFetch('/generate/check/' + id);
+      if (c.faulted) throw new Error('AI Horde n\'a pas pu générer l\'image (essaie une autre phrase).');
+      if (c.done) break;
+      say(c.queue_position ? `File d'attente : position ${c.queue_position} (~${c.wait_time || '?'} s)` : 'Génération en cours…');
+      await sleep(3000);
+    }
+    const g = (await hordeFetch('/generate/status/' + id)).generations?.[0];
+    if (!g || g.censored) throw new Error(g?.censored ? 'Image censurée par AI Horde.' : 'Aucune image reçue.');
+    const gen = await loadImg(g.img.startsWith('http') ? g.img : 'data:image/webp;base64,' + g.img);
+    const out = mk(W, H), oc = out.getContext('2d'); oc.drawImage(cur, 0, 0);
+    const m = mk(W, H), mc = m.getContext('2d'); mc.filter = `blur(${Math.max(1, Math.round(W / 250))}px)`; mc.drawImage(maskView, 0, 0);
+    const gl = mk(W, H), gc = gl.getContext('2d'); gc.drawImage(gen, 0, 0, W, H); gc.globalCompositeOperation = 'destination-in'; gc.drawImage(m, 0, 0);
+    oc.drawImage(gl, 0, 0);
+    setImage(out); $('#clearMask').click(); say('Zone modifiée. (Annuler pour revenir en arrière.)');
+  } finally { $('#cancel').hidden = true; }
+});
+
+/* ---------- 3) images similaires ---------- */
+const TJS = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2';
+const mp = label => p => { if (p.status === 'progress') { say(label + ' ' + Math.round(p.progress) + ' %'); progress(p.progress); } };
+$('#caption').onclick = () => run(async () => {
+  const { pipeline } = await import(TJS);
+  const cap = await pipeline('image-to-text', 'Xenova/vit-gpt2-image-captioning', { progress_callback: mp('Téléchargement du modèle') });
+  say('Analyse de l\'image…');
+  const url = URL.createObjectURL(await toBlob(cur, 'image/jpeg'));
+  const out = await cap(url); URL.revokeObjectURL(url);
+  $('#query').value = out[0].generated_text; say('Description proposée : modifie-la si besoin puis lance la recherche.');
+});
+async function openverse(q) {
+  const j = await (await fetch('https://api.openverse.org/v1/images/?page_size=20&mature=false&q=' + encodeURIComponent(q))).json();
+  return (j.results || []).map(r => ({ src: 'Openverse', title: r.title || '(sans titre)', thumb: r.thumbnail || r.url, link: r.foreign_landing_url, lic: (r.license || '').toUpperCase() }));
+}
+async function commons(q) {
+  const u = 'https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrnamespace=6&gsrlimit=20&prop=imageinfo&iiprop=url|extmetadata&iiurlwidth=256&gsrsearch=' + encodeURIComponent(q + ' filetype:bitmap');
+  const pages = Object.values((await (await fetch(u)).json()).query?.pages || {});
+  return pages.filter(p => p.imageinfo).map(p => { const i = p.imageinfo[0]; return { src: 'Wikimedia Commons', title: p.title.replace(/^File:/, ''), thumb: i.thumburl, link: i.descriptionurl, lic: i.extmetadata?.LicenseShortName?.value || '' }; });
+}
+let clip = null;
+async function getClip() {
+  if (clip) return clip;
+  const t = await import(TJS), M = 'Xenova/clip-vit-base-patch32', cb = { progress_callback: mp('Téléchargement de CLIP') };
+  const processor = await t.AutoProcessor.from_pretrained(M, cb), model = await t.CLIPVisionModelWithProjection.from_pretrained(M, cb);
+  const embed = async raw => { const { image_embeds } = await model(await processor(raw)); const v = Array.from(image_embeds.data), n = Math.hypot(...v); return v.map(x => x / n); };
+  return clip = { embed, RawImage: t.RawImage };
+}
+$('#goSim').onclick = () => run(async () => {
+  const q = $('#query').value.trim(); if (!q) throw new Error('Écris quelques mots, ou utilise « Décrire automatiquement ».');
+  const box = $('#results'); box.textContent = ''; say('Recherche…');
+  const settled = await Promise.allSettled([openverse(q), commons(q)]);
+  let items = settled.flatMap(s => s.status === 'fulfilled' ? s.value : []).filter(x => x.thumb);
+  if (!items.length) throw new Error(settled.every(s => s.status === 'rejected') ? 'Openverse et Wikimedia injoignables.' : 'Aucun résultat pour ces mots.');
+  if ($('#rank').checked) {
+    try {
+      const { embed, RawImage } = await getClip();
+      const qv = await embed(await RawImage.fromBlob(await toBlob(cur, 'image/jpeg')));
+      for (let i = 0; i < items.length; i++) {
+        say(`Comparaison visuelle ${i + 1}/${items.length}…`); progress(100 * i / items.length);
+        try { const v = await embed(await RawImage.fromURL(items[i].thumb)); items[i].score = v.reduce((s, x, j) => s + x * qv[j], 0); } catch (e) { items[i].score = null; }
+      }
+      items.sort((a, b) => (b.score ?? -2) - (a.score ?? -2));
+    } catch (e) { say('Classement visuel indisponible (' + (e.message || e) + ') : ordre d\'origine conservé.', true); }
+  }
+  for (const it of items) {
+    const d = document.createElement('div'); d.className = 'res';
+    const img = Object.assign(document.createElement('img'), { src: it.thumb, loading: 'lazy', alt: it.title });
+    const info = document.createElement('div'), a = Object.assign(document.createElement('a'), { href: it.link, target: '_blank', rel: 'noopener', textContent: it.title });
+    info.append(a, document.createElement('br'), `${it.src}${it.lic ? ' · ' + it.lic : ''}${it.score != null ? ' · ' + Math.round(100 * it.score) + ' %' : ''}`);
+    d.append(img, info); box.append(d);
+  }
+  if (!status.classList.contains('err')) say(items.length + ' images trouvées.');
+});
+$('#copyImg').onclick = async () => { try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': await toBlob(cur) })]); say('Image copiée : colle-la (Ctrl+V) dans la page du moteur.'); } catch (e) { say('Copie impossible ici : télécharge le PNG puis dépose-le sur le moteur.', true); } };
+</script>
+</body>
+</html>

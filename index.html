@@ -52,6 +52,7 @@
     <a class="app" href="bac-lola/" style="--c:#0e7490"><span class="ico" aria-hidden="true">⛴️</span><span>Bac Lola</span></a>
     <a class="app" href="lola-position/" style="--c:#7c3aed"><span class="ico" aria-hidden="true">📍</span><span>Lola AIS</span></a>
     <a class="app" href="meteo-radar/" style="--c:#0284c7"><span class="ico" aria-hidden="true">☁️</span><span>Météo radar</span></a>
+    <a class="app" href="editeur-image/" style="--c:#9333ea"><span class="ico" aria-hidden="true">🪄</span><span>Éditeur image</span></a>
   </nav>
 
   <div class="grid">
@@ -124,9 +125,18 @@
         <a class="btn secondary" href="meteo-radar/index.html" download="meteo-radar.html" title="Enregistrer la page (connexion requise : carte, satellite EUMETSAT, radar RainViewer et vent Open-Meteo)">⬇️ Télécharger la page</a>
       </div>
     </article>
+
+    <article class="card">
+      <h2>Éditeur d'image</h2>
+      <p>Retire le fond d'une image, modifie une zone peinte avec une phrase (IA), ou trouve des images libres de droits proches de la tienne.</p>
+      <div class="actions">
+        <a class="btn primary" href="editeur-image/">Ouvrir</a>
+        <a class="btn secondary" href="editeur-image/index.html" download="editeur-image.html" title="Enregistrer la page (connexion requise : modèles de détourage et d'IA, AI Horde, Openverse, Wikimedia Commons)">⬇️ Télécharger la page</a>
+      </div>
+    </article>
   </div>
 
-  <p class="note">Les fichiers que tu charges restent dans ton navigateur. Seules la recherche de lieu et les altitudes de Carte → GPX interrogent des services publics (Open-Meteo, swisstopo). Parking gratuit interroge OpenStreetMap et des données ouvertes via le serveur du site. Courant de la Loire lit le débit de la Loire (Hub'Eau, Vigicrues) ; le reste du calcul se fait dans ton navigateur. Bac Lola lit la position AIS du bac sur le serveur du site (peeksoumi.com) et dans un fichier public GitHub (dépôt lola-relais) et la météo actuelle sur Open-Meteo ; le reste du calcul se fait dans ton navigateur. Météo radar interroge EUMETSAT (images satellite), RainViewer (radar de pluie), Open-Meteo (vent) et Esri (fond de carte).</p>
+  <p class="note">Les fichiers que tu charges restent dans ton navigateur. Seules la recherche de lieu et les altitudes de Carte → GPX interrogent des services publics (Open-Meteo, swisstopo). Parking gratuit interroge OpenStreetMap et des données ouvertes via le serveur du site. Courant de la Loire lit le débit de la Loire (Hub'Eau, Vigicrues) ; le reste du calcul se fait dans ton navigateur. Bac Lola lit la position AIS du bac sur le serveur du site (peeksoumi.com) et dans un fichier public GitHub (dépôt lola-relais) et la météo actuelle sur Open-Meteo ; le reste du calcul se fait dans ton navigateur. Météo radar interroge EUMETSAT (images satellite), RainViewer (radar de pluie), Open-Meteo (vent) et Esri (fond de carte). Éditeur d'image télécharge ses modèles (jsDelivr, Hugging Face), envoie l'image réduite et ta phrase à AI Horde pour la modification par texte, et seulement des mots-clés à Openverse et Wikimedia Commons pour les images similaires ; le détourage reste dans ton navigateur.</p>
 </div>
 <script>
 // Rend le site installable (appli Android) et prêt pour les notifications Web Push.
