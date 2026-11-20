@@ -20,6 +20,18 @@ Toujours avec `target="_blank" rel="noopener"`. Exemple minimal :
 Pages antérieures à cette règle (ex. `fusion-pdf`) : ajouter le lien dès qu'on les modifie.
 Références : `carte-vers-gpx/src/template.html`.
 
+## Règle obligatoire : icône (favicon) sur CHAQUE page
+Toute page HTML (accueil comprise) déclare une icône dans son `<head>`, juste après `<title>`, en SVG inliné (data URI : pas de fichier externe, la page téléchargée garde son icône) :
+emoji sur une pastille colorée aux coins arrondis. Utiliser la même icône et la même couleur pour le raccourci de l'outil sur la page d'accueil.
+
+```html
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%234f46e5'/%3E%3Ctext x='50' y='70' font-size='60' text-anchor='middle'%3E🧰%3C/text%3E%3C/svg%3E">
+```
+
+- `#` écrit `%23` dans la couleur. Pages générées : modifier le gabarit (`src/template.html`) puis relancer `build.py`.
+- À vérifier avant chaque commit : `grep -c 'rel="icon"' <dossier>/index.html` doit donner 1.
+- Tout nouvel outil ajoute aussi sa tuile (icône + nom court) dans la grille de raccourcis `.launcher` en haut de `index.html` (style écran d'accueil Android).
+
 ## Règle : bouton « Télécharger la page » si l'outil est utilisable seul
 Quand un outil fonctionne de façon autonome (tout le traitement se fait dans le navigateur, sans serveur ni API maison), la page doit proposer
 un bouton pour télécharger le fichier HTML et l'utiliser hors du site, à côté du lien « Proposer une amélioration » :
@@ -56,7 +68,7 @@ qui explique comment l'outil produit son résultat et d'où viennent les donnée
 ## Conventions
 - Un dossier par outil, avec `index.html` autonome (CSS/JS inlinés), un `README.md`, et un test si possible.
 - Ne pas ajouter de dépendance externe sans nécessité ; rien n'est envoyé à un serveur tiers sans le dire dans la page.
-- Tout nouvel outil doit avoir sa carte (Ouvrir + Télécharger la page) dans `index.html` à la racine, la page d'accueil du site.
+- Tout nouvel outil doit avoir sa carte (Ouvrir + Télécharger la page) et sa tuile de raccourci (`.launcher`) dans `index.html` à la racine, la page d'accueil du site.
 - Après modification : tester, puis fusionner dans `main` (le serveur se met à jour seul).
 
 ---
