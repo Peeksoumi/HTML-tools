@@ -24,12 +24,10 @@ h1{font-size:26px;margin:0;font-weight:600}
 .meteo b{font-size:18px;font-weight:400;margin-right:4px;vertical-align:-1px}
 .liens a:hover{text-decoration:underline}
 #bandeau{background:var(--panel);border:1px solid var(--border);border-left-width:6px;border-radius:10px;padding:12px 14px;margin-bottom:12px}
-#courant{background:var(--panel);border:1px solid var(--border);border-left:6px solid var(--violet);border-radius:10px;padding:9px 14px;margin-bottom:12px;font-size:14px;color:var(--dim)}
-#courant .titre{font-size:16px;font-weight:600;color:var(--violet)}
-#courant .detail{margin-top:2px}
-#courant.c-calme{border-left-color:var(--faint)}#courant.c-calme .titre{color:var(--dim);font-weight:500;font-size:14px}
-#courant.c-encours{background:#13101a;border-color:var(--violet);box-shadow:0 0 0 1px var(--violet)}
-#courant .note{font-size:12px;color:var(--faint);margin-top:4px}
+tr.renv td{background:#13101a;border-top:1px solid var(--violet);border-bottom:1px solid var(--violet);white-space:normal;padding:6px 8px}
+tr.renv .titre{font-size:14px;font-weight:600;color:var(--violet)}
+tr.renv .detail{font-size:12px;color:var(--dim);margin-top:2px}
+tr.renv.c-passe .titre{color:var(--dim)}
 tr.cour td{background:rgba(169,139,217,.14)}
 #bandeau .mode{font-size:20px;font-weight:600}
 #bandeau .detail,#bandeau .live{font-family:var(--mono);font-size:13px;color:var(--dim);margin-top:4px}
@@ -115,7 +113,6 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
     <span id="meteo" class="meteo" title="Météo actuelle aux bacs (Open-Meteo)"></span>
 </header>
 <div id="bandeau" class="m-arret"><div class="mode">Chargement…</div><div class="detail"></div><div class="live"></div></div>
-<div id="courant"></div>
 <div id="carte" class="bloc"></div>
 <div id="quais"></div>
 <h2 class="t">Enchaînement prévu</h2><div class="bloc" id="chaine"></div>
@@ -132,7 +129,7 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
     <li><b>Modes</b> : <i>rotation continue</i> si les départs consécutifs sont espacés de ≤ 8,5 min ; <i>retard / perturbation</i> si l'écart médian à la grille dépasse 4,5 min ; <i>arrêt</i> hors service ou sans mouvement depuis 30 min.</li>
     <li><b>Prévision hybride</b> : simulation du cycle départ → traversée (3,0 min en semaine, 3,3–3,4 min le week-end) → arrivée → départ. En grille : créneau + décalage appris (semaine +1,3 min, week-end +1,7 min, réajusté sur les 5 derniers départs). En rotation : arrivée + 3,6 min de séjour. En semaine, les fenêtres de pointe observées (06:55–09:30, 16:00–19:15) anticipent l'entrée et la sortie de rotation.</li>
     <li><b>Validation</b> : rejeu sur 490 départs du 13 au 18/11/2026 : erreur médiane 0,6 min, 93 % à ±2 min (grille officielle seule : 57 %). En rotation continue, erreur moyenne 1,5 min contre 8,4 min pour la grille.</li>
-    <li><b>Changement de courant</b> : la page calcule seule, d'après la <b>date</b>, les pleines et basses mers de <b>Nantes</b> et leur coefficient (analyse harmonique : constantes REFMAR, calage SHOM, moteur de <i>courant-loire</i>), et le débit moyen mensuel de la Loire à Montjean Q (m³/s). Équation, en minutes après l'étale : <b>début du flot = basse mer + 30,2 − 0,0241·Q + 0,164·C</b> ; <b>début du jusant = pleine mer + 34,3 + 0,0136·Q − 0,096·C</b> (C = coefficient ; 20 min mesurées sur le bac incluses ; valable pour Q de 200 à 1 600). À petits débits (Q ≈ 300, C ≈ 50) : flot ≈ +31 min, jusant ≈ +34 min ; en janvier (Q = 1 450, C ≈ 50) : flot ≈ +4 min, jusant ≈ +49 min. Calée sur 12 renverses mesurées du 13 au 19/11/2026 (Q de 200 à 310) : erreur moyenne ≈ 13–16 min, pire cas 29–38 min, fenêtre ± 20 min (± 30 min au-delà de 1 000 m³/s : <b>jamais mesuré</b>). Le bandeau violet annonce le changement 90 min avant, le marque « en cours » dans la fenêtre, le rappelle 45 min après ; les lignes de l'enchaînement dont un horaire tombe dans la fenêtre sont surlignées.</li>
+    <li><b>Changement de courant</b> : la page calcule seule, d'après la <b>date</b>, les pleines et basses mers de <b>Nantes</b> et leur coefficient (analyse harmonique : constantes REFMAR, calage SHOM, moteur de <i>courant-loire</i>), et le débit moyen mensuel de la Loire à Montjean Q (m³/s). Équation, en minutes après l'étale : <b>début du flot = basse mer + 30,2 − 0,0241·Q + 0,164·C</b> ; <b>début du jusant = pleine mer + 34,3 + 0,0136·Q − 0,096·C</b> (C = coefficient ; 20 min mesurées sur le bac incluses ; valable pour Q de 200 à 1 600). À petits débits (Q ≈ 300, C ≈ 50) : flot ≈ +31 min, jusant ≈ +34 min ; en janvier (Q = 1 450, C ≈ 50) : flot ≈ +4 min, jusant ≈ +49 min. Calée sur 12 renverses mesurées du 13 au 19/11/2026 (Q de 200 à 310) : erreur moyenne ≈ 13–16 min, pire cas 29–38 min, fenêtre ± 20 min (± 30 min au-delà de 1 000 m³/s : <b>jamais mesuré</b>). Le changement est affiché comme un retard possible, en violet, dans l'enchaînement prévu, à l'heure de la renverse (à venir ou en cours, jusqu'à 90 min avant) ; les lignes dont un horaire tombe dans la fenêtre sont surlignées.</li>
     <li><b>Quais et courant</b> : le sens du courant (flot ou jusant) déduit de l'équation corrige légèrement la prévision des départs et des traversées : à Basse-Indre le bac part ≈ 0,7 min plus tôt au flot et plus tard au jusant, à Indret l'inverse ; la traversée dure ≈ 22 s de plus au flot (144 s contre 122 s). Effet mesuré sur ≈ 90 départs par cas (6 jours, 07–20 h, test de Mann-Whitney significatif) : petit mais régulier.</li>
     <li><b>Visuel</b> : un bateau est placé entre Indret et Basse-Indre selon la dernière position AIS projetée sur le chenal ; sa situation (à quai à Indret, à quai à Basse-Indre, en route vers l'un ou l'autre) est la même que celle des cartes de quai : elle vient du dernier changement détecté, pas de la vitesse brute. Une flèche orange indique la direction ; atténué si la position est ancienne.</li>
   </ul>
@@ -1054,32 +1051,13 @@ function ligneTraversee(r,fmt,now,cls){
     const cell=c=>'<td class="'+((c[0]==="dep"?r.dep:r.arr)?c[0]:'vide2')+'">'+c[1]+'</td>';
     return '<tr'+(cls?' class="'+cls+'"':'')+'>'+cell(gauche)+cell(droite)+'</tr>';
 }
-// Changement de courant (flot ⇄ jusant) : situation de perturbation anticipée par le calcul de marée, indépendante de la position AIS
+// Changement de courant (flot ⇄ jusant) : perturbation anticipée par le calcul de marée, affichée comme un retard possible dans l'enchaînement prévu, à l'heure de la renverse
 const SENS_COURANT={flot:"flot (vers Nantes)",jusant:"jusant (vers la mer)"};
-function rendreCourant(now){
-    const e=COURANT.etatCourant(now), el=$("courant");
-    if(!e){ el.className="c-calme"; el.innerHTML='<div class="titre">Courant : prévision indisponible</div>'; return; }
-    const r=e.ref, u=r.incert;
-    const fen=formatHM(r.t-u*60000)+"–"+formatHM(r.t+u*60000);
-    let cls, titre, detail="", note="";
-    if(e.phase==="en_cours"){
-        cls="c-encours"; const passe=r.t<=now;
-        titre="〰 Changement de courant en cours : "+(passe?r.type==="flot"?"jusant":"flot":e.sens)+" ➜ "+SENS_COURANT[r.type];
-        detail="Renverse prévue vers <b>"+formatHM(r.t)+"</b> (± "+u+" min, fenêtre "+fen+")";
-        note="Perturbation anticipée : ce changement peut décaler les départs ; effet non démontré à ce jour (voir « Fonctionnement et sources »).";
-    } else if(e.phase==="avant"){
-        cls="c-avant"; titre="〰 Changement de courant à venir ➜ "+SENS_COURANT[r.type];
-        detail="Renverse prévue vers <b>"+formatHM(r.t)+"</b> ± "+u+" min ("+dans(r.t,now)+") · courant actuel : "+SENS_COURANT[e.sens];
-    } else if(e.phase==="apres"){
-        cls="c-avant"; titre="〰 Courant de "+SENS_COURANT[e.sens]+" installé depuis "+formatHM(r.t);
-        detail="Prochain changement vers <b>"+formatHM(e.next.t)+jourTag(e.next.t,now)+"</b> ➜ "+SENS_COURANT[e.next.type];
-    } else {
-        cls="c-calme"; titre="Courant de "+SENS_COURANT[e.sens]+" · prochain changement vers "+formatHM(e.next.t)+jourTag(e.next.t,now)+" ➜ "+SENS_COURANT[e.next.type];
-    }
-    const lag=Math.round(COURANT.lagRenverse(r.type,r.Q,r.coef));
-    note=(note?note+" ":"")+"Équation date + marée de Nantes : débit mensuel "+r.Q+" m³/s, coefficient "+r.coef+" → renverse = "+(r.type==="flot"?"basse":"pleine")+" mer de Nantes + "+lag+" min"+(r.Q>1000?" (gros débit, non validé par des mesures)":"")+".";
-    el.className=cls;
-    el.innerHTML='<div class="titre">'+titre+'</div>'+(detail?'<div class="detail">'+detail+'</div>':"")+(note?'<div class="note">'+note+'</div>':"");
+function ligneCourant(r,now){
+    const u=r.incert, encours=Math.abs(r.t-now)<=u*60000;
+    const titre="〰 "+(r.t<=now?"Changement de courant en cours":"Retard possible : changement de courant")+" ➜ "+SENS_COURANT[r.type];
+    const detail="Renverse vers <b>"+formatHM(r.t)+jourTag(r.t,now)+"</b> ± "+u+" min"+(r.t>now?" ("+dans(r.t,now)+")":"")+" · départs décalés possibles de "+formatHM(r.t-u*60000)+" à "+formatHM(r.t+u*60000)+" (effet non démontré)";
+    return '<tr class="renv'+(encours?' c-encours':'')+'"><td colspan="2"><div class="titre">'+titre+'</div><div class="detail">'+detail+'</div></td></tr>';
 }
 function dans(ms,now){ const m=Math.round((ms-now)/60000); return m<=0?"maintenant":"dans "+m+" min"; }
 
@@ -1121,7 +1099,6 @@ function rendre(){
     else if(relaisMuet) alerte='⚠ Le relais ne publie plus depuis '+dur(now-majRelais)+' : la dernière position peut être périmée, situation affichée en hypothèse.';
     else if(age!==null && age>SE.alerte && !indispo && enService) alerte='⚠ Aucune nouvelle position du bac depuis '+dur(age)+' : source AIS en retard ou bac hors de portée.';
     b.innerHTML='<div class="mode">'+mode.raison+(incertain?' · dernier état connu':'')+'</div><div class="detail">'+mode.detail+'</div><div class="live">'+live+'</div>'+(alerte?'<div class="alerte" role="alert">'+alerte+'</div>':'');
-    rendreCourant(now);
     const BATEAU='<svg viewBox="0 0 44 36" width="44" height="36"><path d="M4 22h36l-5 9H9z" fill="#d9635f"/><rect x="8" y="14" width="28" height="8" rx="1" fill="#e8edf0"/><rect x="14" y="7" width="16" height="7" rx="1" fill="#e8edf0"/><rect x="26" y="1" width="4" height="7" fill="#d9635f"/><g fill="#4f8fbd"><rect x="11" y="16.5" width="3" height="3"/><rect x="17" y="16.5" width="3" height="3"/><rect x="23" y="16.5" width="3" height="3"/><rect x="29" y="16.5" width="3" height="3"/></g></svg>';
     // Visuel : dérivé de la MÊME situation que les cartes (dernier événement), jamais de la vitesse brute
     const der=evs.length?evs[evs.length-1]:null;
@@ -1177,8 +1154,15 @@ function rendre(){
     });
     $("quais").innerHTML=html;
     const dernierDep=evs.filter(e=>e.type==="dep").pop();
+    const lignesChaine=panne?[]:traversees((pr.evenements[0]&&pr.evenements[0].type==="arr"&&dernierDep&&dernierDep.q===autre(pr.evenements[0].q)?[dernierDep]:[]).concat(pr.evenements.slice(0,8))).slice(0,4);
+    const tRang=r=>(r.dep||r.arr).t, tFin=lignesChaine.length?tRang(lignesChaine[lignesChaine.length-1]):now;
+    const renv=COURANT.renverses(now).filter(r=>r.t+r.incert*60000>=now && r.t-r.incert*60000<=Math.max(tFin,now+90*60000)).slice(0,1); // à venir ou en cours, et proche
     $("chaine").innerHTML = panne ? '<div class="vide">Prévisions suspendues : '+(indispo?"position AIS indisponible":"arrêt en cours")+'.</div>' :
-        ENTETE_QQ+traversees((pr.evenements[0]&&pr.evenements[0].type==="arr"&&dernierDep&&dernierDep.q===autre(pr.evenements[0].q)?[dernierDep]:[]).concat(pr.evenements.slice(0,8))).slice(0,4).map((r,i)=>ligneTraversee(r,formatHM,now,(i===0?"next":"")+((r.dep&&COURANT.renverseProche(r.dep.t,now))||(r.arr&&COURANT.renverseProche(r.arr.t,now))?" cour":""))).join("")+'</table>';
+        ENTETE_QQ+(()=>{ const out=[]; let ir=0;
+            lignesChaine.forEach((r,i)=>{ while(ir<renv.length&&renv[ir].t<=tRang(r)) out.push(ligneCourant(renv[ir++],now));
+                out.push(ligneTraversee(r,formatHM,now,(i===0?"next":"")+((r.dep&&COURANT.renverseProche(r.dep.t,now))||(r.arr&&COURANT.renverseProche(r.arr.t,now))?" cour":""))); });
+            while(ir<renv.length) out.push(ligneCourant(renv[ir++],now));
+            return out.join(""); })()+'</table>';
     const mes=traversees(mesures.slice(-12)).reverse().slice(0,5); // uniquement les changements réellement mesurés
     $("mesures").innerHTML = mes.length ? ENTETE_QQ+mes.map(r=>ligneTraversee(r,formatHMS,now,"")).join("")+'</table>'
         : '<div class="vide">Aucun changement mesuré pour l\'instant.</div>';
