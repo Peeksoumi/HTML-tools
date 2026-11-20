@@ -18,6 +18,9 @@
   .card { background:var(--card); border:1px solid var(--bd); border-radius:12px; padding:12px; margin-bottom:10px; }
   .lieu label { display:block; font-size:.9rem; margin-bottom:6px; }
   input[type=search] { width:100%; font:inherit; padding:9px 11px; border-radius:9px; border:1px solid var(--bd); background:var(--card); color:var(--txt); }
+  .rang { display:flex; gap:8px; }
+  .rang input { flex:1 1 auto; min-width:0; }
+  .rang button { flex:none; font:inherit; padding:9px 12px; border-radius:9px; border:1px solid var(--bd); background:var(--card); color:var(--txt); cursor:pointer; }
   .hint { color:var(--mut); font-size:.82rem; margin:6px 0 0; }
   .res h2 { font-size:1.05rem; margin:0 0 2px; display:flex; align-items:center; gap:8px; }
   .pt { width:11px; height:11px; border-radius:50%; display:inline-block; flex:none; }
@@ -46,8 +49,11 @@
 
   <div class="card lieu">
     <label for="q">Ville ou code postal <span class="hint">(facultatif)</span></label>
-    <input type="search" id="q" placeholder="Ex. 44000 ou Nantes" autocomplete="off">
-    <p class="hint">Si tu le renseignes, les liens marqués « lieu pré-rempli » ouvrent la carte déjà centrée sur ce lieu.</p>
+    <div class="rang">
+      <input type="search" id="q" placeholder="Ex. 44000 ou Nantes" autocomplete="off">
+      <button type="button" id="geo">📍 Ma position</button>
+    </div>
+    <p class="hint" id="lieumsg">Si tu le renseignes, les liens marqués « lieu pré-rempli » ouvrent la carte déjà centrée sur ce lieu.</p>
   </div>
 
   <div id="reseaux"></div>
@@ -56,19 +62,21 @@
     <h2>Fonctionnement et sources</h2>
     <h3>Fonctionnement</h3><ul>
       <li><b>Liens</b> : chaque réseau a un ou plusieurs liens vers la carte de son propre site. Relais Colis, Pickup et La Poste s'affichent dans la page (« Afficher ici ») ; les autres s'ouvrent dans un nouvel onglet.</li>
-      <li><b>Lieu pré-rempli</b> : si tu saisis une ville ou un code postal, il est ajouté en paramètre d'URL pour Mondial Relay et Pickup ; les autres sites se remplissent sur leur page.</li>
+      <li><b>Lieu pré-rempli</b> : si tu saisis une ville ou un code postal (ou touches « Ma position », qui le déduit de ta position), il est ajouté en paramètre d'URL pour Mondial Relay et Pickup ; les autres sites se remplissent sur leur page.</li>
       <li><b>Vérification des liens</b> : un contrôleur tourne sur le serveur du site toutes les 6 h, teste chaque lien de cette page (réponse HTTP) et envoie une alerte push si l'un d'eux reste en panne.</li>
-      <li><b>Sur ton appareil</b> : la liste est dans la page (aucune requête avant ton clic) ; ta saisie n'est envoyée qu'au site du réseau que tu ouvres.</li>
+      <li><b>Sur ton appareil</b> : la liste est dans la page (aucune requête avant ton clic) ; ta position ne quitte l'appareil que pour « Ma position » ; ta saisie n'est envoyée qu'au site du réseau que tu ouvres.</li>
     </ul>
     <h3>Sources de données</h3><ul>
       <li><b>Sites officiels des réseaux</b> : Mondial Relay, Relais Colis, Pickup / Chronopost, La Poste / Colissimo, UPS Access Point, DPD, Vinted Go ; chaque carte et ses données appartiennent à son réseau et suivent ses conditions.</li>
-      <li><b>Aucune autre donnée externe</b> : pas de bibliothèque ni de service tiers ; un site n'est chargé dans la page qu'après ton clic sur « Afficher ici ».</li>
+      <li><b>API Adresse (data.gouv.fr)</b> : transforme ta position GPS en code postal et ville, seulement quand tu touches « Ma position » (la position lui est envoyée ; Licence Ouverte).</li>
+      <li><b>Pas d'autre donnée externe</b> : pas de bibliothèque ni de service tiers ; un site n'est chargé dans la page qu'après ton clic sur « Afficher ici ».</li>
     </ul>
     <h3>Limites</h3><ul>
       <li>Mondial Relay, Chronopost, UPS, DPD et Vinted Go interdisent l'affichage dans une autre page (en-tête anti-iframe) : ils s'ouvrent dans un onglet. Le cadre intégré est celui du site officiel, ni modifié ni lu par la page.</li>
       <li>Le contrôle vérifie que l'adresse répond, pas que la carte s'affiche : un site peut changer sa page sans que l'adresse tombe en erreur.</li>
       <li>Mondial Relay, UPS et Vinted Go refusent les robots, même derrière un navigateur : le serveur ne peut pas contrôler leur lien (« non vérifiable », sans alerte), il faut l'essayer soi-même.</li>
       <li>Les paramètres de lieu pré-rempli ne sont pas documentés par les réseaux et peuvent cesser de fonctionner : saisis alors le lieu sur leur page.</li>
+      <li>« Ma position » donne la commune, pas l'adresse exacte, et ne marche qu'en France ; la précision dépend du GPS ou du réseau de l'appareil.</li>
       <li>Tailles de colis acceptées, disponibilité d'un locker et fermetures exceptionnelles : à vérifier sur ton bordereau ou la fiche du point.</li>
     </ul>
   </div>
@@ -152,6 +160,25 @@ $('reseaux').addEventListener('click', e => {
   e.preventDefault();
   const id = a.dataset.embed; ouverts.has(id) ? ouverts.delete(id) : ouverts.add(id);
   afficher();
+});
+// Position de l'appareil -> code postal et ville (API Adresse, data.gouv.fr) -> champ « lieu ». Rien n'est envoyé avant le clic.
+const LIEU_AIDE = $('lieumsg').textContent;
+$('geo').addEventListener('click', () => {
+  const msg = t => { $('lieumsg').textContent = t; };
+  if (!navigator.geolocation) { msg('Géolocalisation indisponible sur cet appareil : saisis une ville.'); return; }
+  msg('Localisation en cours…');
+  navigator.geolocation.getCurrentPosition(async pos => {
+    try {
+      const r = await fetch(`https://api-adresse.data.gouv.fr/reverse/?lon=${pos.coords.longitude}&lat=${pos.coords.latitude}`);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const p = (((await r.json()).features || [])[0] || {}).properties;
+      if (!p || !p.city) throw new Error('aucune commune trouvée');
+      $('q').value = [p.postcode, p.city].filter(Boolean).join(' ');
+      msg('📍 ' + $('q').value + ' — ' + LIEU_AIDE);
+      afficher();
+    } catch (e) { msg('Position obtenue mais commune introuvable (' + e.message + ') : saisis une ville.'); }
+  }, err => msg(err.code === 1 ? 'Position refusée : autorise la localisation ou saisis une ville.' : 'Position introuvable : saisis une ville.'),
+  { timeout: 15000, maximumAge: 60000 });
 });
 let attente; $('q').addEventListener('input', () => { clearTimeout(attente); attente = setTimeout(afficher, 600); });  // évite de recharger un cadre ouvert à chaque lettre
 afficher();
