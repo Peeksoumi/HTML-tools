@@ -5,6 +5,8 @@ officiel de ce réseau : Mondial Relay, Relais Colis, Pickup / Chronopost, La Po
 Page autonome (aucune donnée ni bibliothèque externe, rien n'est envoyé avant un clic) : `index.html`, avec bouton « Télécharger la page ».
 
 - **Liens** : un bouton par carte officielle, ouvert dans un nouvel onglet.
+- **Affichage dans la page** : les liens marqués `"embed": true` (Relais Colis, Pickup, La Poste) s'ouvrent dans un cadre intégré (« Afficher ici »). Les autres sites
+  (Mondial Relay, Chronopost, UPS, DPD, Vinted Go) envoient un en-tête anti-iframe et s'ouvrent dans un onglet.
 - **Lieu pré-rempli (facultatif)** : une ville ou un code postal saisi est ajouté en paramètre d'URL pour Mondial Relay (`codePostal`, `ville`)
   et Pickup (`pudo_keyword`). Ces paramètres ne sont pas documentés par les réseaux : à vérifier en usage.
 - **Source unique des liens** : le bloc `<script type="application/json" id="liens">` de `index.html`. Pour ajouter ou corriger un lien,

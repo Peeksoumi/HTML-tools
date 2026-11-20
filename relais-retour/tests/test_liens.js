@@ -16,6 +16,7 @@ for (const r of reseaux) {
     assert.ok(!ids.has(l.id), 'id en double : ' + l.id); ids.add(l.id);
     const u = new URL(l.url);
     assert.strictEqual(u.protocol, 'https:', 'lien non https : ' + l.id);
+    assert.ok(l.embed === undefined || l.embed === true, 'embed : true ou absent');
     assert.ok(!l.lieu || ['mondial', 'pickup'].includes(l.lieu), 'lieu inconnu : ' + l.id);
   }
 }

@@ -25,6 +25,10 @@
   .liens { display:flex; flex-wrap:wrap; gap:6px; }
   .liens a { font-size:.92rem; text-decoration:none; border-radius:9px; padding:8px 12px; border:1px solid var(--pri); background:var(--pri); color:#fff; }
   .liens a.sec { background:var(--card); color:var(--txt); border-color:var(--bd); }
+  .liens a.ouvrir { background:var(--card); color:var(--txt); border-color:var(--bd); }
+  .cadre { margin-top:10px; }
+  .cadre iframe { width:100%; height:70vh; min-height:420px; border:1px solid var(--bd); border-radius:10px; background:#fff; }
+  .cadre p { margin:6px 0 0; font-size:.82rem; color:var(--mut); }
   .fonct { margin-top:24px; padding:14px 16px; border:1px solid var(--bd); border-radius:12px; background:var(--card); color:var(--txt); text-align:left; font-size:.88rem; line-height:1.45; }
   .fonct h2 { font-size:1rem; margin:0 0 4px; }
   .fonct h3 { font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; color:var(--mut); margin:12px 0 4px; }
@@ -51,16 +55,17 @@
   <div class="fonct" id="fonctionnement">
     <h2>Fonctionnement et sources</h2>
     <h3>Fonctionnement</h3><ul>
-      <li><b>Liens</b> : chaque réseau a un ou plusieurs liens vers la carte de son propre site ; un clic ouvre le site officiel dans un nouvel onglet.</li>
+      <li><b>Liens</b> : chaque réseau a un ou plusieurs liens vers la carte de son propre site. Relais Colis, Pickup et La Poste s'affichent dans la page (« Afficher ici ») ; les autres s'ouvrent dans un nouvel onglet.</li>
       <li><b>Lieu pré-rempli</b> : si tu saisis une ville ou un code postal, il est ajouté en paramètre d'URL pour Mondial Relay et Pickup ; les autres sites se remplissent sur leur page.</li>
       <li><b>Vérification des liens</b> : un contrôleur tourne sur le serveur du site toutes les 6 h, teste chaque lien de cette page (réponse HTTP) et envoie une alerte push si l'un d'eux reste en panne.</li>
       <li><b>Sur ton appareil</b> : la liste est dans la page (aucune requête avant ton clic) ; ta saisie n'est envoyée qu'au site du réseau que tu ouvres.</li>
     </ul>
     <h3>Sources de données</h3><ul>
       <li><b>Sites officiels des réseaux</b> : Mondial Relay, Relais Colis, Pickup / Chronopost, La Poste / Colissimo, UPS Access Point, DPD, Vinted Go ; chaque carte et ses données appartiennent à son réseau et suivent ses conditions.</li>
-      <li><b>Aucune autre donnée externe</b> : pas de bibliothèque ni de service tiers chargé par la page.</li>
+      <li><b>Aucune autre donnée externe</b> : pas de bibliothèque ni de service tiers ; un site n'est chargé dans la page qu'après ton clic sur « Afficher ici ».</li>
     </ul>
     <h3>Limites</h3><ul>
+      <li>Mondial Relay, Chronopost, UPS, DPD et Vinted Go interdisent l'affichage dans une autre page (en-tête anti-iframe) : ils s'ouvrent dans un onglet. Le cadre intégré est celui du site officiel, ni modifié ni lu par la page.</li>
       <li>Le contrôle vérifie que l'adresse répond, pas que la carte s'affiche : un site peut changer sa page sans que l'adresse tombe en erreur.</li>
       <li>Mondial Relay, UPS et Vinted Go refusent les robots, même derrière un navigateur : le serveur ne peut pas contrôler leur lien (« non vérifiable », sans alerte), il faut l'essayer soi-même.</li>
       <li>Les paramètres de lieu pré-rempli ne sont pas documentés par les réseaux et peuvent cesser de fonctionner : saisis alors le lieu sur leur page.</li>
@@ -69,7 +74,7 @@
   </div>
 </main>
 
-<!-- Source unique des liens : lue par la page ET par le contrôleur du serveur (private/relais_liens/check_liens.py). Un lien = id, libelle, url ; "lieu" = pré-remplissage (mondial | pickup). -->
+<!-- Source unique des liens : lue par la page ET par le contrôleur du serveur (private/relais_liens/check_liens.py). Un lien = id, libelle, url ; "lieu" = pré-remplissage (mondial | pickup) ; "embed" = le site accepte d'être affiché dans la page (en-têtes anti-iframe vérifiés). -->
 <script type="application/json" id="liens">
 [
   { "id": "mondial", "nom": "Mondial Relay", "couleur": "#d9261c", "desc": "Points Relais (commerces) et Lockers.",
@@ -78,16 +83,16 @@
     ] },
   { "id": "relaiscolis", "nom": "Relais Colis", "couleur": "#0a7d3b", "desc": "Relais commerçants Relais Colis.",
     "liens": [
-      { "id": "relaiscolis-carte", "libelle": "Trouver un Relais Colis", "url": "https://relaiscolis.com/relais/trouver" }
+      { "id": "relaiscolis-carte", "libelle": "Trouver un Relais Colis", "url": "https://relaiscolis.com/relais/trouver", "embed": true }
     ] },
   { "id": "pickup", "nom": "Pickup / Chronopost", "couleur": "#c26a00", "desc": "Relais commerçants et consignes Pickup, réseau des envois Chronopost Shop2Shop.",
     "liens": [
-      { "id": "pickup-carte", "libelle": "Carte Pickup", "url": "https://map.pickup.fr/", "lieu": "pickup" },
+      { "id": "pickup-carte", "libelle": "Carte Pickup", "url": "https://map.pickup.fr/", "lieu": "pickup", "embed": true },
       { "id": "chronopost-relais", "libelle": "Chronopost : points de proximité", "url": "https://www.chronopost.fr/expeditionAvanceeSec/ounoustrouver.html", "sec": true }
     ] },
   { "id": "colissimo", "nom": "La Poste / Colissimo", "couleur": "#1f4e9c", "desc": "Bureaux de poste, relais et consignes Pickup.",
     "liens": [
-      { "id": "laposte-localiser", "libelle": "Localiser un bureau ou un point de retrait", "url": "https://localiser.laposte.fr/" }
+      { "id": "laposte-localiser", "libelle": "Localiser un bureau ou un point de retrait", "url": "https://localiser.laposte.fr/", "embed": true }
     ] },
   { "id": "ups", "nom": "UPS Access Point", "couleur": "#6b4a1b", "desc": "Commerces de proximité UPS Access Point.",
     "liens": [
@@ -125,17 +130,30 @@ function urlLien(lien, lieu) {
   return u.toString();
 }
 
+// Cartes ouvertes dans la page (iframe) : mémorisées pour survivre au redessin quand on tape un lieu.
+const ouverts = new Set();
 function afficher() {
   const lieu = $('q').value;
   $('reseaux').innerHTML = RESEAUX.map(r => `<section class="card res">
     <h2><span class="pt" style="background:${esc(r.couleur)}"></span>${esc(r.nom)}</h2>
     <p class="desc">${esc(r.desc)}</p>
     <div class="liens">${r.liens.map(l => {
-      const pre = l.lieu && lieu.trim() ? ' · lieu pré-rempli' : '';
-      return `<a class="${l.sec ? 'sec' : ''}" href="${esc(urlLien(l, lieu))}" target="_blank" rel="noopener">🗺️ ${esc(l.libelle)}${pre} ↗</a>`;
-    }).join('')}</div></section>`).join('');
+      const pre = l.lieu && lieu.trim() ? ' · lieu pré-rempli' : '', u = esc(urlLien(l, lieu));
+      if (l.embed) return `<a href="${u}" data-embed="${esc(l.id)}">🗺️ ${ouverts.has(l.id) ? 'Masquer' : 'Afficher ici'} : ${esc(l.libelle)}${pre}</a>
+        <a class="ouvrir" href="${u}" target="_blank" rel="noopener">↗ Nouvel onglet</a>`;
+      return `<a class="${l.sec ? 'sec' : ''}" href="${u}" target="_blank" rel="noopener">🗺️ ${esc(l.libelle)}${pre} ↗</a>`;
+    }).join('')}</div>
+    ${r.liens.filter(l => l.embed && ouverts.has(l.id)).map(l => `<div class="cadre"><iframe title="${esc(l.libelle)}" src="${esc(urlLien(l, lieu))}" allow="geolocation" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+      <p>Si le cadre reste vide, le site refuse d'être affiché ici : utilise « Nouvel onglet ».</p></div>`).join('')}
+  </section>`).join('');
 }
-$('q').addEventListener('input', afficher);
+$('reseaux').addEventListener('click', e => {
+  const a = e.target.closest('a[data-embed]'); if (!a) return;
+  e.preventDefault();
+  const id = a.dataset.embed; ouverts.has(id) ? ouverts.delete(id) : ouverts.add(id);
+  afficher();
+});
+let attente; $('q').addEventListener('input', () => { clearTimeout(attente); attente = setTimeout(afficher, 600); });  // évite de recharger un cadre ouvert à chaque lettre
 afficher();
 </script>
 </body>
