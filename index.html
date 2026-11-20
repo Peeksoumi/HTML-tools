@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>HTML-tools — outils web</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%234f46e5'/%3E%3Ctext x='50' y='70' font-size='60' text-anchor='middle'%3E🧰%3C/text%3E%3C/svg%3E">
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#4f46e5">
 <style>
@@ -26,6 +27,11 @@
   .btn.primary:hover { background:var(--acc-h); }
   .btn.secondary { background:var(--card); color:var(--acc); }
   .btn.secondary:hover { background:#eef2ff; }
+  .launcher { display:grid; grid-template-columns:repeat(auto-fill, minmax(76px, 1fr)); gap:18px 8px; margin:0 0 32px; padding:20px 12px; background:var(--card); border:1px solid var(--line); border-radius:20px; box-shadow:0 1px 3px rgba(0,0,0,.05); }
+  .app { display:flex; flex-direction:column; align-items:center; gap:6px; text-decoration:none; color:var(--ink); font-size:.78rem; line-height:1.2; text-align:center; }
+  .app .ico { width:58px; height:58px; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:30px; background:var(--c); box-shadow:0 2px 6px rgba(0,0,0,.18); transition:transform .12s; }
+  .app:hover .ico, .app:focus-visible .ico { transform:scale(1.08); }
+  .app:active .ico { transform:scale(.94); }
   .note { margin-top:32px; font-size:.85rem; color:var(--mute); }
 </style>
 </head>
@@ -36,6 +42,17 @@
   </div>
   <h1>HTML-tools</h1>
   <p class="lead">Des petits outils web qui fonctionnent directement dans ton navigateur. Ouvre-les ici, ou télécharge la page pour l'utiliser chez toi.</p>
+
+  <nav class="launcher" aria-label="Raccourcis vers les outils">
+    <a class="app" href="fusion-pdf/" style="--c:#dc2626"><span class="ico" aria-hidden="true">📄</span><span>Fusion PDF</span></a>
+    <a class="app" href="carte-vers-gpx/" style="--c:#0b6e4f"><span class="ico" aria-hidden="true">🗺️</span><span>Carte → GPX</span></a>
+    <a class="app" href="/parking/" style="--c:#2563eb"><span class="ico" aria-hidden="true">🅿️</span><span>Parking gratuit</span></a>
+    <a class="app" href="relais-retour/" style="--c:#d97706"><span class="ico" aria-hidden="true">📦</span><span>Relais colis</span></a>
+    <a class="app" href="courant-loire/" style="--c:#1d6fb8"><span class="ico" aria-hidden="true">🌊</span><span>Courant Loire</span></a>
+    <a class="app" href="bac-lola/" style="--c:#0e7490"><span class="ico" aria-hidden="true">⛴️</span><span>Bac Lola</span></a>
+    <a class="app" href="lola-position/" style="--c:#7c3aed"><span class="ico" aria-hidden="true">📍</span><span>Lola AIS</span></a>
+    <a class="app" href="meteo-radar/" style="--c:#0284c7"><span class="ico" aria-hidden="true">☁️</span><span>Météo radar</span></a>
+  </nav>
 
   <div class="grid">
     <article class="card">
