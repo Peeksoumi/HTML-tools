@@ -461,6 +461,13 @@ def fusionner(parkings):
     return res
 
 
+def rang_gratuite(p):
+    """Tri : gratuit confirmé (0), gratuit probable (1), tarif inconnu (2)."""
+    if p["gratuit"] is None:
+        return 2
+    return 1 if p["certitude"] == "probable" else 0
+
+
 def totaux(parkings, rues):
     gratuits = [p for p in parkings if p["gratuit"] is True]
     inconnus = [p for p in parkings if p["gratuit"] is None]
@@ -509,7 +516,7 @@ def rechercher(lat, lon, rayon=1000, max_rues=20):
         p["distance_m"] = int(haversine(lat, lon, p["lat"], p["lon"])) if p["lat"] is not None else None
     parkings = [p for p in parkings
                 if p["gratuit"] is not False and (p["distance_m"] is None or p["distance_m"] <= rayon)]
-    parkings.sort(key=lambda p: (p["distance_m"] is None, p["distance_m"] or 0))
+    parkings.sort(key=lambda p: (rang_gratuite(p), p["distance_m"] is None, p["distance_m"] or 0))
     completer_noms([p for p in parkings if p["lat"] is not None])
     for r in rues:
         r["distance_m"] = int(haversine(lat, lon, r["lat"], r["lon"]))

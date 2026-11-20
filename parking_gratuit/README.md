@@ -15,6 +15,7 @@ Dépôt public HTML-tools ; dépend d'un serveur (pas de bouton « Télécharger
 Fusion : un même parking vu par plusieurs sources est regroupé (< 25 m, ou < 300 m avec un nom ressemblant).
 Le temps réel de l'opérateur l'emporte sur la capacité OSM ; si deux sources se contredisent sur la gratuité,
 le tarif passe à « inconnu ». Les parkings payants sont écartés.
+Tri de la liste : gratuit confirmé, puis gratuit probable, puis tarif inconnu ; à gratuité égale, du plus proche au plus éloigné.
 
 **Lecture des chiffres** : « places libres » = somme du temps réel (parkings gratuits) ; « places au total sans temps
 réel » = capacité des autres parkings gratuits ; « places de rue » = estimation. Ne jamais les additionner comme si

@@ -138,6 +138,13 @@ class Tests(unittest.TestCase):
         self.assertIsNone(r[0]["gratuit"])
         self.assertTrue(r[0]["notes"])
 
+    def test_tri_gratuite(self):
+        base = {"gratuit": True, "certitude": "sûr"}
+        self.assertEqual(sources.rang_gratuite(base), 0)
+        self.assertEqual(sources.rang_gratuite(dict(base, certitude="opérateur")), 0)
+        self.assertEqual(sources.rang_gratuite(dict(base, certitude="probable")), 1)
+        self.assertEqual(sources.rang_gratuite(dict(base, gratuit=None)), 2)
+
     def test_totaux(self):
         res = sources.fusionner(sources.parse_parkings(OSM) + RT)
         tot = sources.totaux(res, sources.parse_rues(OSM))
@@ -187,6 +194,8 @@ class Tests(unittest.TestCase):
         try:
             d = json.load(urllib.request.urlopen(f"{base}/api/recherche?lat={LAT}&lon={LON}&rayon=1000"))
             self.assertEqual(d["totaux"]["libres_temps_reel"], 42)
+            rangs = [sources.rang_gratuite(p) for p in d["parkings"]]
+            self.assertEqual(rangs, sorted(rangs))   # gratuits d'abord, tarif inconnu en dernier
             self.assertEqual(d["rues"][0]["nom"], "Rue Épis")
             ids = {s["id"]: s["ok"] for s in d["sources"]}
             self.assertTrue(ids["osm_parkings"] and ids["osm_rues"] and ids["nantes"])
