@@ -1,0 +1,152 @@
+<div id="app" data-m="1">
+  <canvas id="cv" aria-label="Carte de jeu"></canvas>
+
+  <div id="hud" hidden>
+    <header id="top">
+      <div id="resbar">
+        <div class="res" title="Nourriture (citoyens au travail)"><img data-g="food" alt="Nourriture"><b id="r-food">0</b><small id="g-food"></small></div>
+        <div class="res" title="Bois (citoyens au travail)"><img data-g="wood" alt="Bois"><b id="r-wood">0</b><small id="g-wood"></small></div>
+        <div class="res" title="Or (citoyens au travail)"><img data-g="gold" alt="Or"><b id="r-gold">0</b><small id="g-gold"></small></div>
+        <div class="res" title="Foi, produite par les temples"><img data-g="foi" alt="Foi"><b id="r-foi">0</b></div>
+        <div class="res" title="Population utilisée / logée"><img data-g="pop" alt="Population"><b id="r-pop">0/0</b></div>
+      </div>
+      <div id="topr">
+        <span id="clock">0:00</span>
+        <button id="b-speed" class="tb" type="button" title="Vitesse du jeu">×1</button>
+        <button id="b-menu" class="tb" type="button" aria-label="Pause et menu">II</button>
+      </div>
+    </header>
+    <div id="toasts" aria-live="polite"></div>
+    <aside id="side">
+      <button id="q-idle" class="qb" type="button" title="Citoyen inactif suivant" aria-label="Citoyen inactif suivant"><img data-g="idle" alt=""><span id="idle-n" class="badge" hidden>0</span></button>
+      <button id="q-army" class="qb" type="button" title="Sélectionner toute l’armée (deux fois : centrer)" aria-label="Sélectionner l’armée"><img data-g="army" alt=""></button>
+      <button id="q-box" class="qb" type="button" aria-pressed="false" title="Sélection par zone" aria-label="Sélection par zone"><img data-g="box" alt=""></button>
+      <div id="powers"></div>
+    </aside>
+    <footer id="bottom">
+      <div id="minibox"><canvas id="mini" aria-label="Minicarte : touchez pour vous y rendre"></canvas></div>
+      <div id="selp"></div>
+      <div id="cmdp"></div>
+    </footer>
+    <div id="confirm" hidden><span id="confirm-msg"></span><button id="confirm-ok" class="btn gold" type="button">Valider</button><button id="confirm-no" class="btn" type="button">Annuler</button></div>
+    <div id="tip" hidden></div>
+  </div>
+
+  <section id="menu" class="screen">
+    <canvas id="sky" aria-hidden="true"></canvas>
+    <div class="menu-inner">
+      <nav class="toplinks" aria-label="Liens de la page">
+        <a href="https://github.com/Peeksoumi/HTML-tools/issues/new?title=%5Bmythomachie%5D%20&amp;body=Outil%20concern%C3%A9%20%3A%20mythomachie%20(http%3A%2F%2F141.227.151.70%3A8080%2Fmythomachie%2F)%0A%0A**Ma%20suggestion%20ou%20le%20bug%20rencontr%C3%A9%20%3A**%0A%0A" target="_blank" rel="noopener">💡 Proposer une amélioration</a>
+        <a id="b-download" href="index.html" download="mythomachie.html" title="Enregistrer la page : le jeu entier tient dans ce fichier et fonctionne hors ligne">⬇️ Télécharger la page</a>
+      </nav>
+      <p id="dl-msg" class="note" hidden></p>
+      <header class="hero">
+        <p class="kicker">Stratégie en temps réel · jouable hors ligne</p>
+        <h1 id="title">Mythomachie</h1>
+        <p class="lede">Bâtissez une cité, servez un dieu et brisez les panthéons rivaux.</p>
+      </header>
+      <section aria-labelledby="h-god">
+        <h2 id="h-god">Votre dieu protecteur</h2>
+        <div id="gods" class="gods"></div>
+      </section>
+      <section class="opts" aria-label="Réglages de la partie">
+        <div class="opt"><span class="ol" id="l-ais">Adversaires</span><div class="seg" data-opt="ais" role="group" aria-labelledby="l-ais"><button type="button" data-v="1">1</button><button type="button" data-v="2">2</button><button type="button" data-v="3">3</button></div></div>
+        <div class="opt"><span class="ol" id="l-diff">Difficulté</span><div class="seg" data-opt="diff" role="group" aria-labelledby="l-diff"><button type="button" data-v="easy">Facile</button><button type="button" data-v="normal">Normal</button><button type="button" data-v="hard">Difficile</button></div></div>
+        <div class="opt"><span class="ol" id="l-map">Carte</span><div class="seg" data-opt="map" role="group" aria-labelledby="l-map"><button type="button" data-v="small">Petite</button><button type="button" data-v="medium">Moyenne</button><button type="button" data-v="large">Grande</button></div></div>
+      </section>
+      <div class="actions">
+        <button id="b-play" class="btn gold big" type="button">Lancer la partie</button>
+        <button id="b-continue" class="btn big" type="button" hidden>Reprendre la partie</button>
+        <button id="b-help" class="btn" type="button">Comment jouer</button>
+      </div>
+      <div class="fonct" id="fonctionnement">
+        <h2>Fonctionnement et sources</h2>
+        <h3>Fonctionnement</h3>
+        <ul>
+          <li><b>Simulation</b> : pas fixes de 50 ms pour la récolte, la construction, les combats, les projectiles et les pouvoirs.</li>
+          <li><b>Déplacements</b> : recherche de chemin A* sur une grille de cases, avec évitement entre unités.</li>
+          <li><b>Adversaires</b> : IA à règles (économie, bâtiments, recherches, armée qui contre la vôtre, vagues d’attaque, défense, pouvoirs).</li>
+          <li><b>Brouillard de guerre</b> : vous ne voyez que ce que vos unités et bâtiments voient.</li>
+          <li><b>Navigateur seul</b> : tout tourne sur l’appareil ; la sauvegarde reste dans le stockage local du navigateur.</li>
+        </ul>
+        <h3>Sources de données</h3>
+        <ul>
+          <li><b>Aucune donnée externe</b> : cartes, graphismes et sons sont générés par le code, sans bibliothèque chargée.</li>
+          <li><b>Mythologies</b> grecque, nordique et égyptienne (domaine public) ; jeu original.</li>
+        </ul>
+        <h3>Limites</h3>
+        <ul>
+          <li>Pas de multijoueur ni de campagne : parties contre 1 à 3 adversaires.</li>
+          <li>L’IA voit toute la carte ; elle récolte 20 % plus vite en Difficile et 15 % moins vite en Facile.</li>
+          <li>La sauvegarde est liée à ce navigateur : effacer ses données l’efface.</li>
+          <li>Sur petit téléphone, la grande carte à 4 camps peut ralentir.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="pause" class="screen modal" hidden>
+    <div class="card" role="dialog" aria-modal="true" aria-labelledby="h-pause">
+      <h2 id="h-pause">Pause</h2>
+      <div class="row"><button id="b-resume" class="btn gold" type="button">Reprendre</button><button id="b-save" class="btn" type="button">Sauvegarder</button><button id="b-help2" class="btn" type="button">Comment jouer</button></div>
+      <p id="save-msg"></p>
+      <div class="row"><span class="ol">Vitesse</span><div class="seg" role="group" aria-label="Vitesse du jeu"><button type="button" data-speed="1">×1</button><button type="button" data-speed="1.5">×1,5</button><button type="button" data-speed="2">×2</button></div></div>
+      <div class="row"><button id="b-sound" class="btn" type="button">Sons : activés</button><button id="b-quit" class="btn ghost" type="button">Quitter vers le menu</button></div>
+    </div>
+  </section>
+
+  <section id="end" class="screen modal" hidden>
+    <div class="card" role="dialog" aria-modal="true" aria-labelledby="end-title">
+      <h2 id="end-title">Victoire</h2>
+      <p id="end-sub"></p>
+      <div id="end-stats" class="tablewrap"></div>
+      <div class="row" style="justify-content:center"><button id="b-again" class="btn gold" type="button">Nouvelle partie</button><button id="b-tomenu" class="btn" type="button">Menu principal</button></div>
+    </div>
+  </section>
+
+  <section id="help" class="screen modal" hidden>
+    <div class="card" role="dialog" aria-modal="true" aria-labelledby="h-help">
+      <h2 id="h-help">Comment jouer</h2>
+      <p class="cycle">Hoplite › Cavalier › Archer › Hoplite</p>
+      <div class="help-grid">
+        <div>
+          <h3>Au doigt</h3>
+          <ul>
+            <li>Touchez une unité pour la choisir ; deux fois de suite pour prendre toutes celles du même type à l’écran.</li>
+            <li>Touchez le sol pour déplacer, un ennemi pour attaquer, un arbre, un buisson ou une mine pour récolter, un chantier pour construire.</li>
+            <li>Glissez un doigt pour déplacer la vue, pincez pour zoomer.</li>
+            <li>Appui long puis glissement, ou bouton de zone : sélection par rectangle.</li>
+            <li>Pour bâtir : choisissez le bâtiment, touchez l’emplacement, puis Construire.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>À la souris</h3>
+          <ul>
+            <li>Clic gauche : choisir (glisser pour un rectangle, double-clic pour le même type, Maj pour ajouter).</li>
+            <li>Clic droit : déplacer, attaquer, récolter, construire.</li>
+            <li>Flèches ou ZQSD : déplacer la vue. Molette : zoom.</li>
+            <li>Ctrl + 1 à 5 : créer un groupe ; 1 à 5 : le rappeler.</li>
+            <li>Échap : annuler · Espace : centrer · H : cité · point : citoyen inactif · P : pause.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Économie</h3>
+          <ul>
+            <li>Les citoyens récoltent nourriture (baies, fermes), bois et or, puis les rapportent à la cité ou à un entrepôt.</li>
+            <li>Chaque maison loge 6 habitants de plus (100 au maximum).</li>
+            <li>Les recherches de la cité, de la caserne et du temple renforcent tout votre peuple.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Guerre et dieux</h3>
+          <ul>
+            <li>Béliers et créatures abattent vite les bâtiments ; les archers y sont peu efficaces.</li>
+            <li>Le temple produit la Foi : dépensez-la en pouvoirs (boutons ronds) et en créatures.</li>
+            <li>Un camp est vaincu quand il n’a plus ni cité, caserne, temple, ni citoyen.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="row" style="justify-content:flex-end"><button id="help-close" class="btn gold" type="button">Compris</button></div>
+    </div>
+  </section>
+</div>
