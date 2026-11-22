@@ -6,8 +6,9 @@ Seul, le jeu fonctionne hors ligne ; en ligne, jusqu'à 4 camps (joueurs et ordi
 
 - Dieux : Zeus (Cyclope ; Foudre, Égide), Odin (Valkyrie ; Fimbulvetr, Einherjar), Râ (Phénix ; Soleil ardent, Bénédiction).
 - Unités : citoyen, hoplite, archer, cavalier, bélier, créature du dieu. Cycle : hoplite › cavalier › archer › hoplite.
+- Trois âges (Fondations, Cités, Prodiges) : le passage se recherche à la Cité et débloque Temple, Tour, Cavalier, Bélier, second pouvoir divin et recherches.
 - Réglages : 1 à 3 adversaires, 3 difficultés, 3 tailles de carte. Sauvegarde automatique dans le navigateur.
-- En ligne : salon à code de 4 lettres ou lien d'invitation (`…/mythomachie/#CODE`), mode « chacun pour soi » ou « ensemble contre l'IA », discussion, reprise après rechargement ou coupure (l'ordinateur prend le relais au-delà de 45 s).
+- En ligne : salon à code de 4 lettres ou lien d'invitation (`…/mythomachie/#CODE`, partagé par la feuille de partage du téléphone), mode « chacun pour soi » ou « ensemble contre l'IA », discussion, reprise après rechargement ou coupure (l'ordinateur prend le relais au-delà de 45 s). Un salon garde 30 min la place d'un joueur déconnecté (le temps d'envoyer le lien) ; l'hôte absent plus de 5 min cède sa place.
 - Contrôles au doigt (toucher, glisser, pincer, appui long) et à la souris / clavier.
 - Graphismes, cartes et sons générés par le code ; jeu original inspiré des mythologies grecque, nordique et égyptienne (domaine public).
 
@@ -32,7 +33,7 @@ envoi 10 fois par seconde à chaque joueur de ce que voit son équipe (WebSocket
 
 ## Tests
 
-- `node tests/sim_test.js` : partie IA contre IA de 20 minutes sans navigateur (cohérence, vagues d'attaque, récolte).
-- `python3 tests/smoke.py` : Playwright + Chrome (règles du dépôt, sélection, partie accélérée, sauvegarde, téléchargement).
-- `node server/test_server.js` : serveur local + clients WebSocket (salon, lancement, ordres, brouillard, discussion, reprise).
-- `python3 tests/online_test.py` : partie en ligne de bout en bout dans deux navigateurs (ordinateur et téléphone), rechargement compris.
+- `node tests/sim_test.js` : partie IA contre IA de 20 minutes sans navigateur (cohérence, vagues d'attaque, récolte, passages d'âge).
+- `python3 tests/smoke.py` : Playwright + Chrome (règles du dépôt, sélection et désélection, clic sur un bâtiment, âges verrouillés puis débloqués, partie accélérée, sauvegarde, téléchargement).
+- `node server/test_server.js` : serveur local + clients WebSocket (salon, lancement, ordres, brouillard, discussion, reprise, salon gardé quand l'hôte se déconnecte).
+- `python3 tests/online_test.py` : partie en ligne de bout en bout dans trois navigateurs (ordinateur, téléphone, onglet déjà ouvert) : invitation, connexion muette, désélection et sélection au doigt, rechargement, salon disparu.

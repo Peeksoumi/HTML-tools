@@ -136,12 +136,15 @@ function afford(pl, cost, reserve) {
 function pay(pl, cost) { for (const k in cost) pl.res[k] -= cost[k]; }
 function refund(pl, cost, f) { for (const k in cost) pl.res[k] += cost[k] * (f == null ? 1 : f); }
 function mythOf(pl) { return P[pl.patron].myth; }
+/* Âge atteint (0, 1 ou 2), déduit des recherches age1 et age2 ; unlocked : l'âge suffit-il pour cette unité, ce bâtiment, cette recherche ou ce pouvoir ? */
+function ageOf(pl) { return pl.tech.age2 ? 2 : pl.tech.age1 ? 1 : 0; }
+function unlocked(pl, d) { return !d || (d.age || 0) <= ageOf(pl); }
 function trainList(b) { const pl = G.pl[b.o]; return (B[b.t].trains || []).map(t => t === '$myth' ? mythOf(pl) : t); }
 
 /* ----- Modificateurs ----- */
 function atkOf(u) {
   const d = U[u.t], pl = G.pl[u.o]; let a = d.atk;
-  if (d.cls !== 'vill') { if (pl.tech.iron) a += 2; if (pl.patron === 'zeus') a *= 1.1; }
+  if (d.cls !== 'vill') { if (pl.tech.iron) a += 2; if (pl.tech.forge) a += 2; if (pl.patron === 'zeus') a *= 1.1; }
   if (d.cls === 'myth' && pl.tech.blood) a *= 1.2;
   if (u.buff > G.time) a *= 1.3;
   return a;
@@ -149,12 +152,14 @@ function atkOf(u) {
 function armorOf(u) {
   const d = U[u.t], pl = G.pl[u.o]; let ar = d.armor;
   if (pl.tech.shields && d.cls !== 'vill' && d.cls !== 'myth') ar += 2;
+  if (pl.tech.forge && d.cls !== 'vill') ar += 1;
   return ar;
 }
 function gatherRate(u, rtype, farm) {
   const pl = G.pl[u.o];
   let r = farm ? 0.55 : rtype === 'food' ? 0.75 : rtype === 'wood' ? 0.6 : 0.55;
   if (pl.tech.tools) r *= 1.2;
+  if (pl.tech.tools2) r *= 1.15;
   if (pl.patron === 'odin') r *= 1.15;
   if (pl.ai) r *= DIFF[pl.diff].gather;
   return r;
@@ -194,6 +199,7 @@ function isEnemy(a, b) { return a !== b && a >= 0 && b >= 0 && G.pl[a].team !== 
 function enqueue(b, k, id) {
   const pl = G.pl[b.o]; const cost = k === 'u' ? U[id].cost : R[id].cost;
   if (b.q.length >= 6) return 'full';
+  if (!unlocked(pl, k === 'u' ? U[id] : R[id])) return 'age';
   if (k === 'r' && (pl.tech[id] || G.blds.some(x => !x.dead && x.o === b.o && x.q.some(it => it.k === 'r' && it.id === id)))) return 'done';
   if (!afford(pl, cost)) return 'cost';
   pay(pl, cost); b.q.push({ k, id, p: 0, started: false });
@@ -228,7 +234,7 @@ function canPlace(t, o, tx, ty, strict) {
   return true;
 }
 function placeBuilding(pl, t, tx, ty) {
-  if (!afford(pl, B[t].cost)) return null;
+  if (!unlocked(pl, B[t]) || !afford(pl, B[t].cost)) return null;
   pay(pl, B[t].cost);
   return makeBuilding(t, pl.i, tx, ty, false);
 }

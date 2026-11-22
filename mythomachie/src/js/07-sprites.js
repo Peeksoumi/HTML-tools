@@ -492,13 +492,20 @@ function glyph(c, kind, color) {
     case 'einherjar': c.beginPath(); c.arc(32, 32, 17, Math.PI, 0); c.lineTo(49, 44); c.lineTo(38, 44); c.lineTo(38, 56); c.lineTo(26, 56); c.lineTo(26, 44); c.lineTo(15, 44); c.closePath(); c.fill(); R_(c, 30, 28, 4, 24, 'rgba(0,40,50,0.55)'); L_(c, 18, 36, 46, 36, 'rgba(0,40,50,0.55)', 3); break;
     case 'sun': C_(c, 32, 32, 13, color); for (let k = 0; k < 12; k++) { const a = k * TAU / 12; P_(c, [32 + Math.cos(a - 0.12) * 16, 32 + Math.sin(a - 0.12) * 16, 32 + Math.cos(a) * 27, 32 + Math.sin(a) * 27, 32 + Math.cos(a + 0.12) * 16, 32 + Math.sin(a + 0.12) * 16], color); } C_(c, 32, 32, 7, '#fff1b8'); break;
     case 'blessing': c.lineWidth = 6; c.beginPath(); c.ellipse(32, 19, 8, 11, 0, 0, TAU); c.stroke(); L_(c, 32, 30, 32, 58, color, 6); L_(c, 16, 34, 48, 34, color, 6); break;
-    case 'tools': c.save(); c.translate(32, 32); c.rotate(-0.7); R_(c, -3, -22, 6, 44, '#8a5a30'); R_(c, -12, -24, 24, 9, color); c.restore(); c.save(); c.translate(32, 32); c.rotate(0.7); R_(c, -2.5, -20, 5, 42, '#a0703c'); c.beginPath(); c.moveTo(-14, -14); c.quadraticCurveTo(0, -26, 14, -14); c.lineWidth = 5; c.strokeStyle = color; c.stroke(); c.restore(); break;
+    case 'tools2': case 'tools': c.save(); c.translate(32, 32); c.rotate(-0.7); R_(c, -3, -22, 6, 44, '#8a5a30'); R_(c, -12, -24, 24, 9, color); c.restore(); c.save(); c.translate(32, 32); c.rotate(0.7); R_(c, -2.5, -20, 5, 42, '#a0703c'); c.beginPath(); c.moveTo(-14, -14); c.quadraticCurveTo(0, -26, 14, -14); c.lineWidth = 5; c.strokeStyle = color; c.stroke(); c.restore(); break;
     case 'walls': for (let r = 0; r < 4; r++) for (let k = 0; k < 4; k++) R_(c, 8 + k * 12 + (r % 2) * 6 - 3, 22 + r * 9, 11, 8, color, 'rgba(0,0,0,0.3)'); for (let k = 0; k < 4; k++) R_(c, 8 + k * 13, 12, 8, 9, color); break;
     case 'iron': c.save(); c.translate(32, 32); c.rotate(0.78); P_(c, [-3.5, -26, 3.5, -26, 3.5, 12, 0, 18, -3.5, 12], color); R_(c, -11, 10, 22, 5, '#8a6a3a'); R_(c, -2.5, 15, 5, 12, '#6b4a2b'); c.restore(); break;
     case 'shields': C_(c, 32, 32, 24, color); C_(c, 32, 32, 17, 'rgba(0,0,0,0.25)'); C_(c, 32, 32, 6, color); break;
     case 'rites': P_(c, [18, 40, 46, 40, 40, 54, 24, 54], '#8a6a3a'); P_(c, [22, 40, 32, 8, 42, 40], color); P_(c, [27, 40, 32, 20, 37, 40], '#fff1b8'); break;
     case 'blood': c.beginPath(); c.moveTo(32, 6); c.quadraticCurveTo(52, 34, 46, 44); c.arc(32, 42, 14, 0.15, Math.PI - 0.15); c.quadraticCurveTo(12, 34, 32, 6); c.fill(); break;
     case 'stop': RR_(c, 16, 16, 32, 32, 5, color); break;
+    case 'forge': P_(c, [10, 30, 54, 30, 54, 36, 44, 38, 40, 46, 46, 54, 18, 54, 24, 46, 20, 38, 10, 36], color, 'rgba(0,0,0,0.35)', 1.2); // enclume
+      c.save(); c.translate(40, 16); c.rotate(-0.5); R_(c, -2.5, -2, 5, 22, '#8a5a30'); R_(c, -9, -8, 18, 8, '#d7dde3'); c.restore();
+      for (const [x, y] of [[20, 20], [26, 14], [16, 12]]) C_(c, x, y, 2.2, '#fff1b8'); break;
+    case 'age1': P_(c, [8, 22, 32, 8, 56, 22], color); R_(c, 10, 24, 44, 4, color); // fronton et colonnes
+      for (const x of [14, 26, 38, 50]) R_(c, x - 3, 30, 6, 20, color); R_(c, 8, 50, 48, 6, color); break;
+    case 'age2': for (let k = 0; k < 8; k++) { const a = k * TAU / 8; P_(c, [32 + Math.cos(a - 0.22) * 10, 30 + Math.sin(a - 0.22) * 10, 32 + Math.cos(a) * 26, 30 + Math.sin(a) * 26, 32 + Math.cos(a + 0.22) * 10, 30 + Math.sin(a + 0.22) * 10], color); } // étoile des prodiges
+      C_(c, 32, 30, 10, '#fff4c2'); C_(c, 32, 30, 5, color); break;
     case 'amove': for (const s of [-1, 1]) { c.save(); c.translate(32, 32); c.rotate(s * 0.78); R_(c, -2.5, -24, 5, 34, color); R_(c, -8, 8, 16, 4, color); R_(c, -2, 12, 4, 10, color); c.restore(); } break;
     case 'rally': L_(c, 20, 56, 20, 8, color, 4); P_(c, [22, 9, 50, 18, 22, 28], color); break;
     case 'del': L_(c, 16, 16, 48, 48, color, 7); L_(c, 48, 16, 16, 48, color, 7); break;
@@ -514,7 +521,7 @@ function glyph(c, kind, color) {
     case 'pop': C_(c, 32, 20, 10, color); c.beginPath(); c.moveTo(12, 58); c.quadraticCurveTo(12, 34, 32, 34); c.quadraticCurveTo(52, 34, 52, 58); c.closePath(); c.fill(); break;
   }
 }
-const GLYPH_COL = { bolt: '#cfe6ff', aegis: '#ffd35a', frost: '#bdf0ff', einherjar: '#8ff0e0', sun: '#ffae42', blessing: '#c8ff7a', tools: '#c9ccd0', walls: '#d8cbb0', iron: '#d7dde3', shields: '#c99a3f', rites: '#ffb347', blood: '#d0283c', stop: '#f2e6c4', amove: '#f2e6c4', rally: '#f2e6c4', del: '#ff8a7a', chat: '#f2e6c4', army: '#f2e6c4', idle: '#f2e6c4', box: '#f2e6c4', city: '#f2e6c4', food: '#e3b23c', wood: '#d9b07a', gold: '#f4cf4a', foi: '#cdb8ff', pop: '#e8e1cf' };
+const GLYPH_COL = { tools2: '#9fb8d0', forge: '#9aa3ad', age1: '#f3dd92', age2: '#ffd35a', bolt: '#cfe6ff', aegis: '#ffd35a', frost: '#bdf0ff', einherjar: '#8ff0e0', sun: '#ffae42', blessing: '#c8ff7a', tools: '#c9ccd0', walls: '#d8cbb0', iron: '#d7dde3', shields: '#c99a3f', rites: '#ffb347', blood: '#d0283c', stop: '#f2e6c4', amove: '#f2e6c4', rally: '#f2e6c4', del: '#ff8a7a', chat: '#f2e6c4', army: '#f2e6c4', idle: '#f2e6c4', box: '#f2e6c4', city: '#f2e6c4', food: '#e3b23c', wood: '#d9b07a', gold: '#f4cf4a', foi: '#cdb8ff', pop: '#e8e1cf' };
 function glyphIcon(kind, color) { return iconURL('g:' + kind + (color || ''), c => glyph(c, kind, color || GLYPH_COL[kind] || '#fff')); }
 /* Emblèmes des dieux (menu) */
 function drawEmblem(c, patron, size) {

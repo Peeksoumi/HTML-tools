@@ -17,6 +17,8 @@ const SIM = new vm.Script(simFiles().map(f => fs.readFileSync(f, 'utf8')).join('
   { filename: 'mythomachie-moteur.js' });
 const VERSION = 1;
 const MAX_ROOMS = 30, MAX_CLIENTS = 160, MAX_PLAYERS = 4;
+// Salon : un joueur parti envoyer le lien (appli en arrière-plan) garde sa place ; l'hôte absent ne cède sa place qu'au bout de 5 min.
+const LOBBY_KEEP = 30 * 60000, HOST_WAIT = 5 * 60000;
 const AI_NAMES = { zeus: 'IA Olympe', odin: 'IA Asgard', ra: 'IA Héliopolis' };
 const PATRONS = ['zeus', 'odin', 'ra'];
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
@@ -222,7 +224,8 @@ function onMessage(c, raw) {
     case 'patron': if (me && r.state === 'lobby' && PATRONS.includes(m.patron)) { me.patron = m.patron; sendRoom(r); } break;
     case 'opts': if (me && r.state === 'lobby' && r.host === c.token) { r.opts = cleanOpts(m.opts, r.members.length); sendRoom(r); } break;
     case 'go':
-      if (!me || r.state !== 'lobby') break;
+      if (!me) { c.send({ t: 'err', msg: 'Ce salon n’existe plus.' }); c.send(listRooms()); break; }
+      if (r.state !== 'lobby') break;
       if (r.host !== c.token) { c.send({ t: 'err', msg: 'Seul l’hôte peut lancer la partie.' }); break; }
       { const err = startGame(r); if (err) c.send({ t: 'err', msg: err }); }
       break;
@@ -266,9 +269,13 @@ function housekeeping() {
   const now = Date.now();
   for (const r of [...rooms.values()]) {
     if (r.state === 'lobby') {
-      r.members = r.members.filter(m => m.client || now - m.leftAt < 20000);
-      if (r.host && !r.members.some(m => m.token === r.host)) r.host = r.members[0] ? r.members[0].token : null;
-      if (!r.members.length) rooms.delete(r.code);
+      r.members = r.members.filter(m => m.client || now - m.leftAt < LOBBY_KEEP);
+      if (!r.members.length) { rooms.delete(r.code); continue; }
+      const h = r.members.find(m => m.token === r.host);
+      if (!h || (!h.client && now - h.leftAt > HOST_WAIT)) {
+        const n = r.members.find(m => m.client) || (h ? null : r.members[0]);
+        if (n && n.token !== r.host) { r.host = n.token; sendRoom(r); if (n.client) info(r, n.name + ' devient l’hôte de la partie.'); }
+      }
     } else if (r.state === 'play') {
       for (const m of r.members) if (!m.client && !m.ai && !m.resigned && m.leftAt && now - m.leftAt > 45000) {
         r.api.setAI(m.slot, true); m.ai = true; info(r, 'L’IA prend le relais de ' + m.name + '.');

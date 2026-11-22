@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Partie en ligne de bout en bout : serveur local + deux navigateurs (ordinateur et téléphone tactile).
-Salon créé par Alice, rejoint par Bob via le lien #CODE, lancement, ordres, discussion, maison, rechargement de Bob.
+Salon créé par Alice (bouton Inviter, connexion muette rétablie au retour au premier plan), rejoint par Bob via le lien #CODE,
+Carla par un lien ouvert dans un onglet déjà affiché ; lancement, ordres, discussion, maison, désélection et sélection au doigt,
+rechargement de Bob, puis salon disparu après relance du serveur.
 Usage : python3 tests/online_test.py   (Node.js et Playwright requis)"""
 import asyncio, functools, http.server, os, pathlib, random, subprocess, threading, time
 from playwright.async_api import async_playwright
@@ -29,19 +31,25 @@ async def until(pg, expr, ms=8000):
         await asyncio.sleep(0.1)
     return False
 
-async def main():
-    srv = subprocess.Popen(["node", str(root / "server" / "server.js")], env={**os.environ, "PORT": str(port)}, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+def start_server():
+    s = subprocess.Popen(["node", str(root / "server" / "server.js")], env={**os.environ, "PORT": str(port)}, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     time.sleep(0.8)
+    return s
+
+async def main():
+    srv = start_server()
     errs = []
     try:
         async with async_playwright() as p:
             b = await p.chromium.launch(executable_path=chrome, args=["--no-sandbox"]) if chrome else await p.chromium.launch()
             init = "localStorage.setItem('mythomachie.serveur', 'ws://127.0.0.1:%d/mythomachie/ws');" % port
             ca = await b.new_context(viewport={"width": 1280, "height": 800})
+            await ca.grant_permissions(["clipboard-read", "clipboard-write"], origin=page_url.rsplit("/", 1)[0])
             cb = await b.new_context(viewport={"width": 390, "height": 844}, device_scale_factor=2, is_mobile=True, has_touch=True)
-            for c in (ca, cb): await c.add_init_script(init)
-            pa, pb = await ca.new_page(), await cb.new_page()
-            for name, pg in (("A", pa), ("B", pb)): pg.on("pageerror", lambda e, n=name: errs.append(n + ": " + str(e)))
+            cc = await b.new_context(viewport={"width": 900, "height": 700})
+            for c in (ca, cb, cc): await c.add_init_script(init)
+            pa, pb, pc = await ca.new_page(), await cb.new_page(), await cc.new_page()
+            for name, pg in (("A", pa), ("B", pb), ("C", pc)): pg.on("pageerror", lambda e, n=name: errs.append(n + ": " + str(e)))
             # Alice crée un salon avec une IA
             await pa.goto(page_url)
             await pa.click("#b-online")
@@ -51,12 +59,28 @@ async def main():
             await pa.click("#mp-create")
             ok(await until(pa, "/^[A-Z]{4}$/.test(document.getElementById('mp-roomcode').textContent)"), "salon créé")
             code = await pa.text_content("#mp-roomcode")
+            # Inviter : le lien est affiché et copié
+            await pa.click("#mp-copy")
+            link = await pa.input_value("#mp-link")
+            ok(link.endswith("#" + code) and await until(pa, "document.getElementById('mp-msg').textContent.includes('copié')", 3000)
+               and await pa.evaluate("navigator.clipboard.readText()") == link, "bouton Inviter : lien affiché et copié (" + link + ")")
+            # Connexion muette (téléphone sorti de veille) : au retour au premier plan, une nouvelle connexion reprend le salon
+            await pa.evaluate("window.__oldWs = NET.ws; NET.ws.onmessage = null; document.dispatchEvent(new Event('visibilitychange'))")
+            ok(await until(pa, "NET.ws && NET.ws !== window.__oldWs && NET.state === 'on' && NET.room && NET.room.code === '%s' && NET.host" % code, 9000),
+               "connexion muette remplacée au retour au premier plan, Alice reste hôte du salon")
             # Bob rejoint par le lien d'invitation (#CODE) sur un téléphone
             await pb.goto(page_url + "#" + code)
             ok(await until(pb, "NET.room && NET.room.code === '%s'" % code), "Bob rejoint par le lien #" + code)
             await pb.fill("#mp-name", "Bob"); await pb.dispatch_event("#mp-name", "change")
             await pb.click("#mp-god [data-v='odin']")
             ok(await until(pa, "NET.room && NET.room.members.length === 2 && NET.room.members[1].name === 'Bob' && NET.room.members[1].patron === 'odin'"), "Alice voit Bob (Odin) dans le salon")
+            ok(await until(pa, "document.getElementById('mp-msg').textContent.includes('a rejoint')", 3000), "Alice est prévenue de l’arrivée de Bob")
+            # Carla a déjà le jeu ouvert : le lien d'invitation change seulement le #CODE de son onglet
+            await pc.goto(page_url)
+            await pc.evaluate("location.hash = '#%s'" % code)
+            ok(await until(pc, "NET.room && NET.room.code === '%s' && !NET.host" % code), "Carla rejoint par un lien ouvert dans un onglet déjà affiché")
+            await pc.click("#mp-leave")
+            ok(await until(pa, "NET.room && NET.room.members.length === 2"), "Carla quitte le salon")
             await pa.screenshot(path=str(shots / "en-ligne-salon.png"))
             await pa.click("#mp-go")
             ok(await until(pa, "G && G.mp && G.me === 0 && G.units.length > 0") and await until(pb, "G && G.mp && G.me === 1 && G.units.length > 0"), "partie lancée chez les deux joueurs")
@@ -78,6 +102,14 @@ async def main():
             # discussion
             await pa.evaluate("openChat()"); await pa.fill("#chat-in", "Salut Bob !"); await pa.press("#chat-in", "Enter")
             ok(await until(pb, "[...document.querySelectorAll('#toasts .toast.chat')].some(t => t.textContent.includes('Salut Bob'))", 4000), "Bob reçoit le message d’Alice")
+            # au doigt : ✕ désélectionne ; toucher le toit de la cité la sélectionne
+            await pb.evaluate("(() => { const v = G.units.find(u => u.o === G.me && u.t === 'villager'); setSel([v.id]); })()")
+            await pb.tap("#selp .desel")
+            ok(await pb.evaluate("G.sel.length === 0"), "Bob désélectionne au doigt (bouton ✕)")
+            roof = await pb.evaluate("(() => { const c = G.blds.find(b => b.o === G.me && b.t === 'city'); centerOn(c.x, c.y); const s = w2s(c.x, c.ty * T - BLD_H.city * 0.8); const r = CV.getBoundingClientRect(); return [s.x + r.left, s.y + r.top, c.id]; })()")
+            await pb.touchscreen.tap(roof[0], roof[1])
+            ok(await until(pb, "G.sel.length === 1 && G.sel[0] === %d" % roof[2], 2000), "Bob touche le toit de sa cité : elle est sélectionnée")
+            ok(await until(pb, "G.pl.every(p => p.netAge === 0) && document.querySelector('#age-badge b').textContent === 'I'", 2000), "âges reçus du serveur (tous à l’âge I)")
             # brouillard : Alice ne voit pas la cité de Bob
             ok(await pa.evaluate("!G.blds.some(b => b.o === 1 && b.t === 'city')"), "Alice ne voit pas la cité de Bob (brouillard)")
             await asyncio.sleep(1)
@@ -91,6 +123,12 @@ async def main():
             ok(back, "après rechargement, Bob reprend sa partie")
             n1 = await pa.evaluate("G.netTime"); await asyncio.sleep(2); n2 = await pa.evaluate("G.netTime")
             ok(await pa.evaluate("NET.state") == "on" and n2 - n1 > 1.5, "la partie continue chez Alice (horloge du serveur %.1f → %.1f s)" % (n1, n2))
+            # Carla crée un salon, puis le serveur est relancé (salons perdus) : elle en est avertie
+            await pc.click("#mp-create")
+            ok(await until(pc, "NET.room && NET.host"), "Carla crée un salon")
+            srv.terminate(); srv.wait(); old_log = srv.stdout.read().decode(errors="replace"); srv = start_server()
+            ok(await until(pc, "!NET.room && NET.state === 'on' && document.getElementById('mp-msg').textContent.includes('existe plus')", 15000),
+               "après relance du serveur, Carla apprend que son salon n’existe plus")
             ok(not errs, "aucune erreur dans les pages" + (" : " + " | ".join(errs) if errs else ""))
             await b.close()
     finally:
