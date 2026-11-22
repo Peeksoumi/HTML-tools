@@ -85,8 +85,23 @@ function client(name, token) {
     await wait(400);
     ok(b2.snaps >= 2 && [...b2.ents.values()].some(e => e.k === 'u' && e.r[2] === 1), 'Bob reçoit de nouveau l’état complet');
     a.sock.destroy(); b2.sock.destroy();
+    // Salon : l'hôte part envoyer le lien (appli en arrière-plan, connexion coupée) ; le salon l'attend et son amie peut entrer.
+    const h = await client('Hector'); const wh = await h.wait('welcome'); await h.wait('rooms');
+    h.send({ t: 'create', opts: { map: 'small', ais: 0, diff: 'easy', mode: 'ffa' }, patron: 'ra' }); const rh = await h.wait('room');
+    h.sock.destroy();
+    await wait(26000); // au-delà des 20 s après lesquelles l'ancienne version fermait le salon
+    const f = await client('Fanny'); await f.wait('welcome'); await f.wait('rooms');
+    f.send({ t: 'join', code: rh.room.code, patron: 'odin' }); const rf = await f.wait('room');
+    ok(rf.room.members.length === 2 && rf.room.members[0].on === false && !rf.host, 'salon gardé 26 s après le départ de l’hôte : son amie y entre');
+    const h2 = await client('Hector', wh.token); await h2.wait('welcome'); const rh2 = await h2.wait('room');
+    ok(rh2.host && rh2.room.members.every(m => m.on), 'l’hôte revient dans son salon et reste l’hôte');
+    h2.send({ t: 'go' }); const sh = await h2.wait('start'); ok(sh.pl.length === 2, 'il lance la partie avec son amie');
+    const z = await client('Zoé'); await z.wait('welcome'); await z.wait('rooms');
+    z.send({ t: 'go' }); const ez = await z.wait('err'), lz = await z.wait('rooms');
+    ok(/existe plus/.test(ez.msg) && Array.isArray(lz.rooms), 'lancement demandé hors salon : erreur et liste des salons');
+    h2.sock.destroy(); f.sock.destroy(); z.sock.destroy();
     const st = await new Promise(res => require('http').get('http://127.0.0.1:' + PORT + '/mythomachie/api/status', r => { let d = ''; r.on('data', x => { d += x; }); r.on('end', () => res(JSON.parse(d))); }));
-    ok(st.ok && st.parties === 1, 'état du serveur : ' + JSON.stringify(st));
+    ok(st.ok && st.parties === 2, 'état du serveur : ' + JSON.stringify(st));
   } catch (e) { fail(e.message); console.log(out); }
   srv.kill();
   if (!process.exitCode) console.log('OK');

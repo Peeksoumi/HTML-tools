@@ -11,6 +11,7 @@
         <div class="res" title="Population utilisée / logée"><img data-g="pop" alt="Population"><b id="r-pop">0/0</b></div>
       </div>
       <div id="topr">
+        <span id="age-badge" class="ageb" title="Âge des Fondations"><small>Âge</small> <b>I</b></span>
         <span id="clock">0:00</span>
         <button id="b-chat" class="tb" type="button" aria-label="Écrire aux joueurs" title="Écrire aux joueurs (Entrée)" hidden><img data-g="chat" alt=""></button>
         <button id="b-speed" class="tb" type="button" title="Vitesse du jeu">×1</button>
@@ -68,10 +69,11 @@
         <ul>
           <li><b>Simulation</b> : pas fixes de 50 ms pour la récolte, la construction, les combats, les projectiles et les pouvoirs.</li>
           <li><b>Déplacements</b> : recherche de chemin A* sur une grille de cases, avec évitement entre unités.</li>
-          <li><b>Adversaires</b> : IA à règles (économie, bâtiments, recherches, armée qui contre la vôtre, vagues d’attaque, défense, pouvoirs).</li>
+          <li><b>Âges</b> : trois âges ; chaque passage se recherche à la Cité et débloque bâtiments, unités, recherches et pouvoirs.</li>
+          <li><b>Adversaires</b> : IA à règles (économie, fermes, passages d’âge, bâtiments, recherches, armée qui contre la vôtre, vagues d’attaque, défense, pouvoirs).</li>
           <li><b>Brouillard de guerre</b> : vous ne voyez que ce que vos unités et bâtiments voient.</li>
           <li><b>Seul</b> : tout tourne sur l’appareil ; la sauvegarde reste dans le stockage local du navigateur.</li>
-          <li><b>En ligne</b> : le serveur de jeu du site fait tourner la partie ; chaque navigateur envoie ses ordres et reçoit 10 fois par seconde ce que voit son équipe.</li>
+          <li><b>En ligne</b> : le serveur de jeu du site fait tourner la partie ; chaque navigateur envoie ses ordres et reçoit 10 fois par seconde ce que voit son équipe. Un salon garde la place d’un joueur parti envoyer le lien.</li>
         </ul>
         <h3>Sources de données</h3>
         <ul>
@@ -82,7 +84,7 @@
         <h3>Limites</h3>
         <ul>
           <li>Pas de campagne ; 4 camps au maximum, seul ou en ligne.</li>
-          <li>En ligne, une connexion lente fait sauter les unités ; une partie quittée par tous est perdue après 3 min.</li>
+          <li>En ligne, une connexion lente fait sauter les unités ; un salon vide ferme après 30 min, une partie quittée par tous après 3 min.</li>
           <li>L’IA voit toute la carte ; elle récolte 20 % plus vite en Difficile et 15 % moins vite en Facile.</li>
           <li>La sauvegarde est liée à ce navigateur : effacer ses données l’efface.</li>
           <li>Sur petit téléphone, la grande carte à 4 camps peut ralentir.</li>
@@ -117,7 +119,8 @@
       <div class="row"><label class="ol" for="mp-name">Votre nom</label><input id="mp-name" class="field" maxlength="20" autocomplete="nickname" placeholder="Votre nom"></div>
       <div class="row"><span class="ol" id="l-mpgod">Votre dieu</span><div class="seg" id="mp-god" role="group" aria-labelledby="l-mpgod"><button type="button" data-v="zeus">Zeus</button><button type="button" data-v="odin">Odin</button><button type="button" data-v="ra">Râ</button></div></div>
       <div id="mp-room" hidden>
-        <div class="row between"><p class="roomcode">Code du salon <b id="mp-roomcode">----</b></p><button id="mp-copy" class="btn ghost" type="button">Copier le lien d’invitation</button></div>
+        <div class="row between"><p class="roomcode">Code du salon <b id="mp-roomcode">----</b></p><button id="mp-copy" class="btn gold" type="button">Inviter un ami</button></div>
+        <div class="row"><input id="mp-link" class="field link" readonly aria-label="Lien d’invitation à envoyer"></div>
         <ul id="mp-members" class="mp-list"></ul>
         <p id="mp-optsum" class="sub"></p>
       </div>
@@ -147,7 +150,7 @@
         <div>
           <h3>Au doigt</h3>
           <ul>
-            <li>Touchez une unité pour la choisir ; deux fois de suite pour prendre toutes celles du même type à l’écran.</li>
+            <li>Touchez une unité pour la choisir ; deux fois de suite pour prendre toutes celles du même type à l’écran. Le bouton ✕ du panneau du bas désélectionne.</li>
             <li>Touchez le sol pour déplacer, un ennemi pour attaquer, un arbre, un buisson ou une mine pour récolter, un chantier pour construire.</li>
             <li>Glissez un doigt pour déplacer la vue, pincez pour zoomer.</li>
             <li>Appui long puis glissement, ou bouton de zone : sélection par rectangle.</li>
@@ -170,6 +173,7 @@
             <li>Les citoyens récoltent nourriture (baies, fermes), bois et or, puis les rapportent à la cité ou à un entrepôt.</li>
             <li>Chaque maison loge 6 habitants de plus (100 au maximum).</li>
             <li>Les recherches de la cité, de la caserne et du temple renforcent tout votre peuple.</li>
+            <li>Âges : à la Cité, passez à l’Âge des Cités (Temple, Tour, Cavalier, nouvelles recherches), puis à l’Âge des Prodiges (Bélier, second pouvoir divin, améliorations les plus fortes). Ce qui est grisé avec un chiffre attend cet âge.</li>
           </ul>
         </div>
         <div>

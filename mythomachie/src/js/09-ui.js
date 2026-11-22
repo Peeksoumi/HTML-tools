@@ -62,21 +62,28 @@ function boxSelect(b, add) {
   else if (!add && !UI.touch) setSel([]);
 }
 function pick(wx, wy) {
-  let best = null, bd = 1e9; const extra = UI.touch ? 7 : 2;
+  const extra = UI.touch ? 7 : 2;
+  let best = null, bd = 1e9, onBody = false;
   for (const u of G.units) {
     if (u.dead) continue;
     if (u.o !== G.me && !G.revealAll && !visibleAt(u.x, u.y)) continue;
     const d = U[u.t]; const cy = u.y - d.h * 0.45 - (d.fly ? 22 : 0);
     const dd = Math.hypot(wx - u.x, wy - cy), rr = Math.max(d.r + 6, d.h * 0.55) + extra;
-    if (dd < rr && dd < bd) { bd = dd; best = u; }
+    if (dd < rr && dd < bd) { bd = dd; best = u; onBody = dd <= Math.max(d.r + 3, d.h * 0.35); }
   }
-  if (best) return best;
+  // Bâtiment : tout son dessin (toit compris) ; s'ils se chevauchent, celui de devant.
+  let bb = null, bFoot = -1;
   for (const b of G.blds) {
     if (b.dead) continue;
     if (b.o !== G.me && !G.revealAll && !G.ex[idx(b.tx + (b.size >> 1), b.ty + (b.size >> 1))]) continue;
-    const x0 = b.tx * T, y0 = b.ty * T - (b.t === 'farm' ? 0 : BLD_H[b.t] * 0.55), x1 = x0 + b.size * T, y1 = (b.ty + b.size) * T;
-    if (wx >= x0 && wx <= x1 && wy >= y0 && wy <= y1) return b;
+    const top = b.t === 'farm' ? 0 : b.built ? BLD_H[b.t] : BLD_H[b.t] * 0.5;
+    const x0 = b.tx * T - extra, x1 = (b.tx + b.size) * T + extra, y0 = b.ty * T - top - extra, y1 = (b.ty + b.size) * T + extra;
+    if (wx >= x0 && wx <= x1 && wy >= y0 && wy <= y1 && y1 > bFoot) { bb = b; bFoot = y1; }
   }
+  // Une unité l'emporte si on la touche en plein corps et qu'elle n'est pas cachée derrière le bâtiment.
+  if (best && (!bb || (onBody && (bb.t === 'farm' || best.y >= bFoot - extra - 6)))) return best;
+  if (bb) return bb;
+  if (best) return best;
   for (const r of G.ress) {
     if (r.dead || (!G.revealAll && !G.ex[idx(r.tx, r.ty)])) continue;
     if (distToRect(wx, wy, r.tx, r.ty - (r.t === 'gold' ? 0.35 : 0.2), r.size) < 5 + extra) return r;
@@ -152,6 +159,7 @@ function updateConfirm() {
 function viewCenterW() { return s2w(VW / 2, (VH - UI.botH + UI.topH) / 2); }
 function startPlace(t) {
   const pl = G.pl[G.me];
+  if (!unlocked(pl, B[t])) { ageToast(B[t]); return; }
   if (t === 'temple' && countB(G.me, 'temple') >= B.temple.max) { toast('Trois temples au maximum.', 'warn'); sfx('err'); return; }
   if (!afford(pl, B[t].cost)) { toast(missingText(B[t].cost), 'warn'); sfx('err'); return; }
   UI.mode = 'place'; UI.placeType = t;
@@ -179,6 +187,7 @@ function confirmPlace(keep) {
 }
 function startPower(pid) {
   const pl = G.pl[G.me], gp = GP[pid];
+  if (!unlocked(pl, gp)) { toast(gp.name + ' : pouvoir de l’' + AGES[gp.age].name + '.', 'warn'); sfx('err'); return; }
   if (!hasTemple(pl)) { toast('Construisez un temple pour invoquer votre dieu.', 'warn'); sfx('err'); return; }
   const cd = (pl.cd[pid] || 0) - G.time;
   if (cd > 0) { toast(gp.name + ' : encore ' + Math.ceil(cd) + ' s.', 'warn'); sfx('err'); return; }
@@ -206,7 +215,8 @@ function doAction(a) {
       const b = selBld(); if (!b) return;
       const cost = k === 'train' ? U[v].cost : R[v].cost;
       const r = ACT.queue(b, k === 'train' ? 'u' : 'r', v);
-      if (r === 'cost') { toast(missingText(cost), 'warn'); sfx('err'); }
+      if (r === 'age') ageToast(k === 'train' ? U[v] : R[v]);
+      else if (r === 'cost') { toast(missingText(cost), 'warn'); sfx('err'); }
       else if (r === 'full') { toast('File de production pleine.', 'warn'); sfx('err'); }
       else if (r === 'ok') sfx('click');
       refreshPanels(true); break;
@@ -221,6 +231,7 @@ function doAction(a) {
       ACT.demolish(b); UI.demolishArm = 0; setSel([]); break;
     }
     case 'only': setSel(selUnits().filter(u => u.t === v).map(u => u.id)); break;
+    case 'desel': if (UI.mode === 'amove' || UI.mode === 'rally') cancelMode(); setSel([]); sfx('click'); break;
     case 'power': startPower(v); break;
   }
 }
@@ -257,13 +268,15 @@ function portrait(e) {
 }
 function buildSelPanel() {
   const el = $('selp'); const units = selUnits(); const one = selOne();
+  el.classList.toggle('has-sel', G.sel.length > 0);
+  const desel = '<button class="desel" type="button" data-a="desel" title="Désélectionner (Échap)" aria-label="Désélectionner">✕</button>';
   if (!G.sel.length) { el.innerHTML = '<p class="hint">' + (UI.touch ? 'Touchez une unité ou un bâtiment. Glissez pour vous déplacer.' : 'Cliquez sur une unité ou un bâtiment. Clic droit pour donner un ordre.') + '</p>'; return; }
   if (units.length > 1) {
     const counts = {}; for (const u of units) counts[u.t] = (counts[u.t] || 0) + 1;
     let h = '<div class="multi">';
     for (const t in counts) h += '<button class="chip" data-a="only:' + t + '" title="Ne garder que : ' + esc(U[t].plural) + '"><img src="' + unitIcon(t, G.pl[G.me].color, myStyle()) + '" alt=""><b>' + counts[t] + '</b></button>';
     h += '</div><p class="sub">' + units.length + ' unités sélectionnées</p>';
-    el.innerHTML = h; return;
+    el.innerHTML = desel + h; return;
   }
   const e = one || units[0]; if (!e) { el.innerHTML = ''; return; }
   const owner = e.o >= 0 ? G.pl[e.o] : null;
@@ -281,7 +294,7 @@ function buildSelPanel() {
     h += '</div>';
   }
   h += '</div></div>';
-  el.innerHTML = h;
+  el.innerHTML = desel + h;
 }
 function updateSelPanel() {
   const units = selUnits(), one = selOne();
@@ -318,14 +331,18 @@ function updateSelPanel() {
   }
   const qp = $('sp-qp'); if (qp && e.k === 'b' && e.q[0]) qp.style.setProperty('--p', e.q[0].p.toFixed(3));
 }
-function cmdBtn(a, img, label, cost, tip, extraCls) {
-  return '<button class="cmd ' + (extraCls || '') + '" data-a="' + a + '" data-tip="' + esc(tip || '') + '"' + (cost ? ' data-cost="' + esc(JSON.stringify(cost)) + '"' : '') + '><img src="' + img + '" alt=""><span class="cn">' + esc(label) + '</span>' + (cost ? '<span class="cc">' + costHTML(cost) + '</span>' : '') + '</button>';
+function cmdBtn(a, img, label, cost, tip, extraCls, badge) {
+  return '<button class="cmd ' + (extraCls || '') + '" data-a="' + a + '" data-tip="' + esc(tip || '') + '"' + (cost ? ' data-cost="' + esc(JSON.stringify(cost)) + '"' : '') + '><img src="' + img + '" alt=""><span class="cn">' + esc(label) + '</span>' + (cost ? '<span class="cc">' + costHTML(cost) + '</span>' : '') + (badge || '') + '</button>';
 }
+/* Âges : contenu verrouillé grisé, avec le numéro de l'âge requis */
+const lockTip = d => ' Nécessite l’' + AGES[d.age].name + '.';
+const ageBadge = d => '<span class="ab" aria-hidden="true">' + AGES[d.age].short + '</span>';
+function ageToast(d) { toast('Nécessite l’' + AGES[d.age].name + ' : passez à l’âge suivant depuis la Cité.', 'warn'); sfx('err'); }
 function buildCmdPanel() {
   const el = $('cmdp'); const units = selUnits(); const pl = G.pl[G.me]; const sty = myStyle(); let h = '';
   if (units.length) {
     if (units.some(u => u.t === 'villager')) {
-      for (const t of BUILD_LIST) h += cmdBtn('build:' + t, bldIcon(t, sty, pl.color), B[t].name, B[t].cost, B[t].name + ' — ' + B[t].desc, UI.mode === 'place' && UI.placeType === t ? 'on' : '');
+      for (const t of BUILD_LIST) { const lk = !unlocked(pl, B[t]); h += cmdBtn('build:' + t, bldIcon(t, sty, pl.color), B[t].name, B[t].cost, B[t].name + ' — ' + B[t].desc + (lk ? lockTip(B[t]) : ''), (lk ? 'lock ' : '') + (UI.mode === 'place' && UI.placeType === t ? 'on' : ''), lk ? ageBadge(B[t]) : ''); }
     }
     if (units.some(u => u.t !== 'villager')) h += cmdBtn('amove', glyphIcon('amove'), 'Attaquer', null, 'Attaque-déplacement : vos unités combattent tout ennemi rencontré en chemin.', UI.mode === 'amove' ? 'on' : '');
     h += cmdBtn('stop', glyphIcon('stop'), 'Stop', null, 'Arrêter l’action en cours.');
@@ -333,12 +350,14 @@ function buildCmdPanel() {
     const b = selBld();
     if (b) {
       if (b.built) {
-        for (const t of trainable(b)) h += cmdBtn('train:' + t, unitIcon(t, pl.color, sty), U[t].name, U[t].cost, U[t].name + ' — ' + U[t].desc + ' (' + U[t].time + ' s, population ' + U[t].pop + ')');
+        for (const t of trainable(b)) { const lk = !unlocked(pl, U[t]); h += cmdBtn('train:' + t, unitIcon(t, pl.color, sty), U[t].name, U[t].cost, U[t].name + ' — ' + U[t].desc + ' (' + U[t].time + ' s, population ' + U[t].pop + ')' + (lk ? lockTip(U[t]) : ''), lk ? 'lock' : '', lk ? ageBadge(U[t]) : ''); }
         for (const r of (B[b.t].research || [])) {
           if (pl.tech[r]) continue;
           const queued = G.blds.some(x => !x.dead && x.o === G.me && x.q.some(it => it.k === 'r' && it.id === r));
           if (queued) continue;
-          h += cmdBtn('res:' + r, glyphIcon(R[r].icon), R[r].name, R[r].cost, R[r].name + ' — ' + R[r].desc + ' (' + R[r].time + ' s)');
+          if (R[r].ageUp && R[r].ageUp !== ageOf(pl) + 1) continue; // seul le prochain âge est proposé
+          const lk = !unlocked(pl, R[r]);
+          h += cmdBtn('res:' + r, glyphIcon(R[r].icon), R[r].ageUp ? 'Âge ' + AGES[R[r].ageUp].short : R[r].name, R[r].cost, R[r].name + ' — ' + R[r].desc + ' (' + R[r].time + ' s)' + (lk ? lockTip(R[r]) : ''), (lk ? 'lock' : '') + (R[r].ageUp ? ' ageup' : ''), lk ? ageBadge(R[r]) : '');
         }
         if (B[b.t].trains) h += cmdBtn('rally', glyphIcon('rally'), 'Ralliement', null, 'Point où se rendent les unités formées. Touchez une ressource pour y envoyer les citoyens.', UI.mode === 'rally' ? 'on' : '');
       }
@@ -367,17 +386,18 @@ function buildPowers() {
   const el = $('powers'); const pl = G.pl[G.me]; let h = '';
   for (const pid of P[pl.patron].powers) {
     const gp = GP[pid];
-    h += '<button class="pw" data-p="' + pid + '" data-tip="' + esc(gp.name + ' — ' + gp.desc + ' Coût : ' + gp.cost + ' Foi, recharge ' + gp.cd + ' s.') + '" aria-label="' + esc(gp.name) + '"><img src="' + glyphIcon(pid) + '" alt=""><span class="pc">' + gp.cost + '</span></button>';
+    h += '<button class="pw" data-p="' + pid + '" data-tip="' + esc(gp.name + ' — ' + gp.desc + ' Coût : ' + gp.cost + ' Foi, recharge ' + gp.cd + ' s.' + (gp.age ? lockTip(gp) : '')) + '" aria-label="' + esc(gp.name) + '"><img src="' + glyphIcon(pid) + '" alt=""><span class="pc">' + gp.cost + '</span>' + (gp.age ? ageBadge(gp) : '') + '</button>';
   }
   el.innerHTML = h;
 }
 function updatePowers() {
   const pl = G.pl[G.me]; const temple = hasTemple(pl);
   for (const btn of $('powers').children) {
-    const pid = btn.dataset.p, gp = GP[pid], cd = Math.max(0, (pl.cd[pid] || 0) - G.time);
+    const pid = btn.dataset.p, gp = GP[pid], cd = Math.max(0, (pl.cd[pid] || 0) - G.time), lk = !unlocked(pl, gp);
     btn.style.setProperty('--cd', (cd / gp.cd).toFixed(3));
-    btn.classList.toggle('off', !temple || pl.res.foi < gp.cost);
-    btn.classList.toggle('ready', temple && cd <= 0 && pl.res.foi >= gp.cost);
+    btn.classList.toggle('locked', lk);
+    btn.classList.toggle('off', lk || !temple || pl.res.foi < gp.cost);
+    btn.classList.toggle('ready', !lk && temple && cd <= 0 && pl.res.foi >= gp.cost);
     btn.classList.toggle('on', UI.mode === 'power' && UI.powerId === pid);
   }
 }
@@ -396,13 +416,21 @@ function hudUpdate() {
   for (const k of ['food', 'wood', 'gold']) { const el = $('g-' + k); const v = g[k] ? String(g[k]) : ''; if (el.textContent !== v) el.textContent = v; }
   const ie = $('idle-n'); ie.textContent = idle; ie.hidden = idle === 0; $('q-idle').classList.toggle('alert', idle > 0);
   $('clock').textContent = fmtTime(G.time);
+  const ag = ageOf(pl); let up = -1;
+  for (const b of G.blds) if (!b.dead && b.o === G.me && b.t === 'city' && b.q[0] && b.q[0].k === 'r' && R[b.q[0].id] && R[b.q[0].id].ageUp) up = Math.max(up, b.q[0].p);
+  const ak = ag + ':' + (up >= 0 ? Math.floor(up * 50) : -1);
+  if (UI.ageKey !== ak) {
+    UI.ageKey = ak; const el = $('age-badge');
+    el.querySelector('b').textContent = AGES[ag].short; el.classList.toggle('up', up >= 0); el.style.setProperty('--p', (up >= 0 ? up * 100 : 0).toFixed(0) + '%');
+    el.title = AGES[ag].name + (up >= 0 ? ' — passage à l’' + AGES[ag + 1].name + ' : ' + Math.floor(up * 100) + ' %' : ag < AGES.length - 1 ? ' — passez à l’âge suivant depuis la Cité' : '');
+  }
   updatePowers();
   if (UI.mode) updateConfirm();
   // conseils de départ
   if (!G.over && UI.hintsOn) {
     const H0 = [[2, UI.touch ? 'Touchez un citoyen, puis un buisson, un arbre ou la mine d’or pour récolter.' : 'Clic gauche pour choisir une unité, clic droit pour lui donner un ordre.'],
       [22, 'Formez des citoyens à la Cité et bâtissez des maisons pour loger votre peuple.'],
-      [80, 'La Caserne forme l’armée ; le Temple produit la Foi des pouvoirs divins.'],
+      [80, 'La Caserne forme l’armée. À la Cité, passez à l’Âge des Cités pour débloquer le Temple et les pouvoirs divins.'],
       [160, 'Hoplite bat cavalier, cavalier bat archer, archer bat hoplite.']];
     while (G.hints < H0.length && G.time >= H0[G.hints][0]) { toast(H0[G.hints][1], 'info'); G.hints++; }
   }
@@ -651,7 +679,7 @@ function renderGods() {
   for (const pid of PATRONS) {
     const p = P[pid], m = U[p.myth];
     h += '<button class="god" data-god="' + pid + '" aria-pressed="' + (MENU.patron === pid) + '"><canvas width="144" height="144" aria-hidden="true"></canvas><span class="gn">' + p.name + '</span><span class="gr">' + p.realm + ' · ' + p.people + '</span>' +
-      '<span class="gl"><b>Créature</b> ' + m.name + '</span><span class="gl"><b>Pouvoirs</b> ' + p.powers.map(x => GP[x].name).join(' · ') + '</span><span class="gl"><b>Bienfait</b> ' + p.bonus + '</span></button>';
+      '<span class="gl"><b>Créature</b> ' + m.name + '</span><span class="gl"><b>Pouvoirs</b> ' + p.powers.map(x => GP[x].name + (GP[x].age ? ' (âge ' + AGES[GP[x].age].short + ')' : '')).join(' · ') + '</span><span class="gl"><b>Bienfait</b> ' + p.bonus + '</span></button>';
   }
   el.innerHTML = h;
   for (const b of el.querySelectorAll('.god')) { const c = b.querySelector('canvas').getContext('2d'); c.scale(2, 2); drawEmblem(c, b.dataset.god, 72); }

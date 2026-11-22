@@ -1,5 +1,5 @@
 /* ===== Jeu en ligne côté navigateur : connexion, salon, ordres, discussion ===== */
-const NET = { ws: null, state: 'off', token: null, room: null, host: false, rooms: [], retry: 0, want: false, on: [], needCenter: false, autoJoin: null, wasDefeated: false };
+const NET = { ws: null, state: 'off', token: null, room: null, host: false, rooms: [], retry: 0, want: false, on: [], needCenter: false, autoJoin: null, wasDefeated: false, lastMsg: 0 };
 const MPO = { map: 'medium', ais: 1, diff: 'normal', mode: 'ffa' };
 function lsGet(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
 function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (_) { } }
@@ -30,7 +30,7 @@ function netConnect() {
   try { ws = new WebSocket(netUrl()); } catch (_) { setNetState('error'); return; }
   NET.ws = ws;
   ws.onopen = () => { NET.retry = 0; setNetState('on'); ws.send(JSON.stringify({ t: 'hi', name: myName(), token: NET.token })); };
-  ws.onmessage = ev => { let m; try { m = JSON.parse(ev.data); } catch (_) { return; } netOnMessage(m); };
+  ws.onmessage = ev => { NET.lastMsg = performance.now(); let m; try { m = JSON.parse(ev.data); } catch (_) { return; } netOnMessage(m); };
   ws.onclose = () => {
     if (NET.ws === ws) NET.ws = null;
     setNetState(NET.retry > 2 ? 'error' : 'off');
@@ -38,6 +38,21 @@ function netConnect() {
     if (G && G.mp && !G.over) toast('Connexion perdue : reconnexion…', 'warn');
     if (NET.retry === 3 && !(G && G.mp)) mpMsg('Le serveur de jeu ne répond pas. Le jeu en ligne fonctionne depuis peeksoumi.com/mythomachie.');
   };
+}
+/* Connexion muette (téléphone sorti de veille, réseau changé) : on l'abandonne sans attendre et on en ouvre une autre. */
+function netDrop() {
+  const ws = NET.ws; if (!ws) return;
+  NET.ws = null; ws.onopen = ws.onmessage = ws.onclose = null;
+  try { ws.close(); } catch (_) { }
+  NET.retry = 0; if (NET.want) netConnect();
+}
+/* Retour au premier plan : reconnexion immédiate, ou vérification que la connexion répond encore. */
+function netWake() {
+  if (!NET.want) return;
+  if (!NET.ws || NET.ws.readyState > 1) { NET.retry = 0; netConnect(); return; }
+  if (NET.ws.readyState !== 1) return;
+  const t0 = performance.now(); netSend({ t: 'ping', k: 1 });
+  setTimeout(() => { if (NET.ws && NET.ws.readyState === 1 && NET.lastMsg < t0) netDrop(); }, 4000);
 }
 function netSend(o) { if (NET.ws && NET.ws.readyState === 1) { NET.ws.send(JSON.stringify(o)); return true; } return false; }
 function netCmd(c) { if (!netSend({ t: 'c', c })) toast('Connexion perdue : ordre non transmis.', 'warn'); }
@@ -48,8 +63,19 @@ function netOnMessage(m) {
       NET.token = m.token; lsSet('mythomachie.jeton', m.token);
       if (NET.autoJoin) { netSend({ t: 'join', code: NET.autoJoin, patron: MENU.patron }); NET.autoJoin = null; }
       break;
-    case 'rooms': NET.rooms = m.rooms; if (!(G && G.mp)) lsSet('mythomachie.enligne', ''); if (!NET.room) renderOnline(); break;
-    case 'room': NET.room = m.room; NET.host = m.host; mpMsg(''); renderOnline(); break;
+    case 'rooms': // le serveur nous considère hors salon
+      NET.rooms = m.rooms;
+      if (!(G && G.mp)) lsSet('mythomachie.enligne', '');
+      if (NET.room) { mpMsg('Le salon ' + NET.room.code + ' n’existe plus : créez-en un autre.'); NET.room = null; }
+      renderOnline(); break;
+    case 'room': {
+      const before = NET.room && NET.room.code === m.room.code ? NET.room.members.map(x => x.name) : null;
+      NET.room = m.room; NET.host = m.host; lsSet('mythomachie.enligne', '1');
+      const fresh = before ? m.room.members.filter((x, i) => i !== m.you && !before.includes(x.name)) : [];
+      if (fresh.length) { mpMsg(fresh.map(x => x.name).join(', ') + (fresh.length > 1 ? ' ont rejoint' : ' a rejoint') + ' le salon.' + (NET.host ? ' Lancez la partie quand vous êtes prêts.' : '')); sfx('done'); try { navigator.vibrate && navigator.vibrate(60); } catch (_) { } }
+      else if (!before) mpMsg(NET.host ? 'Invitez vos amis : ils arrivent dans le salon en ouvrant le lien.' : 'Vous êtes dans le salon. La partie démarre quand l’hôte la lance.');
+      renderOnline(); break;
+    }
     case 'err': if (G && G.mp) toast(m.msg, 'warn'); else mpMsg(m.msg); sfx('err'); break;
     case 'info': if (G && G.mp) toast(m.msg, 'info'); else mpMsg(m.msg); break;
     case 'start': mpBegin(m); break;
@@ -113,6 +139,7 @@ const ACT = {
   queue(b, k, id) {
     if (!G.mp) return enqueue(b, k, id);
     if (b.q.length >= 6) return 'full';
+    if (!unlocked(G.pl[G.me], k === 'u' ? U[id] : R[id])) return 'age';
     if (!afford(G.pl[G.me], k === 'u' ? U[id].cost : R[id].cost)) return 'cost';
     netCmd([k === 'u' ? 'train' : 'research', b.id, id]); return 'ok';
   },
@@ -138,6 +165,7 @@ function openOnline() {
 }
 function closeOnline() {
   if (NET.room) netSend({ t: 'leave' });
+  lsSet('mythomachie.enligne', '');
   NET.room = null; NET.want = false; $('online').hidden = true;
   if (NET.ws) try { NET.ws.close(); } catch (_) { }
   if (location.hash) history.replaceState(null, '', location.pathname + location.search);
@@ -160,6 +188,7 @@ function renderOnline() {
     else list.innerHTML = NET.rooms.map(x => '<button class="roomrow" type="button" data-code="' + esc(x.code) + '"><b>' + esc(x.host) + '</b><span>' + x.n + ' / 4 camps · ' + esc(optsText(x.opts)) + '</span><i>' + esc(x.code) + '</i></button>').join('');
   } else {
     $('mp-roomcode').textContent = r.code;
+    const link = shareUrl(r.code); if ($('mp-link').value !== link) $('mp-link').value = link;
     const rows = r.members.map((m, i) => '<li><i class="dot" style="background:' + TEAM[i] + '"></i><b>' + esc(m.name) + '</b> <span class="sub">' + P[m.patron].name + (m.token === 'host' ? ' · hôte' : '') + (m.on ? '' : ' · hors ligne') + '</span></li>');
     for (let k = 0; k < r.opts.ais; k++) rows.push('<li><i class="dot" style="background:' + TEAM[r.members.length + k] + '"></i><b>Ordinateur</b> <span class="sub">' + DIFF[r.opts.diff].name + '</span></li>');
     $('mp-members').innerHTML = rows.join('');
@@ -174,7 +203,8 @@ function renderOnline() {
 function mpPlayersHTML() {
   return G.pl.map((p, i) => {
     const st = p.defeated ? 'vaincu' : p.ai ? 'ordinateur' : (NET.on[i] === 0 ? 'déconnecté' : 'en ligne');
-    return '<li><i class="dot" style="background:' + p.color + '"></i><b>' + esc(p.name) + '</b> <span class="sub">' + P[p.patron].name + ' · ' + st + (i === G.me ? ' · vous' : '') + '</span></li>';
+    const ag = i === G.me ? ageOf(p) : (p.netAge || 0);
+    return '<li><i class="dot" style="background:' + p.color + '"></i><b>' + esc(p.name) + '</b> <span class="sub">' + P[p.patron].name + ' · âge ' + AGES[ag].short + ' · ' + st + (i === G.me ? ' · vous' : '') + '</span></li>';
   }).join('');
 }
 function initNetUI() {
@@ -195,11 +225,19 @@ function initNetUI() {
   $('mp-code').addEventListener('keydown', e => { if (e.key === 'Enter') join($('mp-code').value); });
   $('mp-rooms').addEventListener('click', e => { const b = e.target.closest('.roomrow'); if (b) join(b.dataset.code); });
   $('mp-go').addEventListener('click', () => netSend({ t: 'go' }));
-  $('mp-leave').addEventListener('click', () => { netSend({ t: 'leave' }); NET.room = null; renderOnline(); });
+  $('mp-leave').addEventListener('click', () => { netSend({ t: 'leave' }); NET.room = null; lsSet('mythomachie.enligne', ''); mpMsg(''); renderOnline(); });
+  // Inviter : feuille de partage du téléphone (WhatsApp, SMS…), sinon copie du lien, sinon lien sélectionné à copier soi-même
   $('mp-copy').addEventListener('click', async () => {
-    const url = shareUrl(NET.room.code);
-    try { await navigator.clipboard.writeText(url); mpMsg('Lien copié : ' + url); } catch (_) { mpMsg('Lien à partager : ' + url); }
+    if (!NET.room) return;
+    const code = NET.room.code, url = shareUrl(code);
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Mythomachie', text: 'Rejoins ma partie de Mythomachie (salon ' + code + ') :', url }); mpMsg('Votre ami arrive dans le salon dès qu’il ouvre le lien.'); return; }
+      catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    try { await navigator.clipboard.writeText(url); mpMsg('Lien copié : collez-le dans un message à votre ami.'); }
+    catch (_) { const f = $('mp-link'); f.focus(); f.select(); mpMsg('Copiez ce lien et envoyez-le à votre ami.'); }
   });
+  $('mp-link').addEventListener('focus', e => e.target.select());
   $('b-chat').addEventListener('click', openChat);
   $('chatbar').addEventListener('submit', e => {
     e.preventDefault(); const t = $('chat-in').value.trim();
@@ -207,7 +245,20 @@ function initNetUI() {
     $('chatbar').hidden = true; $('chat-in').blur();
   });
   $('chat-in').addEventListener('keydown', e => { if (e.key === 'Escape') { $('chatbar').hidden = true; e.target.blur(); } });
-  const m = /^#([A-Za-z]{4})$/.exec(location.hash || '');
-  if (m) { NET.autoJoin = m[1].toUpperCase(); setTimeout(openOnline, 50); }
-  else if (lsGet('mythomachie.enligne') === '1') setTimeout(openOnline, 50); // reprise d'une partie en ligne après rechargement
+  if (!joinFromHash() && lsGet('mythomachie.enligne') === '1') setTimeout(openOnline, 50); // reprise d'un salon ou d'une partie en ligne après rechargement
+  addEventListener('hashchange', joinFromHash); // lien d'invitation ouvert dans un onglet où le jeu est déjà affiché
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) netWake(); });
+  addEventListener('online', netWake); addEventListener('pageshow', e => { if (e.persisted) netWake(); });
+  setInterval(() => { if (G && G.mp && !G.over && !document.hidden && NET.ws && NET.ws.readyState === 1 && performance.now() - NET.lastMsg > 8000) netDrop(); }, 2000);
+}
+/* Lien d'invitation …/mythomachie/#CODE : ouvre l'écran en ligne et rejoint le salon. */
+function joinFromHash() {
+  const m = /^#([A-Za-z]{4})$/.exec(location.hash || ''); if (!m) return false;
+  const code = m[1].toUpperCase();
+  if (G && G.mp && !G.over) return true; // déjà en partie en ligne : le lien ne sert plus
+  if (G && !G.mp) quitToMenu(); // partie seule en cours : sauvegardée avant de rejoindre
+  if (NET.room && NET.room.code === code) { openOnline(); return true; }
+  if (NET.state === 'on' && NET.ws && NET.ws.readyState === 1) { openOnline(); netSend({ t: 'name', name: myName() }); netSend({ t: 'join', code, patron: MENU.patron }); }
+  else { NET.autoJoin = code; setTimeout(openOnline, 50); }
+  return true;
 }

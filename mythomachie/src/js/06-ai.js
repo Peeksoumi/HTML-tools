@@ -48,11 +48,15 @@ function aiEconomy(ai, pl, D) {
   const I = ai.I;
   const nV = I.vill.length + I.qVill;
   if (nV < D.vill && pl.popUsed < pl.popCap) {
-    for (const c of (I.blds.city || [])) if (c.built && c.q.length < 2 && afford(pl, U.villager.cost)) { enqueue(c, 'u', 'villager'); break; }
+    for (const c of (I.blds.city || [])) if (c.built && c.q.length < 2 && afford(pl, U.villager.cost, ai.ageRes)) { enqueue(c, 'u', 'villager'); break; }
   }
   const hb = I.unbuilt.filter(b => b.t === 'house').length;
   const margin = 3 + Math.floor(pl.popUsed / 18);
   if (pl.popCap < POP_MAX && pl.popCap - pl.popUsed <= margin && hb < (pl.popUsed > 40 ? 2 : 1) && afford(pl, B.house.cost)) aiPlace(ai, pl, 'house');
+  // Fermes : quand les baies proches s'épuisent, la nourriture vient des fermes (un citoyen par ferme, le bâtisseur s'y met)
+  let berries = 0; for (const r of G.ress) if (!r.dead && r.t === 'berry' && Math.hypot(r.x - ai.hx, r.y - ai.hy) < 16 * T) berries += r.amt;
+  const wantFarms = berries > 500 ? 0 : Math.min(12, Math.ceil(I.vill.length * 0.4));
+  if ((I.blds.farm || []).length < wantFarms && I.unbuilt.filter(b => b.t === 'farm').length < 2 && afford(pl, B.farm.cost)) aiPlace(ai, pl, 'farm');
   for (const v of I.idleVill) aiAssign(ai, pl, v);
   // rééquilibrage selon les stocks
   if (G.time > ai.rebT) {
@@ -154,6 +158,7 @@ function aiAssignBuilders(ai, pl, b) {
 function aiBuild(ai, pl, D) {
   const I = ai.I, n = t => (I.blds[t] || []).length, t = G.time, slow = pl.diff === 'easy' ? 1.4 : 1;
   ai.reserve = null;
+  aiAge(ai, pl);
   const plan = [];
   if (n('city') < 1 && I.vill.length > 0) plan.push('city');
   if (n('barracks') < 1 && t > 75 * slow) plan.push('barracks');
@@ -163,18 +168,32 @@ function aiBuild(ai, pl, D) {
   if (pl.diff !== 'easy' && n('temple') < 2 && t > 620) plan.push('temple');
   if (pl.diff === 'hard' && n('city') < 2 && t > 900 && I.vill.length > 24) plan.push('city');
   for (const k of plan) {
-    if (I.unbuilt.some(b => b.t === k)) continue;
-    if (afford(pl, B[k].cost)) aiPlace(ai, pl, k);
-    else ai.reserve = B[k].cost;
+    if (!unlocked(pl, B[k]) || I.unbuilt.some(b => b.t === k)) continue;
+    const keep = k === 'city' && n('city') < 1 ? null : ai.reserve; // une première cité passe avant tout
+    if (afford(pl, B[k].cost, keep)) aiPlace(ai, pl, k);
+    else if (!ai.reserve) ai.reserve = B[k].cost;
     break;
   }
   aiResearch(ai, pl);
 }
-const AI_RESEARCH = [['tools', 'city', 200], ['rites', 'temple', 320], ['iron', 'barracks', 480], ['shields', 'barracks', 560], ['blood', 'temple', 720], ['walls', 'city', 840]];
+/* Passage d'âge : dès qu'il y a assez de citoyens et que l'heure est venue ; sinon les ressources sont mises de côté. */
+const AI_AGE = { easy: [[300, 12], [960, 20]], normal: [[210, 12], [600, 20]], hard: [[160, 12], [460, 20]] };
+function aiAge(ai, pl) {
+  ai.ageRes = null;
+  const a = ageOf(pl); if (a >= AGES.length - 1) return;
+  const id = 'age' + (a + 1), [tm, nv] = AI_AGE[pl.diff][a];
+  if (G.time < tm || ai.I.vill.length < nv) return;
+  const cities = (ai.I.blds.city || []).filter(b => b.built);
+  if (!cities.length || cities.some(b => b.q.some(it => it.k === 'r' && it.id === id))) return;
+  const c = cities.reduce((x, y) => (y.q.length < x.q.length ? y : x));
+  if (afford(pl, R[id].cost) && enqueue(c, 'r', id) === 'ok') return;
+  ai.reserve = ai.ageRes = R[id].cost; // on économise : ni citoyens, ni soldats, ni bâtiments en attendant
+}
+const AI_RESEARCH = [['tools', 'city', 200], ['rites', 'temple', 320], ['iron', 'barracks', 480], ['shields', 'barracks', 560], ['blood', 'temple', 720], ['tools2', 'city', 760], ['forge', 'barracks', 800], ['walls', 'city', 840]];
 function aiResearch(ai, pl) {
   const slow = pl.diff === 'easy' ? 1.6 : pl.diff === 'hard' ? 0.8 : 1;
   for (const [id, at, tm] of AI_RESEARCH) {
-    if (pl.tech[id] || G.time < tm * slow) continue;
+    if (pl.tech[id] || !unlocked(pl, R[id]) || G.time < tm * slow) continue;
     const bs = ai.I.blds[at] || [];
     if (bs.some(b => b.q.some(it => it.k === 'r' && it.id === id))) continue;
     const b = bs.find(x => x.built && x.q.length === 0);
@@ -187,7 +206,7 @@ function mergeReserve(a, b) { if (!a) return b; if (!b) return a; const r = Obje
 function centroid(arr) { let x = 0, y = 0; for (const u of arr) { x += u.x; y += u.y; } return { x: x / arr.length, y: y / arr.length }; }
 function aiPickUnit(ai, pl, D) {
   const I = ai.I;
-  if ((I.counts.ram || 0) < (G.time > 900 ? 3 : 2) && I.mil.length >= 8 && G.time > 480 && Math.random() < 0.3 && afford(pl, U.ram.cost)) return 'ram';
+  if (unlocked(pl, U.ram) && (I.counts.ram || 0) < (G.time > 900 ? 3 : 2) && I.mil.length >= 8 && G.time > 480 && Math.random() < 0.3 && afford(pl, U.ram.cost)) return 'ram';
   let w;
   if (!D.counters) w = { hoplite: 1, archer: 1, cavalier: 0.7 };
   else {
@@ -199,7 +218,7 @@ function aiPickUnit(ai, pl, D) {
     const tot = inf + arch + cav + myth + 2;
     w = { hoplite: 1 + 3 * cav / tot + myth / tot, archer: 1 + 3 * inf / tot, cavalier: 0.7 + 3 * arch / tot };
   }
-  const keys = Object.keys(w).filter(k => afford(pl, U[k].cost)); if (!keys.length) return null;
+  const keys = Object.keys(w).filter(k => unlocked(pl, U[k]) && afford(pl, U[k].cost)); if (!keys.length) return null;
   let s = 0; for (const k of keys) s += w[k];
   let r = Math.random() * s;
   for (const k of keys) { r -= w[k]; if (r <= 0) return k; }

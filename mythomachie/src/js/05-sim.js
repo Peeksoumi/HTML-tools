@@ -413,8 +413,10 @@ function finishResearch(pl, id) {
   pl.tech[id] = true;
   if (id === 'walls') for (const b of G.blds) if (!b.dead && b.o === pl.i) { const m = bldMhp(pl, b.t); b.hp *= m / b.mhp; b.mhp = m; }
   if (id === 'blood') for (const u of G.units) if (!u.dead && u.o === pl.i && U[u.t].cls === 'myth') { const m = unitMhp(pl, u.t); u.hp *= m / u.mhp; u.mhp = m; }
-  if (pl.i === G.me) { H.toast('Recherche terminée : ' + R[id].name, 'good'); H.sfx('done'); }
+  if (pl.i === G.me) { H.toast(techDoneText(id), 'good'); H.sfx(R[id].ageUp ? 'start' : 'done'); }
+  else if (R[id].ageUp && G.me >= 0) H.toast(pl.name + ' entre dans l’' + AGES[R[id].ageUp].name + '.', 'info');
 }
+function techDoneText(id) { return R[id].ageUp ? 'Vous entrez dans l’' + AGES[R[id].ageUp].name + ' !' : 'Recherche terminée : ' + R[id].name; }
 
 /* ----- Collisions ----- */
 function separation() {
@@ -485,7 +487,7 @@ function updateProjectiles(dt) {
 }
 
 /* ----- Pouvoirs divins ----- */
-function canCast(pl, pid) { return !pl.defeated && hasTemple(pl) && pl.res.foi >= GP[pid].cost && (pl.cd[pid] || 0) <= G.time; }
+function canCast(pl, pid) { return !pl.defeated && unlocked(pl, GP[pid]) && hasTemple(pl) && pl.res.foi >= GP[pid].cost && (pl.cd[pid] || 0) <= G.time; }
 function castPower(o, pid, x, y) {
   const pl = G.pl[o], gp = GP[pid];
   if (!canCast(pl, pid)) return false;

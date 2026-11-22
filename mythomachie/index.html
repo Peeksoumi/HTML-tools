@@ -44,6 +44,9 @@ button { font: inherit; color: inherit; touch-action: manipulation; cursor: poin
 .res.full b { color: var(--warn); }
 #topr { display: flex; align-items: center; gap: 8px; }
 #clock { font-variant-numeric: tabular-nums; color: var(--mist); font-size: 13px; }
+.ageb { --p: 0%; padding: 3px 9px; border-radius: 999px; border: 1px solid rgba(217,181,82,.6); background: rgba(35,44,116,.55); font-size: 13px; white-space: nowrap; }
+.ageb small { color: var(--mist); font-size: 11px; } .ageb b { color: var(--gold-hi); font-family: var(--f-display); letter-spacing: .05em; }
+.ageb.up { background: linear-gradient(90deg, rgba(217,181,82,.45) var(--p), rgba(35,44,116,.55) var(--p)); }
 .tb { min-width: 40px; height: 34px; padding: 0 8px; border-radius: 8px; border: 1px solid rgba(217,181,82,.6); background: rgba(35,44,116,.55); font-weight: 700; font-variant-numeric: tabular-nums; }
 .tb:active { background: rgba(217,181,82,.25); }
 
@@ -74,7 +77,10 @@ button.toast { cursor: pointer; text-decoration: underline dotted rgba(255,255,2
   background: linear-gradient(0deg, rgba(10,14,36,.97), rgba(10,14,36,.88)); border-top: 1px solid rgba(217,181,82,.5); box-shadow: 0 -6px 18px rgba(0,0,0,.35); }
 #minibox { width: 128px; height: 128px; border: 1px solid rgba(217,181,82,.65); border-radius: 8px; overflow: hidden; background: #05060d; }
 #mini { width: 100%; height: 100%; display: block; touch-action: none; cursor: pointer; }
-#selp { min-width: 0; min-height: 60px; }
+#selp { min-width: 0; min-height: 60px; position: relative; }
+#selp.has-sel { padding-right: 42px; }
+.desel { position: absolute; top: 0; right: 0; width: 36px; height: 36px; padding: 0; border-radius: 10px; border: 1px solid rgba(217,181,82,.5); background: linear-gradient(180deg, rgba(35,44,116,.88), rgba(18,24,69,.92)); color: var(--marble); font-size: 18px; line-height: 1; cursor: pointer; }
+.desel:active { transform: translateY(1px); }
 #cmdp:empty { display: block; }
 .hint { margin: 6px 0; color: var(--mist); font-size: 13px; max-width: 46ch; }
 .one { display: flex; gap: 10px; align-items: flex-start; }
@@ -102,10 +108,12 @@ button.toast { cursor: pointer; text-decoration: underline dotted rgba(255,255,2
 .cmd .cn { font-size: 10px; line-height: 1.15; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cmd .cc { display: flex; gap: 3px; font-size: 9.5px; line-height: 1.1; font-variant-numeric: tabular-nums; color: #e9e2c6; }
 .ci { display: inline-flex; align-items: center; gap: 1px; } .ci img { width: 10px; height: 10px; }
-.cmd.na { opacity: .5; } .cmd.on { border-color: #fff; background: rgba(217,181,82,.32); } .cmd.danger { border-color: var(--bad); background: rgba(160,40,30,.55); }
+.cmd.na { opacity: .5; } .cmd.lock { opacity: .42; filter: grayscale(.6); } .cmd.ageup { border-color: var(--gold-hi); box-shadow: 0 0 10px rgba(243,221,146,.35); }
+.ab { position: absolute; top: 2px; right: 3px; min-width: 16px; padding: 0 3px; border-radius: 6px; background: rgba(10,14,36,.9); border: 1px solid rgba(217,181,82,.7); color: var(--gold-hi); font: 700 9.5px/14px var(--f-body); text-align: center; }
+.pw .ab { display: none; z-index: 3; top: 3px; left: 50%; right: auto; transform: translateX(-50%); } .pw.locked .ab { display: block; } .cmd.on { border-color: #fff; background: rgba(217,181,82,.32); } .cmd.danger { border-color: var(--bad); background: rgba(160,40,30,.55); }
 .cmd:active, .chip:active, .qb:active, .pw:active, .qi:active { transform: translateY(1px); }
 .qn { position: absolute; top: 2px; right: 3px; min-width: 16px; height: 16px; border-radius: 8px; background: var(--gold); color: #1c1405; font: 700 10px/16px var(--f-body); }
-@media (hover: hover) { .cmd:hover, .chip:hover, .qb:hover, .qi:hover { border-color: var(--gold-hi); } }
+@media (hover: hover) { .cmd:hover, .chip:hover, .qb:hover, .qi:hover, .desel:hover { border-color: var(--gold-hi); } }
 
 #confirm { position: absolute; left: 50%; bottom: calc(var(--botH) + 12px); transform: translateX(-50%); display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; padding: 8px 10px; background: rgba(10,14,36,.96); border: 1px solid var(--gold); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.5); width: max-content; max-width: calc(100vw - 150px); }
 #confirm-msg { font-size: 13px; }
@@ -113,6 +121,7 @@ button.toast { cursor: pointer; text-decoration: underline dotted rgba(255,255,2
 #chatbar { position: absolute; left: 50%; bottom: calc(var(--botH) + 12px); transform: translateX(-50%); display: flex; gap: 8px; padding: 8px; width: min(560px, calc(100vw - 24px)); background: rgba(10,14,36,.96); border: 1px solid var(--gold); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.5); z-index: 5; }
 #chatbar input, .field { flex: 1; min-width: 0; min-height: 40px; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(217,181,82,.55); background: rgba(5,8,24,.85); color: var(--marble); font: 15px var(--f-body); -webkit-user-select: text; user-select: text; }
 .field.code { flex: 0 0 auto; width: 7.5em; text-transform: uppercase; letter-spacing: .3em; font-weight: 700; text-align: center; }
+.field.link { font-size: 13px; color: var(--mist); }
 .tb img { width: 20px; height: 20px; display: block; }
 .toast.chat { text-align: left; border-color: rgba(217,181,82,.8); }
 .netstate { padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; border: 1px solid rgba(255,255,255,.2); }
@@ -236,6 +245,7 @@ td small { color: var(--mist); }
 @media (max-width: 460px) {
   .res small { display: none; }
   #clock { display: none; }
+  .ageb small { display: none; } .ageb { padding: 3px 7px; }
   .tb { min-width: 36px; height: 32px; padding: 0 6px; }
   #resbar { gap: 0 8px; }
   #top { padding-left: calc(env(safe-area-inset-left, 0px) + 8px); padding-right: calc(env(safe-area-inset-right, 0px) + 8px); }
@@ -259,6 +269,7 @@ td small { color: var(--mist); }
         <div class="res" title="Population utilisée / logée"><img data-g="pop" alt="Population"><b id="r-pop">0/0</b></div>
       </div>
       <div id="topr">
+        <span id="age-badge" class="ageb" title="Âge des Fondations"><small>Âge</small> <b>I</b></span>
         <span id="clock">0:00</span>
         <button id="b-chat" class="tb" type="button" aria-label="Écrire aux joueurs" title="Écrire aux joueurs (Entrée)" hidden><img data-g="chat" alt=""></button>
         <button id="b-speed" class="tb" type="button" title="Vitesse du jeu">×1</button>
@@ -316,10 +327,11 @@ td small { color: var(--mist); }
         <ul>
           <li><b>Simulation</b> : pas fixes de 50 ms pour la récolte, la construction, les combats, les projectiles et les pouvoirs.</li>
           <li><b>Déplacements</b> : recherche de chemin A* sur une grille de cases, avec évitement entre unités.</li>
-          <li><b>Adversaires</b> : IA à règles (économie, bâtiments, recherches, armée qui contre la vôtre, vagues d’attaque, défense, pouvoirs).</li>
+          <li><b>Âges</b> : trois âges ; chaque passage se recherche à la Cité et débloque bâtiments, unités, recherches et pouvoirs.</li>
+          <li><b>Adversaires</b> : IA à règles (économie, fermes, passages d’âge, bâtiments, recherches, armée qui contre la vôtre, vagues d’attaque, défense, pouvoirs).</li>
           <li><b>Brouillard de guerre</b> : vous ne voyez que ce que vos unités et bâtiments voient.</li>
           <li><b>Seul</b> : tout tourne sur l’appareil ; la sauvegarde reste dans le stockage local du navigateur.</li>
-          <li><b>En ligne</b> : le serveur de jeu du site fait tourner la partie ; chaque navigateur envoie ses ordres et reçoit 10 fois par seconde ce que voit son équipe.</li>
+          <li><b>En ligne</b> : le serveur de jeu du site fait tourner la partie ; chaque navigateur envoie ses ordres et reçoit 10 fois par seconde ce que voit son équipe. Un salon garde la place d’un joueur parti envoyer le lien.</li>
         </ul>
         <h3>Sources de données</h3>
         <ul>
@@ -330,7 +342,7 @@ td small { color: var(--mist); }
         <h3>Limites</h3>
         <ul>
           <li>Pas de campagne ; 4 camps au maximum, seul ou en ligne.</li>
-          <li>En ligne, une connexion lente fait sauter les unités ; une partie quittée par tous est perdue après 3 min.</li>
+          <li>En ligne, une connexion lente fait sauter les unités ; un salon vide ferme après 30 min, une partie quittée par tous après 3 min.</li>
           <li>L’IA voit toute la carte ; elle récolte 20 % plus vite en Difficile et 15 % moins vite en Facile.</li>
           <li>La sauvegarde est liée à ce navigateur : effacer ses données l’efface.</li>
           <li>Sur petit téléphone, la grande carte à 4 camps peut ralentir.</li>
@@ -365,7 +377,8 @@ td small { color: var(--mist); }
       <div class="row"><label class="ol" for="mp-name">Votre nom</label><input id="mp-name" class="field" maxlength="20" autocomplete="nickname" placeholder="Votre nom"></div>
       <div class="row"><span class="ol" id="l-mpgod">Votre dieu</span><div class="seg" id="mp-god" role="group" aria-labelledby="l-mpgod"><button type="button" data-v="zeus">Zeus</button><button type="button" data-v="odin">Odin</button><button type="button" data-v="ra">Râ</button></div></div>
       <div id="mp-room" hidden>
-        <div class="row between"><p class="roomcode">Code du salon <b id="mp-roomcode">----</b></p><button id="mp-copy" class="btn ghost" type="button">Copier le lien d’invitation</button></div>
+        <div class="row between"><p class="roomcode">Code du salon <b id="mp-roomcode">----</b></p><button id="mp-copy" class="btn gold" type="button">Inviter un ami</button></div>
+        <div class="row"><input id="mp-link" class="field link" readonly aria-label="Lien d’invitation à envoyer"></div>
         <ul id="mp-members" class="mp-list"></ul>
         <p id="mp-optsum" class="sub"></p>
       </div>
@@ -395,7 +408,7 @@ td small { color: var(--mist); }
         <div>
           <h3>Au doigt</h3>
           <ul>
-            <li>Touchez une unité pour la choisir ; deux fois de suite pour prendre toutes celles du même type à l’écran.</li>
+            <li>Touchez une unité pour la choisir ; deux fois de suite pour prendre toutes celles du même type à l’écran. Le bouton ✕ du panneau du bas désélectionne.</li>
             <li>Touchez le sol pour déplacer, un ennemi pour attaquer, un arbre, un buisson ou une mine pour récolter, un chantier pour construire.</li>
             <li>Glissez un doigt pour déplacer la vue, pincez pour zoomer.</li>
             <li>Appui long puis glissement, ou bouton de zone : sélection par rectangle.</li>
@@ -418,6 +431,7 @@ td small { color: var(--mist); }
             <li>Les citoyens récoltent nourriture (baies, fermes), bois et or, puis les rapportent à la cité ou à un entrepôt.</li>
             <li>Chaque maison loge 6 habitants de plus (100 au maximum).</li>
             <li>Les recherches de la cité, de la caserne et du temple renforcent tout votre peuple.</li>
+            <li>Âges : à la Cité, passez à l’Âge des Cités (Temple, Tour, Cavalier, nouvelles recherches), puis à l’Âge des Prodiges (Bélier, second pouvoir divin, améliorations les plus fortes). Ce qui est grisé avec un chiffre attend cet âge.</li>
           </ul>
         </div>
         <div>
@@ -504,6 +518,13 @@ const TEAM = ['#3f7fe8', '#e0443a', '#a35ee0', '#f2901e'];
 const SKINS = ['#f0c9a4', '#d9a77c', '#b98257', '#8d5b3b'];
 const RES_KEYS = ['food', 'wood', 'gold', 'foi'];
 const RES_NAME = { food: 'Nourriture', wood: 'Bois', gold: 'Or', foi: 'Foi' };
+/* Âges : on passe au suivant par une recherche à la Cité (age1, age2) ; un champ age sur une unité, un bâtiment,
+   une recherche ou un pouvoir donne l'âge minimal pour y accéder. */
+const AGES = [
+  { name: 'Âge des Fondations', short: 'I' },
+  { name: 'Âge des Cités', short: 'II' },
+  { name: 'Âge des Prodiges', short: 'III' },
+];
 
 /* Unités. range et speed en cases, r et h en pixels */
 const U = {
@@ -513,9 +534,9 @@ const U = {
     desc: 'Fantassin à la lance. Redoutable contre la cavalerie.' },
   archer: { name: 'Archer', plural: 'Archers', cls: 'arch', hp: 60, atk: 6, rate: 1.6, range: 5.5, speed: 1.8, sight: 8, armor: 0, pop: 1, cost: { wood: 45, gold: 20 }, time: 12, r: 7, h: 22, proj: 'arrow',
     desc: 'Tire à distance. Efficace contre les fantassins.' },
-  cavalier: { name: 'Cavalier', plural: 'Cavaliers', cls: 'cav', hp: 150, atk: 9, rate: 1.5, range: 0.25, speed: 2.9, sight: 7, armor: 1, pop: 2, cost: { food: 80, gold: 40 }, time: 15, r: 10, h: 30,
+  cavalier: { name: 'Cavalier', plural: 'Cavaliers', cls: 'cav', age: 1, hp: 150, atk: 9, rate: 1.5, range: 0.25, speed: 2.9, sight: 7, armor: 1, pop: 2, cost: { food: 80, gold: 40 }, time: 15, r: 10, h: 30,
     desc: 'Rapide. Efficace contre les archers et les citoyens.' },
-  ram: { name: 'Bélier', plural: 'Béliers', cls: 'siege', hp: 260, atk: 45, rate: 3, range: 0.25, speed: 1.05, sight: 4, armor: 3, pop: 2, cost: { wood: 150, gold: 40 }, time: 20, r: 11, h: 24, onlyB: true,
+  ram: { name: 'Bélier', plural: 'Béliers', cls: 'siege', age: 2, hp: 260, atk: 45, rate: 3, range: 0.25, speed: 1.05, sight: 4, armor: 3, pop: 2, cost: { wood: 150, gold: 40 }, time: 20, r: 11, h: 24, onlyB: true,
     desc: 'Engin de siège : n’attaque que les bâtiments, résiste aux flèches.' },
   cyclops: { name: 'Cyclope', plural: 'Cyclopes', cls: 'myth', hp: 480, atk: 28, rate: 2.2, range: 0.35, speed: 1.45, sight: 7, armor: 3, pop: 4, cost: { gold: 75, foi: 50 }, time: 25, r: 13, h: 44, splash: 1.2, bBonus: 2,
     desc: 'Géant forgeron de Zeus : frappe en zone et démolit les murs.' },
@@ -541,16 +562,16 @@ const MULT = {
 
 /* Bâtiments. size en cases */
 const B = {
-  city: { name: 'Cité', f: true, size: 4, hp: 2200, cost: { wood: 300, gold: 150 }, time: 90, pop: 10, drop: true, trains: ['villager'], research: ['tools', 'walls'], sight: 9,
+  city: { name: 'Cité', f: true, size: 4, hp: 2200, cost: { wood: 300, gold: 150 }, time: 90, pop: 10, drop: true, trains: ['villager'], research: ['age1', 'age2', 'tools', 'tools2', 'walls'], sight: 9,
     shoot: { atk: 5, rate: 2, range: 6.5 }, desc: 'Cœur du peuple : forme les citoyens et reçoit toutes les ressources.' },
   house: { name: 'Maison', f: true, size: 2, hp: 350, cost: { wood: 40 }, time: 18, pop: 6, sight: 4, desc: '+6 de population.' },
   farm: { name: 'Ferme', f: true, size: 3, hp: 200, cost: { wood: 60 }, time: 15, walk: true, sight: 3, desc: 'Nourriture inépuisable, pour un citoyen à la fois.' },
   store: { name: 'Entrepôt', f: false, size: 2, hp: 450, cost: { wood: 80 }, time: 22, drop: true, sight: 5, desc: 'Dépôt de ressources à bâtir près des forêts et des mines.' },
-  barracks: { name: 'Caserne', f: true, size: 3, hp: 900, cost: { wood: 150 }, time: 40, trains: ['hoplite', 'archer', 'cavalier', 'ram'], research: ['iron', 'shields'], sight: 6,
+  barracks: { name: 'Caserne', f: true, size: 3, hp: 900, cost: { wood: 150 }, time: 40, trains: ['hoplite', 'archer', 'cavalier', 'ram'], research: ['iron', 'shields', 'forge'], sight: 6,
     desc: 'Forme les soldats et les béliers.' },
-  temple: { name: 'Temple', f: false, size: 3, hp: 1000, cost: { wood: 120, gold: 100 }, time: 45, trains: ['$myth'], research: ['rites', 'blood'], foi: 0.45, sight: 6, max: 3,
+  temple: { name: 'Temple', f: false, age: 1, size: 3, hp: 1000, cost: { wood: 120, gold: 100 }, time: 45, trains: ['$myth'], research: ['rites', 'blood'], foi: 0.45, sight: 6, max: 3,
     desc: 'Produit la Foi des pouvoirs divins et invoque la créature de votre dieu.' },
-  tower: { name: 'Tour', f: true, size: 2, hp: 750, cost: { wood: 100, gold: 50 }, time: 35, shoot: { atk: 8, rate: 1.6, range: 7 }, sight: 9,
+  tower: { name: 'Tour', f: true, age: 1, size: 2, hp: 750, cost: { wood: 100, gold: 50 }, time: 35, shoot: { atk: 8, rate: 1.6, range: 7 }, sight: 9,
     desc: 'Tire des flèches sur les ennemis à portée.' },
 };
 const BUILD_LIST = ['house', 'farm', 'store', 'barracks', 'temple', 'tower', 'city'];
@@ -558,12 +579,16 @@ const BUILD_LIST = ['house', 'farm', 'store', 'barracks', 'temple', 'tower', 'ci
 const BLD_H = { city: 74, house: 40, farm: 6, store: 34, barracks: 56, temple: 64, tower: 84 };
 
 const R = {
+  age1: { name: 'Âge des Cités', desc: 'Passer à l’âge II : Temple (Foi, créature, pouvoirs divins), Tour, Cavalier et quatre recherches.', cost: { food: 400, gold: 150 }, time: 45, icon: 'age1', ageUp: 1 },
+  age2: { name: 'Âge des Prodiges', desc: 'Passer à l’âge III : Bélier, second pouvoir divin, Outils de fer, Forge divine et Sang divin.', cost: { food: 750, gold: 550 }, time: 60, icon: 'age2', ageUp: 2, age: 1 },
   tools: { name: 'Outils de bronze', desc: '+20 % de vitesse de récolte.', cost: { food: 150, wood: 100 }, time: 30, icon: 'tools' },
-  walls: { name: 'Remparts', desc: '+40 % de PV pour les bâtiments, +3 dégâts pour tours et cités.', cost: { wood: 150, gold: 150 }, time: 40, icon: 'walls' },
-  iron: { name: 'Armes de fer', desc: '+2 d’attaque pour les soldats et les créatures.', cost: { food: 150, gold: 150 }, time: 40, icon: 'iron' },
-  shields: { name: 'Boucliers de bronze', desc: '+2 d’armure pour les soldats.', cost: { wood: 150, gold: 150 }, time: 40, icon: 'shields' },
-  rites: { name: 'Rites sacrés', desc: '+60 % de Foi produite par les temples.', cost: { food: 100, gold: 150 }, time: 35, icon: 'rites' },
-  blood: { name: 'Sang divin', desc: 'Créatures : +30 % de PV et +20 % d’attaque.', cost: { gold: 150, foi: 30 }, time: 40, icon: 'blood' },
+  tools2: { name: 'Outils de fer', desc: '+15 % de vitesse de récolte, en plus des outils de bronze.', cost: { food: 250, wood: 250 }, time: 40, icon: 'tools2', age: 2 },
+  walls: { name: 'Remparts', desc: '+40 % de PV pour les bâtiments, +3 dégâts pour tours et cités.', cost: { wood: 150, gold: 150 }, time: 40, icon: 'walls', age: 1 },
+  iron: { name: 'Armes de fer', desc: '+2 d’attaque pour les soldats et les créatures.', cost: { food: 150, gold: 150 }, time: 40, icon: 'iron', age: 1 },
+  shields: { name: 'Boucliers de bronze', desc: '+2 d’armure pour les soldats.', cost: { wood: 150, gold: 150 }, time: 40, icon: 'shields', age: 1 },
+  forge: { name: 'Forge divine', desc: 'Soldats et créatures : +2 d’attaque et +1 d’armure.', cost: { food: 250, gold: 350 }, time: 50, icon: 'forge', age: 2 },
+  rites: { name: 'Rites sacrés', desc: '+60 % de Foi produite par les temples.', cost: { food: 100, gold: 150 }, time: 35, icon: 'rites', age: 1 },
+  blood: { name: 'Sang divin', desc: 'Créatures : +30 % de PV et +20 % d’attaque.', cost: { gold: 150, foi: 30 }, time: 40, icon: 'blood', age: 2 },
 };
 
 const P = {
@@ -575,11 +600,11 @@ const PATRONS = ['zeus', 'odin', 'ra'];
 
 const GP = {
   bolt: { name: 'Foudre', desc: 'Six éclairs frappent les ennemis de la zone (70 dégâts chacun).', cost: 50, cd: 40, r: 3, kind: 'hostile', color: '#bfe0ff' },
-  aegis: { name: 'Égide', desc: 'Vos unités de la zone subissent 60 % de dégâts en moins pendant 15 s.', cost: 35, cd: 45, r: 4, kind: 'friendly', color: '#ffd76a' },
+  aegis: { name: 'Égide', age: 2, desc: 'Vos unités de la zone subissent 60 % de dégâts en moins pendant 15 s.', cost: 35, cd: 45, r: 4, kind: 'friendly', color: '#ffd76a' },
   frost: { name: 'Fimbulvetr', desc: 'Gèle les ennemis de la zone pendant 6 s et leur inflige 25 dégâts.', cost: 55, cd: 50, r: 4, kind: 'hostile', color: '#9fe3ff' },
-  einherjar: { name: 'Einherjar', desc: 'Quatre guerriers spectraux combattent pour vous pendant 40 s.', cost: 45, cd: 55, r: 1.5, kind: 'summon', color: '#8ff0e0' },
+  einherjar: { name: 'Einherjar', age: 2, desc: 'Quatre guerriers spectraux combattent pour vous pendant 40 s.', cost: 45, cd: 55, r: 1.5, kind: 'summon', color: '#8ff0e0' },
   sun: { name: 'Soleil ardent', desc: 'La zone brûle pendant 8 s : 14 dégâts par seconde aux ennemis, bâtiments compris.', cost: 50, cd: 40, r: 3.5, kind: 'hostile', color: '#ffae42' },
-  blessing: { name: 'Bénédiction', desc: 'Soigne vos unités de la zone et augmente leur attaque de 30 % pendant 12 s.', cost: 40, cd: 45, r: 5, kind: 'friendly', color: '#c8ff7a' },
+  blessing: { name: 'Bénédiction', age: 2, desc: 'Soigne vos unités de la zone et augmente leur attaque de 30 % pendant 12 s.', cost: 40, cd: 45, r: 5, kind: 'friendly', color: '#c8ff7a' },
 };
 
 const DIFF = {
@@ -729,12 +754,15 @@ function afford(pl, cost, reserve) {
 function pay(pl, cost) { for (const k in cost) pl.res[k] -= cost[k]; }
 function refund(pl, cost, f) { for (const k in cost) pl.res[k] += cost[k] * (f == null ? 1 : f); }
 function mythOf(pl) { return P[pl.patron].myth; }
+/* Âge atteint (0, 1 ou 2), déduit des recherches age1 et age2 ; unlocked : l'âge suffit-il pour cette unité, ce bâtiment, cette recherche ou ce pouvoir ? */
+function ageOf(pl) { return pl.tech.age2 ? 2 : pl.tech.age1 ? 1 : 0; }
+function unlocked(pl, d) { return !d || (d.age || 0) <= ageOf(pl); }
 function trainList(b) { const pl = G.pl[b.o]; return (B[b.t].trains || []).map(t => t === '$myth' ? mythOf(pl) : t); }
 
 /* ----- Modificateurs ----- */
 function atkOf(u) {
   const d = U[u.t], pl = G.pl[u.o]; let a = d.atk;
-  if (d.cls !== 'vill') { if (pl.tech.iron) a += 2; if (pl.patron === 'zeus') a *= 1.1; }
+  if (d.cls !== 'vill') { if (pl.tech.iron) a += 2; if (pl.tech.forge) a += 2; if (pl.patron === 'zeus') a *= 1.1; }
   if (d.cls === 'myth' && pl.tech.blood) a *= 1.2;
   if (u.buff > G.time) a *= 1.3;
   return a;
@@ -742,12 +770,14 @@ function atkOf(u) {
 function armorOf(u) {
   const d = U[u.t], pl = G.pl[u.o]; let ar = d.armor;
   if (pl.tech.shields && d.cls !== 'vill' && d.cls !== 'myth') ar += 2;
+  if (pl.tech.forge && d.cls !== 'vill') ar += 1;
   return ar;
 }
 function gatherRate(u, rtype, farm) {
   const pl = G.pl[u.o];
   let r = farm ? 0.55 : rtype === 'food' ? 0.75 : rtype === 'wood' ? 0.6 : 0.55;
   if (pl.tech.tools) r *= 1.2;
+  if (pl.tech.tools2) r *= 1.15;
   if (pl.patron === 'odin') r *= 1.15;
   if (pl.ai) r *= DIFF[pl.diff].gather;
   return r;
@@ -787,6 +817,7 @@ function isEnemy(a, b) { return a !== b && a >= 0 && b >= 0 && G.pl[a].team !== 
 function enqueue(b, k, id) {
   const pl = G.pl[b.o]; const cost = k === 'u' ? U[id].cost : R[id].cost;
   if (b.q.length >= 6) return 'full';
+  if (!unlocked(pl, k === 'u' ? U[id] : R[id])) return 'age';
   if (k === 'r' && (pl.tech[id] || G.blds.some(x => !x.dead && x.o === b.o && x.q.some(it => it.k === 'r' && it.id === id)))) return 'done';
   if (!afford(pl, cost)) return 'cost';
   pay(pl, cost); b.q.push({ k, id, p: 0, started: false });
@@ -821,7 +852,7 @@ function canPlace(t, o, tx, ty, strict) {
   return true;
 }
 function placeBuilding(pl, t, tx, ty) {
-  if (!afford(pl, B[t].cost)) return null;
+  if (!unlocked(pl, B[t]) || !afford(pl, B[t].cost)) return null;
   pay(pl, B[t].cost);
   return makeBuilding(t, pl.i, tx, ty, false);
 }
@@ -1781,8 +1812,10 @@ function finishResearch(pl, id) {
   pl.tech[id] = true;
   if (id === 'walls') for (const b of G.blds) if (!b.dead && b.o === pl.i) { const m = bldMhp(pl, b.t); b.hp *= m / b.mhp; b.mhp = m; }
   if (id === 'blood') for (const u of G.units) if (!u.dead && u.o === pl.i && U[u.t].cls === 'myth') { const m = unitMhp(pl, u.t); u.hp *= m / u.mhp; u.mhp = m; }
-  if (pl.i === G.me) { H.toast('Recherche terminée : ' + R[id].name, 'good'); H.sfx('done'); }
+  if (pl.i === G.me) { H.toast(techDoneText(id), 'good'); H.sfx(R[id].ageUp ? 'start' : 'done'); }
+  else if (R[id].ageUp && G.me >= 0) H.toast(pl.name + ' entre dans l’' + AGES[R[id].ageUp].name + '.', 'info');
 }
+function techDoneText(id) { return R[id].ageUp ? 'Vous entrez dans l’' + AGES[R[id].ageUp].name + ' !' : 'Recherche terminée : ' + R[id].name; }
 
 /* ----- Collisions ----- */
 function separation() {
@@ -1853,7 +1886,7 @@ function updateProjectiles(dt) {
 }
 
 /* ----- Pouvoirs divins ----- */
-function canCast(pl, pid) { return !pl.defeated && hasTemple(pl) && pl.res.foi >= GP[pid].cost && (pl.cd[pid] || 0) <= G.time; }
+function canCast(pl, pid) { return !pl.defeated && unlocked(pl, GP[pid]) && hasTemple(pl) && pl.res.foi >= GP[pid].cost && (pl.cd[pid] || 0) <= G.time; }
 function castPower(o, pid, x, y) {
   const pl = G.pl[o], gp = GP[pid];
   if (!canCast(pl, pid)) return false;
@@ -2041,11 +2074,15 @@ function aiEconomy(ai, pl, D) {
   const I = ai.I;
   const nV = I.vill.length + I.qVill;
   if (nV < D.vill && pl.popUsed < pl.popCap) {
-    for (const c of (I.blds.city || [])) if (c.built && c.q.length < 2 && afford(pl, U.villager.cost)) { enqueue(c, 'u', 'villager'); break; }
+    for (const c of (I.blds.city || [])) if (c.built && c.q.length < 2 && afford(pl, U.villager.cost, ai.ageRes)) { enqueue(c, 'u', 'villager'); break; }
   }
   const hb = I.unbuilt.filter(b => b.t === 'house').length;
   const margin = 3 + Math.floor(pl.popUsed / 18);
   if (pl.popCap < POP_MAX && pl.popCap - pl.popUsed <= margin && hb < (pl.popUsed > 40 ? 2 : 1) && afford(pl, B.house.cost)) aiPlace(ai, pl, 'house');
+  // Fermes : quand les baies proches s'épuisent, la nourriture vient des fermes (un citoyen par ferme, le bâtisseur s'y met)
+  let berries = 0; for (const r of G.ress) if (!r.dead && r.t === 'berry' && Math.hypot(r.x - ai.hx, r.y - ai.hy) < 16 * T) berries += r.amt;
+  const wantFarms = berries > 500 ? 0 : Math.min(12, Math.ceil(I.vill.length * 0.4));
+  if ((I.blds.farm || []).length < wantFarms && I.unbuilt.filter(b => b.t === 'farm').length < 2 && afford(pl, B.farm.cost)) aiPlace(ai, pl, 'farm');
   for (const v of I.idleVill) aiAssign(ai, pl, v);
   // rééquilibrage selon les stocks
   if (G.time > ai.rebT) {
@@ -2147,6 +2184,7 @@ function aiAssignBuilders(ai, pl, b) {
 function aiBuild(ai, pl, D) {
   const I = ai.I, n = t => (I.blds[t] || []).length, t = G.time, slow = pl.diff === 'easy' ? 1.4 : 1;
   ai.reserve = null;
+  aiAge(ai, pl);
   const plan = [];
   if (n('city') < 1 && I.vill.length > 0) plan.push('city');
   if (n('barracks') < 1 && t > 75 * slow) plan.push('barracks');
@@ -2156,18 +2194,32 @@ function aiBuild(ai, pl, D) {
   if (pl.diff !== 'easy' && n('temple') < 2 && t > 620) plan.push('temple');
   if (pl.diff === 'hard' && n('city') < 2 && t > 900 && I.vill.length > 24) plan.push('city');
   for (const k of plan) {
-    if (I.unbuilt.some(b => b.t === k)) continue;
-    if (afford(pl, B[k].cost)) aiPlace(ai, pl, k);
-    else ai.reserve = B[k].cost;
+    if (!unlocked(pl, B[k]) || I.unbuilt.some(b => b.t === k)) continue;
+    const keep = k === 'city' && n('city') < 1 ? null : ai.reserve; // une première cité passe avant tout
+    if (afford(pl, B[k].cost, keep)) aiPlace(ai, pl, k);
+    else if (!ai.reserve) ai.reserve = B[k].cost;
     break;
   }
   aiResearch(ai, pl);
 }
-const AI_RESEARCH = [['tools', 'city', 200], ['rites', 'temple', 320], ['iron', 'barracks', 480], ['shields', 'barracks', 560], ['blood', 'temple', 720], ['walls', 'city', 840]];
+/* Passage d'âge : dès qu'il y a assez de citoyens et que l'heure est venue ; sinon les ressources sont mises de côté. */
+const AI_AGE = { easy: [[300, 12], [960, 20]], normal: [[210, 12], [600, 20]], hard: [[160, 12], [460, 20]] };
+function aiAge(ai, pl) {
+  ai.ageRes = null;
+  const a = ageOf(pl); if (a >= AGES.length - 1) return;
+  const id = 'age' + (a + 1), [tm, nv] = AI_AGE[pl.diff][a];
+  if (G.time < tm || ai.I.vill.length < nv) return;
+  const cities = (ai.I.blds.city || []).filter(b => b.built);
+  if (!cities.length || cities.some(b => b.q.some(it => it.k === 'r' && it.id === id))) return;
+  const c = cities.reduce((x, y) => (y.q.length < x.q.length ? y : x));
+  if (afford(pl, R[id].cost) && enqueue(c, 'r', id) === 'ok') return;
+  ai.reserve = ai.ageRes = R[id].cost; // on économise : ni citoyens, ni soldats, ni bâtiments en attendant
+}
+const AI_RESEARCH = [['tools', 'city', 200], ['rites', 'temple', 320], ['iron', 'barracks', 480], ['shields', 'barracks', 560], ['blood', 'temple', 720], ['tools2', 'city', 760], ['forge', 'barracks', 800], ['walls', 'city', 840]];
 function aiResearch(ai, pl) {
   const slow = pl.diff === 'easy' ? 1.6 : pl.diff === 'hard' ? 0.8 : 1;
   for (const [id, at, tm] of AI_RESEARCH) {
-    if (pl.tech[id] || G.time < tm * slow) continue;
+    if (pl.tech[id] || !unlocked(pl, R[id]) || G.time < tm * slow) continue;
     const bs = ai.I.blds[at] || [];
     if (bs.some(b => b.q.some(it => it.k === 'r' && it.id === id))) continue;
     const b = bs.find(x => x.built && x.q.length === 0);
@@ -2180,7 +2232,7 @@ function mergeReserve(a, b) { if (!a) return b; if (!b) return a; const r = Obje
 function centroid(arr) { let x = 0, y = 0; for (const u of arr) { x += u.x; y += u.y; } return { x: x / arr.length, y: y / arr.length }; }
 function aiPickUnit(ai, pl, D) {
   const I = ai.I;
-  if ((I.counts.ram || 0) < (G.time > 900 ? 3 : 2) && I.mil.length >= 8 && G.time > 480 && Math.random() < 0.3 && afford(pl, U.ram.cost)) return 'ram';
+  if (unlocked(pl, U.ram) && (I.counts.ram || 0) < (G.time > 900 ? 3 : 2) && I.mil.length >= 8 && G.time > 480 && Math.random() < 0.3 && afford(pl, U.ram.cost)) return 'ram';
   let w;
   if (!D.counters) w = { hoplite: 1, archer: 1, cavalier: 0.7 };
   else {
@@ -2192,7 +2244,7 @@ function aiPickUnit(ai, pl, D) {
     const tot = inf + arch + cav + myth + 2;
     w = { hoplite: 1 + 3 * cav / tot + myth / tot, archer: 1 + 3 * inf / tot, cavalier: 0.7 + 3 * arch / tot };
   }
-  const keys = Object.keys(w).filter(k => afford(pl, U[k].cost)); if (!keys.length) return null;
+  const keys = Object.keys(w).filter(k => unlocked(pl, U[k]) && afford(pl, U[k].cost)); if (!keys.length) return null;
   let s = 0; for (const k of keys) s += w[k];
   let r = Math.random() * s;
   for (const k of keys) { r -= w[k]; if (r <= 0) return k; }
@@ -2441,6 +2493,7 @@ function netSnapshot(slot, view) {
   out.p = [Math.floor(pl.res.food), Math.floor(pl.res.wood), Math.floor(pl.res.gold), Math.floor(pl.res.foi), pl.popUsed, pl.popCap];
   out.tech = Object.keys(pl.tech); out.cd = pl.cd;
   out.d = G.pl.map(p => p.defeated ? 1 : 0);
+  out.ag = G.pl.map(p => ageOf(p));
   if (G.over) { out.over = 1; out.win = G.winTeam; }
   view.lastT = G.time;
   return out;
@@ -2527,11 +2580,12 @@ function netClientSnap(s) {
   const me = G.pl[G.me];
   if (s.p) { me.res.food = s.p[0]; me.res.wood = s.p[1]; me.res.gold = s.p[2]; me.res.foi = s.p[3]; me.popUsed = s.p[4]; me.popCap = s.p[5]; }
   if (s.tech) {
-    if (!G.netFirst) for (const k of s.tech) if (!me.tech[k] && R[k]) { H.toast('Recherche terminée : ' + R[k].name, 'good'); H.sfx('done'); }
+    if (!G.netFirst) for (const k of s.tech) if (!me.tech[k] && R[k]) { H.toast(techDoneText(k), 'good'); H.sfx(R[k].ageUp ? 'start' : 'done'); }
     const t = {}; for (const k of s.tech) t[k] = true; me.tech = t;
   }
   if (s.cd) me.cd = s.cd;
   if (s.d) s.d.forEach((v, i) => { if (G.pl[i]) G.pl[i].defeated = !!v; });
+  if (s.ag) s.ag.forEach((v, i) => { const p = G.pl[i]; if (!p) return; if (!G.netFirst && i !== G.me && v > (p.netAge || 0)) H.toast(p.name + ' entre dans l’' + AGES[v].name + '.', 'info'); p.netAge = v; });
   for (const id of s.rm) netRemove(id);
   for (const r of s.u) netUnit(r);
   for (const r of s.b) netBld(r);
@@ -3067,13 +3121,20 @@ function glyph(c, kind, color) {
     case 'einherjar': c.beginPath(); c.arc(32, 32, 17, Math.PI, 0); c.lineTo(49, 44); c.lineTo(38, 44); c.lineTo(38, 56); c.lineTo(26, 56); c.lineTo(26, 44); c.lineTo(15, 44); c.closePath(); c.fill(); R_(c, 30, 28, 4, 24, 'rgba(0,40,50,0.55)'); L_(c, 18, 36, 46, 36, 'rgba(0,40,50,0.55)', 3); break;
     case 'sun': C_(c, 32, 32, 13, color); for (let k = 0; k < 12; k++) { const a = k * TAU / 12; P_(c, [32 + Math.cos(a - 0.12) * 16, 32 + Math.sin(a - 0.12) * 16, 32 + Math.cos(a) * 27, 32 + Math.sin(a) * 27, 32 + Math.cos(a + 0.12) * 16, 32 + Math.sin(a + 0.12) * 16], color); } C_(c, 32, 32, 7, '#fff1b8'); break;
     case 'blessing': c.lineWidth = 6; c.beginPath(); c.ellipse(32, 19, 8, 11, 0, 0, TAU); c.stroke(); L_(c, 32, 30, 32, 58, color, 6); L_(c, 16, 34, 48, 34, color, 6); break;
-    case 'tools': c.save(); c.translate(32, 32); c.rotate(-0.7); R_(c, -3, -22, 6, 44, '#8a5a30'); R_(c, -12, -24, 24, 9, color); c.restore(); c.save(); c.translate(32, 32); c.rotate(0.7); R_(c, -2.5, -20, 5, 42, '#a0703c'); c.beginPath(); c.moveTo(-14, -14); c.quadraticCurveTo(0, -26, 14, -14); c.lineWidth = 5; c.strokeStyle = color; c.stroke(); c.restore(); break;
+    case 'tools2': case 'tools': c.save(); c.translate(32, 32); c.rotate(-0.7); R_(c, -3, -22, 6, 44, '#8a5a30'); R_(c, -12, -24, 24, 9, color); c.restore(); c.save(); c.translate(32, 32); c.rotate(0.7); R_(c, -2.5, -20, 5, 42, '#a0703c'); c.beginPath(); c.moveTo(-14, -14); c.quadraticCurveTo(0, -26, 14, -14); c.lineWidth = 5; c.strokeStyle = color; c.stroke(); c.restore(); break;
     case 'walls': for (let r = 0; r < 4; r++) for (let k = 0; k < 4; k++) R_(c, 8 + k * 12 + (r % 2) * 6 - 3, 22 + r * 9, 11, 8, color, 'rgba(0,0,0,0.3)'); for (let k = 0; k < 4; k++) R_(c, 8 + k * 13, 12, 8, 9, color); break;
     case 'iron': c.save(); c.translate(32, 32); c.rotate(0.78); P_(c, [-3.5, -26, 3.5, -26, 3.5, 12, 0, 18, -3.5, 12], color); R_(c, -11, 10, 22, 5, '#8a6a3a'); R_(c, -2.5, 15, 5, 12, '#6b4a2b'); c.restore(); break;
     case 'shields': C_(c, 32, 32, 24, color); C_(c, 32, 32, 17, 'rgba(0,0,0,0.25)'); C_(c, 32, 32, 6, color); break;
     case 'rites': P_(c, [18, 40, 46, 40, 40, 54, 24, 54], '#8a6a3a'); P_(c, [22, 40, 32, 8, 42, 40], color); P_(c, [27, 40, 32, 20, 37, 40], '#fff1b8'); break;
     case 'blood': c.beginPath(); c.moveTo(32, 6); c.quadraticCurveTo(52, 34, 46, 44); c.arc(32, 42, 14, 0.15, Math.PI - 0.15); c.quadraticCurveTo(12, 34, 32, 6); c.fill(); break;
     case 'stop': RR_(c, 16, 16, 32, 32, 5, color); break;
+    case 'forge': P_(c, [10, 30, 54, 30, 54, 36, 44, 38, 40, 46, 46, 54, 18, 54, 24, 46, 20, 38, 10, 36], color, 'rgba(0,0,0,0.35)', 1.2); // enclume
+      c.save(); c.translate(40, 16); c.rotate(-0.5); R_(c, -2.5, -2, 5, 22, '#8a5a30'); R_(c, -9, -8, 18, 8, '#d7dde3'); c.restore();
+      for (const [x, y] of [[20, 20], [26, 14], [16, 12]]) C_(c, x, y, 2.2, '#fff1b8'); break;
+    case 'age1': P_(c, [8, 22, 32, 8, 56, 22], color); R_(c, 10, 24, 44, 4, color); // fronton et colonnes
+      for (const x of [14, 26, 38, 50]) R_(c, x - 3, 30, 6, 20, color); R_(c, 8, 50, 48, 6, color); break;
+    case 'age2': for (let k = 0; k < 8; k++) { const a = k * TAU / 8; P_(c, [32 + Math.cos(a - 0.22) * 10, 30 + Math.sin(a - 0.22) * 10, 32 + Math.cos(a) * 26, 30 + Math.sin(a) * 26, 32 + Math.cos(a + 0.22) * 10, 30 + Math.sin(a + 0.22) * 10], color); } // étoile des prodiges
+      C_(c, 32, 30, 10, '#fff4c2'); C_(c, 32, 30, 5, color); break;
     case 'amove': for (const s of [-1, 1]) { c.save(); c.translate(32, 32); c.rotate(s * 0.78); R_(c, -2.5, -24, 5, 34, color); R_(c, -8, 8, 16, 4, color); R_(c, -2, 12, 4, 10, color); c.restore(); } break;
     case 'rally': L_(c, 20, 56, 20, 8, color, 4); P_(c, [22, 9, 50, 18, 22, 28], color); break;
     case 'del': L_(c, 16, 16, 48, 48, color, 7); L_(c, 48, 16, 16, 48, color, 7); break;
@@ -3089,7 +3150,7 @@ function glyph(c, kind, color) {
     case 'pop': C_(c, 32, 20, 10, color); c.beginPath(); c.moveTo(12, 58); c.quadraticCurveTo(12, 34, 32, 34); c.quadraticCurveTo(52, 34, 52, 58); c.closePath(); c.fill(); break;
   }
 }
-const GLYPH_COL = { bolt: '#cfe6ff', aegis: '#ffd35a', frost: '#bdf0ff', einherjar: '#8ff0e0', sun: '#ffae42', blessing: '#c8ff7a', tools: '#c9ccd0', walls: '#d8cbb0', iron: '#d7dde3', shields: '#c99a3f', rites: '#ffb347', blood: '#d0283c', stop: '#f2e6c4', amove: '#f2e6c4', rally: '#f2e6c4', del: '#ff8a7a', chat: '#f2e6c4', army: '#f2e6c4', idle: '#f2e6c4', box: '#f2e6c4', city: '#f2e6c4', food: '#e3b23c', wood: '#d9b07a', gold: '#f4cf4a', foi: '#cdb8ff', pop: '#e8e1cf' };
+const GLYPH_COL = { tools2: '#9fb8d0', forge: '#9aa3ad', age1: '#f3dd92', age2: '#ffd35a', bolt: '#cfe6ff', aegis: '#ffd35a', frost: '#bdf0ff', einherjar: '#8ff0e0', sun: '#ffae42', blessing: '#c8ff7a', tools: '#c9ccd0', walls: '#d8cbb0', iron: '#d7dde3', shields: '#c99a3f', rites: '#ffb347', blood: '#d0283c', stop: '#f2e6c4', amove: '#f2e6c4', rally: '#f2e6c4', del: '#ff8a7a', chat: '#f2e6c4', army: '#f2e6c4', idle: '#f2e6c4', box: '#f2e6c4', city: '#f2e6c4', food: '#e3b23c', wood: '#d9b07a', gold: '#f4cf4a', foi: '#cdb8ff', pop: '#e8e1cf' };
 function glyphIcon(kind, color) { return iconURL('g:' + kind + (color || ''), c => glyph(c, kind, color || GLYPH_COL[kind] || '#fff')); }
 /* Emblèmes des dieux (menu) */
 function drawEmblem(c, patron, size) {
@@ -3546,21 +3607,28 @@ function boxSelect(b, add) {
   else if (!add && !UI.touch) setSel([]);
 }
 function pick(wx, wy) {
-  let best = null, bd = 1e9; const extra = UI.touch ? 7 : 2;
+  const extra = UI.touch ? 7 : 2;
+  let best = null, bd = 1e9, onBody = false;
   for (const u of G.units) {
     if (u.dead) continue;
     if (u.o !== G.me && !G.revealAll && !visibleAt(u.x, u.y)) continue;
     const d = U[u.t]; const cy = u.y - d.h * 0.45 - (d.fly ? 22 : 0);
     const dd = Math.hypot(wx - u.x, wy - cy), rr = Math.max(d.r + 6, d.h * 0.55) + extra;
-    if (dd < rr && dd < bd) { bd = dd; best = u; }
+    if (dd < rr && dd < bd) { bd = dd; best = u; onBody = dd <= Math.max(d.r + 3, d.h * 0.35); }
   }
-  if (best) return best;
+  // Bâtiment : tout son dessin (toit compris) ; s'ils se chevauchent, celui de devant.
+  let bb = null, bFoot = -1;
   for (const b of G.blds) {
     if (b.dead) continue;
     if (b.o !== G.me && !G.revealAll && !G.ex[idx(b.tx + (b.size >> 1), b.ty + (b.size >> 1))]) continue;
-    const x0 = b.tx * T, y0 = b.ty * T - (b.t === 'farm' ? 0 : BLD_H[b.t] * 0.55), x1 = x0 + b.size * T, y1 = (b.ty + b.size) * T;
-    if (wx >= x0 && wx <= x1 && wy >= y0 && wy <= y1) return b;
+    const top = b.t === 'farm' ? 0 : b.built ? BLD_H[b.t] : BLD_H[b.t] * 0.5;
+    const x0 = b.tx * T - extra, x1 = (b.tx + b.size) * T + extra, y0 = b.ty * T - top - extra, y1 = (b.ty + b.size) * T + extra;
+    if (wx >= x0 && wx <= x1 && wy >= y0 && wy <= y1 && y1 > bFoot) { bb = b; bFoot = y1; }
   }
+  // Une unité l'emporte si on la touche en plein corps et qu'elle n'est pas cachée derrière le bâtiment.
+  if (best && (!bb || (onBody && (bb.t === 'farm' || best.y >= bFoot - extra - 6)))) return best;
+  if (bb) return bb;
+  if (best) return best;
   for (const r of G.ress) {
     if (r.dead || (!G.revealAll && !G.ex[idx(r.tx, r.ty)])) continue;
     if (distToRect(wx, wy, r.tx, r.ty - (r.t === 'gold' ? 0.35 : 0.2), r.size) < 5 + extra) return r;
@@ -3636,6 +3704,7 @@ function updateConfirm() {
 function viewCenterW() { return s2w(VW / 2, (VH - UI.botH + UI.topH) / 2); }
 function startPlace(t) {
   const pl = G.pl[G.me];
+  if (!unlocked(pl, B[t])) { ageToast(B[t]); return; }
   if (t === 'temple' && countB(G.me, 'temple') >= B.temple.max) { toast('Trois temples au maximum.', 'warn'); sfx('err'); return; }
   if (!afford(pl, B[t].cost)) { toast(missingText(B[t].cost), 'warn'); sfx('err'); return; }
   UI.mode = 'place'; UI.placeType = t;
@@ -3663,6 +3732,7 @@ function confirmPlace(keep) {
 }
 function startPower(pid) {
   const pl = G.pl[G.me], gp = GP[pid];
+  if (!unlocked(pl, gp)) { toast(gp.name + ' : pouvoir de l’' + AGES[gp.age].name + '.', 'warn'); sfx('err'); return; }
   if (!hasTemple(pl)) { toast('Construisez un temple pour invoquer votre dieu.', 'warn'); sfx('err'); return; }
   const cd = (pl.cd[pid] || 0) - G.time;
   if (cd > 0) { toast(gp.name + ' : encore ' + Math.ceil(cd) + ' s.', 'warn'); sfx('err'); return; }
@@ -3690,7 +3760,8 @@ function doAction(a) {
       const b = selBld(); if (!b) return;
       const cost = k === 'train' ? U[v].cost : R[v].cost;
       const r = ACT.queue(b, k === 'train' ? 'u' : 'r', v);
-      if (r === 'cost') { toast(missingText(cost), 'warn'); sfx('err'); }
+      if (r === 'age') ageToast(k === 'train' ? U[v] : R[v]);
+      else if (r === 'cost') { toast(missingText(cost), 'warn'); sfx('err'); }
       else if (r === 'full') { toast('File de production pleine.', 'warn'); sfx('err'); }
       else if (r === 'ok') sfx('click');
       refreshPanels(true); break;
@@ -3705,6 +3776,7 @@ function doAction(a) {
       ACT.demolish(b); UI.demolishArm = 0; setSel([]); break;
     }
     case 'only': setSel(selUnits().filter(u => u.t === v).map(u => u.id)); break;
+    case 'desel': if (UI.mode === 'amove' || UI.mode === 'rally') cancelMode(); setSel([]); sfx('click'); break;
     case 'power': startPower(v); break;
   }
 }
@@ -3741,13 +3813,15 @@ function portrait(e) {
 }
 function buildSelPanel() {
   const el = $('selp'); const units = selUnits(); const one = selOne();
+  el.classList.toggle('has-sel', G.sel.length > 0);
+  const desel = '<button class="desel" type="button" data-a="desel" title="Désélectionner (Échap)" aria-label="Désélectionner">✕</button>';
   if (!G.sel.length) { el.innerHTML = '<p class="hint">' + (UI.touch ? 'Touchez une unité ou un bâtiment. Glissez pour vous déplacer.' : 'Cliquez sur une unité ou un bâtiment. Clic droit pour donner un ordre.') + '</p>'; return; }
   if (units.length > 1) {
     const counts = {}; for (const u of units) counts[u.t] = (counts[u.t] || 0) + 1;
     let h = '<div class="multi">';
     for (const t in counts) h += '<button class="chip" data-a="only:' + t + '" title="Ne garder que : ' + esc(U[t].plural) + '"><img src="' + unitIcon(t, G.pl[G.me].color, myStyle()) + '" alt=""><b>' + counts[t] + '</b></button>';
     h += '</div><p class="sub">' + units.length + ' unités sélectionnées</p>';
-    el.innerHTML = h; return;
+    el.innerHTML = desel + h; return;
   }
   const e = one || units[0]; if (!e) { el.innerHTML = ''; return; }
   const owner = e.o >= 0 ? G.pl[e.o] : null;
@@ -3765,7 +3839,7 @@ function buildSelPanel() {
     h += '</div>';
   }
   h += '</div></div>';
-  el.innerHTML = h;
+  el.innerHTML = desel + h;
 }
 function updateSelPanel() {
   const units = selUnits(), one = selOne();
@@ -3802,14 +3876,18 @@ function updateSelPanel() {
   }
   const qp = $('sp-qp'); if (qp && e.k === 'b' && e.q[0]) qp.style.setProperty('--p', e.q[0].p.toFixed(3));
 }
-function cmdBtn(a, img, label, cost, tip, extraCls) {
-  return '<button class="cmd ' + (extraCls || '') + '" data-a="' + a + '" data-tip="' + esc(tip || '') + '"' + (cost ? ' data-cost="' + esc(JSON.stringify(cost)) + '"' : '') + '><img src="' + img + '" alt=""><span class="cn">' + esc(label) + '</span>' + (cost ? '<span class="cc">' + costHTML(cost) + '</span>' : '') + '</button>';
+function cmdBtn(a, img, label, cost, tip, extraCls, badge) {
+  return '<button class="cmd ' + (extraCls || '') + '" data-a="' + a + '" data-tip="' + esc(tip || '') + '"' + (cost ? ' data-cost="' + esc(JSON.stringify(cost)) + '"' : '') + '><img src="' + img + '" alt=""><span class="cn">' + esc(label) + '</span>' + (cost ? '<span class="cc">' + costHTML(cost) + '</span>' : '') + (badge || '') + '</button>';
 }
+/* Âges : contenu verrouillé grisé, avec le numéro de l'âge requis */
+const lockTip = d => ' Nécessite l’' + AGES[d.age].name + '.';
+const ageBadge = d => '<span class="ab" aria-hidden="true">' + AGES[d.age].short + '</span>';
+function ageToast(d) { toast('Nécessite l’' + AGES[d.age].name + ' : passez à l’âge suivant depuis la Cité.', 'warn'); sfx('err'); }
 function buildCmdPanel() {
   const el = $('cmdp'); const units = selUnits(); const pl = G.pl[G.me]; const sty = myStyle(); let h = '';
   if (units.length) {
     if (units.some(u => u.t === 'villager')) {
-      for (const t of BUILD_LIST) h += cmdBtn('build:' + t, bldIcon(t, sty, pl.color), B[t].name, B[t].cost, B[t].name + ' — ' + B[t].desc, UI.mode === 'place' && UI.placeType === t ? 'on' : '');
+      for (const t of BUILD_LIST) { const lk = !unlocked(pl, B[t]); h += cmdBtn('build:' + t, bldIcon(t, sty, pl.color), B[t].name, B[t].cost, B[t].name + ' — ' + B[t].desc + (lk ? lockTip(B[t]) : ''), (lk ? 'lock ' : '') + (UI.mode === 'place' && UI.placeType === t ? 'on' : ''), lk ? ageBadge(B[t]) : ''); }
     }
     if (units.some(u => u.t !== 'villager')) h += cmdBtn('amove', glyphIcon('amove'), 'Attaquer', null, 'Attaque-déplacement : vos unités combattent tout ennemi rencontré en chemin.', UI.mode === 'amove' ? 'on' : '');
     h += cmdBtn('stop', glyphIcon('stop'), 'Stop', null, 'Arrêter l’action en cours.');
@@ -3817,12 +3895,14 @@ function buildCmdPanel() {
     const b = selBld();
     if (b) {
       if (b.built) {
-        for (const t of trainable(b)) h += cmdBtn('train:' + t, unitIcon(t, pl.color, sty), U[t].name, U[t].cost, U[t].name + ' — ' + U[t].desc + ' (' + U[t].time + ' s, population ' + U[t].pop + ')');
+        for (const t of trainable(b)) { const lk = !unlocked(pl, U[t]); h += cmdBtn('train:' + t, unitIcon(t, pl.color, sty), U[t].name, U[t].cost, U[t].name + ' — ' + U[t].desc + ' (' + U[t].time + ' s, population ' + U[t].pop + ')' + (lk ? lockTip(U[t]) : ''), lk ? 'lock' : '', lk ? ageBadge(U[t]) : ''); }
         for (const r of (B[b.t].research || [])) {
           if (pl.tech[r]) continue;
           const queued = G.blds.some(x => !x.dead && x.o === G.me && x.q.some(it => it.k === 'r' && it.id === r));
           if (queued) continue;
-          h += cmdBtn('res:' + r, glyphIcon(R[r].icon), R[r].name, R[r].cost, R[r].name + ' — ' + R[r].desc + ' (' + R[r].time + ' s)');
+          if (R[r].ageUp && R[r].ageUp !== ageOf(pl) + 1) continue; // seul le prochain âge est proposé
+          const lk = !unlocked(pl, R[r]);
+          h += cmdBtn('res:' + r, glyphIcon(R[r].icon), R[r].ageUp ? 'Âge ' + AGES[R[r].ageUp].short : R[r].name, R[r].cost, R[r].name + ' — ' + R[r].desc + ' (' + R[r].time + ' s)' + (lk ? lockTip(R[r]) : ''), (lk ? 'lock' : '') + (R[r].ageUp ? ' ageup' : ''), lk ? ageBadge(R[r]) : '');
         }
         if (B[b.t].trains) h += cmdBtn('rally', glyphIcon('rally'), 'Ralliement', null, 'Point où se rendent les unités formées. Touchez une ressource pour y envoyer les citoyens.', UI.mode === 'rally' ? 'on' : '');
       }
@@ -3851,17 +3931,18 @@ function buildPowers() {
   const el = $('powers'); const pl = G.pl[G.me]; let h = '';
   for (const pid of P[pl.patron].powers) {
     const gp = GP[pid];
-    h += '<button class="pw" data-p="' + pid + '" data-tip="' + esc(gp.name + ' — ' + gp.desc + ' Coût : ' + gp.cost + ' Foi, recharge ' + gp.cd + ' s.') + '" aria-label="' + esc(gp.name) + '"><img src="' + glyphIcon(pid) + '" alt=""><span class="pc">' + gp.cost + '</span></button>';
+    h += '<button class="pw" data-p="' + pid + '" data-tip="' + esc(gp.name + ' — ' + gp.desc + ' Coût : ' + gp.cost + ' Foi, recharge ' + gp.cd + ' s.' + (gp.age ? lockTip(gp) : '')) + '" aria-label="' + esc(gp.name) + '"><img src="' + glyphIcon(pid) + '" alt=""><span class="pc">' + gp.cost + '</span>' + (gp.age ? ageBadge(gp) : '') + '</button>';
   }
   el.innerHTML = h;
 }
 function updatePowers() {
   const pl = G.pl[G.me]; const temple = hasTemple(pl);
   for (const btn of $('powers').children) {
-    const pid = btn.dataset.p, gp = GP[pid], cd = Math.max(0, (pl.cd[pid] || 0) - G.time);
+    const pid = btn.dataset.p, gp = GP[pid], cd = Math.max(0, (pl.cd[pid] || 0) - G.time), lk = !unlocked(pl, gp);
     btn.style.setProperty('--cd', (cd / gp.cd).toFixed(3));
-    btn.classList.toggle('off', !temple || pl.res.foi < gp.cost);
-    btn.classList.toggle('ready', temple && cd <= 0 && pl.res.foi >= gp.cost);
+    btn.classList.toggle('locked', lk);
+    btn.classList.toggle('off', lk || !temple || pl.res.foi < gp.cost);
+    btn.classList.toggle('ready', !lk && temple && cd <= 0 && pl.res.foi >= gp.cost);
     btn.classList.toggle('on', UI.mode === 'power' && UI.powerId === pid);
   }
 }
@@ -3880,13 +3961,21 @@ function hudUpdate() {
   for (const k of ['food', 'wood', 'gold']) { const el = $('g-' + k); const v = g[k] ? String(g[k]) : ''; if (el.textContent !== v) el.textContent = v; }
   const ie = $('idle-n'); ie.textContent = idle; ie.hidden = idle === 0; $('q-idle').classList.toggle('alert', idle > 0);
   $('clock').textContent = fmtTime(G.time);
+  const ag = ageOf(pl); let up = -1;
+  for (const b of G.blds) if (!b.dead && b.o === G.me && b.t === 'city' && b.q[0] && b.q[0].k === 'r' && R[b.q[0].id] && R[b.q[0].id].ageUp) up = Math.max(up, b.q[0].p);
+  const ak = ag + ':' + (up >= 0 ? Math.floor(up * 50) : -1);
+  if (UI.ageKey !== ak) {
+    UI.ageKey = ak; const el = $('age-badge');
+    el.querySelector('b').textContent = AGES[ag].short; el.classList.toggle('up', up >= 0); el.style.setProperty('--p', (up >= 0 ? up * 100 : 0).toFixed(0) + '%');
+    el.title = AGES[ag].name + (up >= 0 ? ' — passage à l’' + AGES[ag + 1].name + ' : ' + Math.floor(up * 100) + ' %' : ag < AGES.length - 1 ? ' — passez à l’âge suivant depuis la Cité' : '');
+  }
   updatePowers();
   if (UI.mode) updateConfirm();
   // conseils de départ
   if (!G.over && UI.hintsOn) {
     const H0 = [[2, UI.touch ? 'Touchez un citoyen, puis un buisson, un arbre ou la mine d’or pour récolter.' : 'Clic gauche pour choisir une unité, clic droit pour lui donner un ordre.'],
       [22, 'Formez des citoyens à la Cité et bâtissez des maisons pour loger votre peuple.'],
-      [80, 'La Caserne forme l’armée ; le Temple produit la Foi des pouvoirs divins.'],
+      [80, 'La Caserne forme l’armée. À la Cité, passez à l’Âge des Cités pour débloquer le Temple et les pouvoirs divins.'],
       [160, 'Hoplite bat cavalier, cavalier bat archer, archer bat hoplite.']];
     while (G.hints < H0.length && G.time >= H0[G.hints][0]) { toast(H0[G.hints][1], 'info'); G.hints++; }
   }
@@ -4135,7 +4224,7 @@ function renderGods() {
   for (const pid of PATRONS) {
     const p = P[pid], m = U[p.myth];
     h += '<button class="god" data-god="' + pid + '" aria-pressed="' + (MENU.patron === pid) + '"><canvas width="144" height="144" aria-hidden="true"></canvas><span class="gn">' + p.name + '</span><span class="gr">' + p.realm + ' · ' + p.people + '</span>' +
-      '<span class="gl"><b>Créature</b> ' + m.name + '</span><span class="gl"><b>Pouvoirs</b> ' + p.powers.map(x => GP[x].name).join(' · ') + '</span><span class="gl"><b>Bienfait</b> ' + p.bonus + '</span></button>';
+      '<span class="gl"><b>Créature</b> ' + m.name + '</span><span class="gl"><b>Pouvoirs</b> ' + p.powers.map(x => GP[x].name + (GP[x].age ? ' (âge ' + AGES[GP[x].age].short + ')' : '')).join(' · ') + '</span><span class="gl"><b>Bienfait</b> ' + p.bonus + '</span></button>';
   }
   el.innerHTML = h;
   for (const b of el.querySelectorAll('.god')) { const c = b.querySelector('canvas').getContext('2d'); c.scale(2, 2); drawEmblem(c, b.dataset.god, 72); }
@@ -4446,7 +4535,7 @@ window.MYTH = {
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 
 /* ===== Jeu en ligne côté navigateur : connexion, salon, ordres, discussion ===== */
-const NET = { ws: null, state: 'off', token: null, room: null, host: false, rooms: [], retry: 0, want: false, on: [], needCenter: false, autoJoin: null, wasDefeated: false };
+const NET = { ws: null, state: 'off', token: null, room: null, host: false, rooms: [], retry: 0, want: false, on: [], needCenter: false, autoJoin: null, wasDefeated: false, lastMsg: 0 };
 const MPO = { map: 'medium', ais: 1, diff: 'normal', mode: 'ffa' };
 function lsGet(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
 function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (_) { } }
@@ -4477,7 +4566,7 @@ function netConnect() {
   try { ws = new WebSocket(netUrl()); } catch (_) { setNetState('error'); return; }
   NET.ws = ws;
   ws.onopen = () => { NET.retry = 0; setNetState('on'); ws.send(JSON.stringify({ t: 'hi', name: myName(), token: NET.token })); };
-  ws.onmessage = ev => { let m; try { m = JSON.parse(ev.data); } catch (_) { return; } netOnMessage(m); };
+  ws.onmessage = ev => { NET.lastMsg = performance.now(); let m; try { m = JSON.parse(ev.data); } catch (_) { return; } netOnMessage(m); };
   ws.onclose = () => {
     if (NET.ws === ws) NET.ws = null;
     setNetState(NET.retry > 2 ? 'error' : 'off');
@@ -4485,6 +4574,21 @@ function netConnect() {
     if (G && G.mp && !G.over) toast('Connexion perdue : reconnexion…', 'warn');
     if (NET.retry === 3 && !(G && G.mp)) mpMsg('Le serveur de jeu ne répond pas. Le jeu en ligne fonctionne depuis peeksoumi.com/mythomachie.');
   };
+}
+/* Connexion muette (téléphone sorti de veille, réseau changé) : on l'abandonne sans attendre et on en ouvre une autre. */
+function netDrop() {
+  const ws = NET.ws; if (!ws) return;
+  NET.ws = null; ws.onopen = ws.onmessage = ws.onclose = null;
+  try { ws.close(); } catch (_) { }
+  NET.retry = 0; if (NET.want) netConnect();
+}
+/* Retour au premier plan : reconnexion immédiate, ou vérification que la connexion répond encore. */
+function netWake() {
+  if (!NET.want) return;
+  if (!NET.ws || NET.ws.readyState > 1) { NET.retry = 0; netConnect(); return; }
+  if (NET.ws.readyState !== 1) return;
+  const t0 = performance.now(); netSend({ t: 'ping', k: 1 });
+  setTimeout(() => { if (NET.ws && NET.ws.readyState === 1 && NET.lastMsg < t0) netDrop(); }, 4000);
 }
 function netSend(o) { if (NET.ws && NET.ws.readyState === 1) { NET.ws.send(JSON.stringify(o)); return true; } return false; }
 function netCmd(c) { if (!netSend({ t: 'c', c })) toast('Connexion perdue : ordre non transmis.', 'warn'); }
@@ -4495,8 +4599,19 @@ function netOnMessage(m) {
       NET.token = m.token; lsSet('mythomachie.jeton', m.token);
       if (NET.autoJoin) { netSend({ t: 'join', code: NET.autoJoin, patron: MENU.patron }); NET.autoJoin = null; }
       break;
-    case 'rooms': NET.rooms = m.rooms; if (!(G && G.mp)) lsSet('mythomachie.enligne', ''); if (!NET.room) renderOnline(); break;
-    case 'room': NET.room = m.room; NET.host = m.host; mpMsg(''); renderOnline(); break;
+    case 'rooms': // le serveur nous considère hors salon
+      NET.rooms = m.rooms;
+      if (!(G && G.mp)) lsSet('mythomachie.enligne', '');
+      if (NET.room) { mpMsg('Le salon ' + NET.room.code + ' n’existe plus : créez-en un autre.'); NET.room = null; }
+      renderOnline(); break;
+    case 'room': {
+      const before = NET.room && NET.room.code === m.room.code ? NET.room.members.map(x => x.name) : null;
+      NET.room = m.room; NET.host = m.host; lsSet('mythomachie.enligne', '1');
+      const fresh = before ? m.room.members.filter((x, i) => i !== m.you && !before.includes(x.name)) : [];
+      if (fresh.length) { mpMsg(fresh.map(x => x.name).join(', ') + (fresh.length > 1 ? ' ont rejoint' : ' a rejoint') + ' le salon.' + (NET.host ? ' Lancez la partie quand vous êtes prêts.' : '')); sfx('done'); try { navigator.vibrate && navigator.vibrate(60); } catch (_) { } }
+      else if (!before) mpMsg(NET.host ? 'Invitez vos amis : ils arrivent dans le salon en ouvrant le lien.' : 'Vous êtes dans le salon. La partie démarre quand l’hôte la lance.');
+      renderOnline(); break;
+    }
     case 'err': if (G && G.mp) toast(m.msg, 'warn'); else mpMsg(m.msg); sfx('err'); break;
     case 'info': if (G && G.mp) toast(m.msg, 'info'); else mpMsg(m.msg); break;
     case 'start': mpBegin(m); break;
@@ -4560,6 +4675,7 @@ const ACT = {
   queue(b, k, id) {
     if (!G.mp) return enqueue(b, k, id);
     if (b.q.length >= 6) return 'full';
+    if (!unlocked(G.pl[G.me], k === 'u' ? U[id] : R[id])) return 'age';
     if (!afford(G.pl[G.me], k === 'u' ? U[id].cost : R[id].cost)) return 'cost';
     netCmd([k === 'u' ? 'train' : 'research', b.id, id]); return 'ok';
   },
@@ -4585,6 +4701,7 @@ function openOnline() {
 }
 function closeOnline() {
   if (NET.room) netSend({ t: 'leave' });
+  lsSet('mythomachie.enligne', '');
   NET.room = null; NET.want = false; $('online').hidden = true;
   if (NET.ws) try { NET.ws.close(); } catch (_) { }
   if (location.hash) history.replaceState(null, '', location.pathname + location.search);
@@ -4607,6 +4724,7 @@ function renderOnline() {
     else list.innerHTML = NET.rooms.map(x => '<button class="roomrow" type="button" data-code="' + esc(x.code) + '"><b>' + esc(x.host) + '</b><span>' + x.n + ' / 4 camps · ' + esc(optsText(x.opts)) + '</span><i>' + esc(x.code) + '</i></button>').join('');
   } else {
     $('mp-roomcode').textContent = r.code;
+    const link = shareUrl(r.code); if ($('mp-link').value !== link) $('mp-link').value = link;
     const rows = r.members.map((m, i) => '<li><i class="dot" style="background:' + TEAM[i] + '"></i><b>' + esc(m.name) + '</b> <span class="sub">' + P[m.patron].name + (m.token === 'host' ? ' · hôte' : '') + (m.on ? '' : ' · hors ligne') + '</span></li>');
     for (let k = 0; k < r.opts.ais; k++) rows.push('<li><i class="dot" style="background:' + TEAM[r.members.length + k] + '"></i><b>Ordinateur</b> <span class="sub">' + DIFF[r.opts.diff].name + '</span></li>');
     $('mp-members').innerHTML = rows.join('');
@@ -4621,7 +4739,8 @@ function renderOnline() {
 function mpPlayersHTML() {
   return G.pl.map((p, i) => {
     const st = p.defeated ? 'vaincu' : p.ai ? 'ordinateur' : (NET.on[i] === 0 ? 'déconnecté' : 'en ligne');
-    return '<li><i class="dot" style="background:' + p.color + '"></i><b>' + esc(p.name) + '</b> <span class="sub">' + P[p.patron].name + ' · ' + st + (i === G.me ? ' · vous' : '') + '</span></li>';
+    const ag = i === G.me ? ageOf(p) : (p.netAge || 0);
+    return '<li><i class="dot" style="background:' + p.color + '"></i><b>' + esc(p.name) + '</b> <span class="sub">' + P[p.patron].name + ' · âge ' + AGES[ag].short + ' · ' + st + (i === G.me ? ' · vous' : '') + '</span></li>';
   }).join('');
 }
 function initNetUI() {
@@ -4642,11 +4761,19 @@ function initNetUI() {
   $('mp-code').addEventListener('keydown', e => { if (e.key === 'Enter') join($('mp-code').value); });
   $('mp-rooms').addEventListener('click', e => { const b = e.target.closest('.roomrow'); if (b) join(b.dataset.code); });
   $('mp-go').addEventListener('click', () => netSend({ t: 'go' }));
-  $('mp-leave').addEventListener('click', () => { netSend({ t: 'leave' }); NET.room = null; renderOnline(); });
+  $('mp-leave').addEventListener('click', () => { netSend({ t: 'leave' }); NET.room = null; lsSet('mythomachie.enligne', ''); mpMsg(''); renderOnline(); });
+  // Inviter : feuille de partage du téléphone (WhatsApp, SMS…), sinon copie du lien, sinon lien sélectionné à copier soi-même
   $('mp-copy').addEventListener('click', async () => {
-    const url = shareUrl(NET.room.code);
-    try { await navigator.clipboard.writeText(url); mpMsg('Lien copié : ' + url); } catch (_) { mpMsg('Lien à partager : ' + url); }
+    if (!NET.room) return;
+    const code = NET.room.code, url = shareUrl(code);
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Mythomachie', text: 'Rejoins ma partie de Mythomachie (salon ' + code + ') :', url }); mpMsg('Votre ami arrive dans le salon dès qu’il ouvre le lien.'); return; }
+      catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    try { await navigator.clipboard.writeText(url); mpMsg('Lien copié : collez-le dans un message à votre ami.'); }
+    catch (_) { const f = $('mp-link'); f.focus(); f.select(); mpMsg('Copiez ce lien et envoyez-le à votre ami.'); }
   });
+  $('mp-link').addEventListener('focus', e => e.target.select());
   $('b-chat').addEventListener('click', openChat);
   $('chatbar').addEventListener('submit', e => {
     e.preventDefault(); const t = $('chat-in').value.trim();
@@ -4654,9 +4781,22 @@ function initNetUI() {
     $('chatbar').hidden = true; $('chat-in').blur();
   });
   $('chat-in').addEventListener('keydown', e => { if (e.key === 'Escape') { $('chatbar').hidden = true; e.target.blur(); } });
-  const m = /^#([A-Za-z]{4})$/.exec(location.hash || '');
-  if (m) { NET.autoJoin = m[1].toUpperCase(); setTimeout(openOnline, 50); }
-  else if (lsGet('mythomachie.enligne') === '1') setTimeout(openOnline, 50); // reprise d'une partie en ligne après rechargement
+  if (!joinFromHash() && lsGet('mythomachie.enligne') === '1') setTimeout(openOnline, 50); // reprise d'un salon ou d'une partie en ligne après rechargement
+  addEventListener('hashchange', joinFromHash); // lien d'invitation ouvert dans un onglet où le jeu est déjà affiché
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) netWake(); });
+  addEventListener('online', netWake); addEventListener('pageshow', e => { if (e.persisted) netWake(); });
+  setInterval(() => { if (G && G.mp && !G.over && !document.hidden && NET.ws && NET.ws.readyState === 1 && performance.now() - NET.lastMsg > 8000) netDrop(); }, 2000);
+}
+/* Lien d'invitation …/mythomachie/#CODE : ouvre l'écran en ligne et rejoint le salon. */
+function joinFromHash() {
+  const m = /^#([A-Za-z]{4})$/.exec(location.hash || ''); if (!m) return false;
+  const code = m[1].toUpperCase();
+  if (G && G.mp && !G.over) return true; // déjà en partie en ligne : le lien ne sert plus
+  if (G && !G.mp) quitToMenu(); // partie seule en cours : sauvegardée avant de rejoindre
+  if (NET.room && NET.room.code === code) { openOnline(); return true; }
+  if (NET.state === 'on' && NET.ws && NET.ws.readyState === 1) { openOnline(); netSend({ t: 'name', name: myName() }); netSend({ t: 'join', code, patron: MENU.patron }); }
+  else { NET.autoJoin = code; setTimeout(openOnline, 50); }
+  return true;
 }
 
 </script>

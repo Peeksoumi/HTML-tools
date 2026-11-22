@@ -130,6 +130,7 @@ function netSnapshot(slot, view) {
   out.p = [Math.floor(pl.res.food), Math.floor(pl.res.wood), Math.floor(pl.res.gold), Math.floor(pl.res.foi), pl.popUsed, pl.popCap];
   out.tech = Object.keys(pl.tech); out.cd = pl.cd;
   out.d = G.pl.map(p => p.defeated ? 1 : 0);
+  out.ag = G.pl.map(p => ageOf(p));
   if (G.over) { out.over = 1; out.win = G.winTeam; }
   view.lastT = G.time;
   return out;
@@ -216,11 +217,12 @@ function netClientSnap(s) {
   const me = G.pl[G.me];
   if (s.p) { me.res.food = s.p[0]; me.res.wood = s.p[1]; me.res.gold = s.p[2]; me.res.foi = s.p[3]; me.popUsed = s.p[4]; me.popCap = s.p[5]; }
   if (s.tech) {
-    if (!G.netFirst) for (const k of s.tech) if (!me.tech[k] && R[k]) { H.toast('Recherche terminée : ' + R[k].name, 'good'); H.sfx('done'); }
+    if (!G.netFirst) for (const k of s.tech) if (!me.tech[k] && R[k]) { H.toast(techDoneText(k), 'good'); H.sfx(R[k].ageUp ? 'start' : 'done'); }
     const t = {}; for (const k of s.tech) t[k] = true; me.tech = t;
   }
   if (s.cd) me.cd = s.cd;
   if (s.d) s.d.forEach((v, i) => { if (G.pl[i]) G.pl[i].defeated = !!v; });
+  if (s.ag) s.ag.forEach((v, i) => { const p = G.pl[i]; if (!p) return; if (!G.netFirst && i !== G.me && v > (p.netAge || 0)) H.toast(p.name + ' entre dans l’' + AGES[v].name + '.', 'info'); p.netAge = v; });
   for (const id of s.rm) netRemove(id);
   for (const r of s.u) netUnit(r);
   for (const r of s.b) netBld(r);
