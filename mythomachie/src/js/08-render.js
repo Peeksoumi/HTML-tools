@@ -239,13 +239,13 @@ function render() {
   for (const b of G.blds) {
     if (b.t !== 'farm' || b.dead) continue;
     if ((b.tx + 3) * T < vx0 || b.tx * T > vx1 || (b.ty + 3) * T < vy0 || b.ty * T > vy1) continue;
-    if (b.o !== 0 && !rv && !G.ex[idx(b.tx + 1, b.ty + 1)]) continue;
+    if (b.o !== G.me && !rv && !G.ex[idx(b.tx + 1, b.ty + 1)]) continue;
     drawBuilding(c, b);
   }
   // anneaux de sélection
   for (const id of G.sel) {
     const e = G.byId.get(id); if (!e) continue;
-    const col = e.k === 'r' ? '#ffe08a' : e.o === 0 ? '#a6f5a0' : '#ff7b6b';
+    const col = e.k === 'r' ? '#ffe08a' : e.o === G.me ? '#a6f5a0' : '#ff7b6b';
     if (e.k === 'u') { c.beginPath(); c.ellipse(e.x, e.y + 1, U[e.t].r + 3, (U[e.t].r + 3) * 0.48, 0, 0, TAU); c.strokeStyle = col; c.lineWidth = 1.8; c.stroke(); }
     else { const s = e.size * T; c.beginPath(); c.ellipse(e.x, e.y + 4, s * 0.62, s * 0.5, 0, 0, TAU); c.strokeStyle = col; c.lineWidth = 2; c.setLineDash([7, 5]); c.stroke(); c.setLineDash([]); }
   }
@@ -262,13 +262,13 @@ function render() {
   for (const b of G.blds) {
     if (b.dead || b.t === 'farm') continue;
     if ((b.tx + b.size) * T < vx0 - 30 || b.tx * T > vx1 + 30 || (b.ty + b.size) * T < vy0 || b.ty * T - 100 > vy1) continue;
-    if (b.o !== 0 && !rv && !G.ex[idx(b.tx + (b.size >> 1), b.ty + (b.size >> 1))]) continue;
+    if (b.o !== G.me && !rv && !G.ex[idx(b.tx + (b.size >> 1), b.ty + (b.size >> 1))]) continue;
     dlPush((b.ty + b.size) * T - 2, 2, b, 0);
   }
   const fly = [];
   for (const u of G.units) {
     if (u.dead || u.x < vx0 - 40 || u.x > vx1 + 40 || u.y < vy0 - 20 || u.y > vy1 + 70) continue;
-    if (u.o !== 0 && !rv && !visibleAt(u.x, u.y)) continue;
+    if (u.o !== G.me && !rv && !visibleAt(u.x, u.y)) continue;
     if (U[u.t].fly) fly.push(u); else dlPush(u.y, 3, u, 0);
   }
   const list = DLP.slice(0, DLN).sort(DL_SORT);
@@ -286,23 +286,23 @@ function render() {
   // barres de vie
   for (const u of G.units) {
     if (u.dead || u.x < vx0 - 30 || u.x > vx1 + 30 || u.y < vy0 - 10 || u.y > vy1 + 60) continue;
-    if (u.o !== 0 && !rv && !visibleAt(u.x, u.y)) continue;
+    if (u.o !== G.me && !rv && !visibleAt(u.x, u.y)) continue;
     const d = U[u.t];
     if (sel.has(u.id) || (u.hp < u.mhp && G.time - u.hitT < 5)) hpBar(c, u.x, u.y - d.h - (d.fly ? 28 : d.t === 'valkyrie' ? 6 : 4) - 4, d.cls === 'myth' ? 30 : 20, u.hp / u.mhp);
   }
   for (const b of G.blds) {
     if (b.dead || b.t === 'farm' && !sel.has(b.id)) continue;
     if (!(sel.has(b.id) || (b.hp < b.mhp && (G.time - b.hitT < 6 || !b.built)))) continue;
-    if (b.o !== 0 && !rv && !G.ex[idx(b.tx + (b.size >> 1), b.ty + (b.size >> 1))]) continue;
+    if (b.o !== G.me && !rv && !G.ex[idx(b.tx + (b.size >> 1), b.ty + (b.size >> 1))]) continue;
     hpBar(c, b.x, b.ty * T - BLD_H[b.t] - 4, b.size * T * 0.6, b.built ? b.hp / b.mhp : b.prog);
   }
   for (const id of G.sel) { const e = G.byId.get(id); if (e && e.k === 'r') hpBar(c, e.x, e.ty * T - 10, 28, e.amt / e.max); }
   // point de ralliement
   if (G.sel.length === 1) {
     const b = G.byId.get(G.sel[0]);
-    if (b && b.k === 'b' && b.o === 0 && b.rally) {
+    if (b && b.k === 'b' && b.o === G.me && b.rally) {
       c.setLineDash([5, 6]); L_(c, b.x, b.y, b.rally.x, b.rally.y, 'rgba(255,240,200,0.6)', 1.4); c.setLineDash([]);
-      L_(c, b.rally.x, b.rally.y, b.rally.x, b.rally.y - 22, '#4a3524', 2); P_(c, [b.rally.x, b.rally.y - 22, b.rally.x + 13, b.rally.y - 18, b.rally.x, b.rally.y - 13], G.pl[0].color);
+      L_(c, b.rally.x, b.rally.y, b.rally.x, b.rally.y - 22, '#4a3524', 2); P_(c, [b.rally.x, b.rally.y - 22, b.rally.x + 13, b.rally.y - 18, b.rally.x, b.rally.y - 13], G.pl[G.me].color);
     }
   }
   // marques d'ordre
@@ -320,8 +320,8 @@ function render() {
 function drawModeOverlay(c) {
   if (UI.mode === 'place' && UI.ghost) {
     const t = UI.placeType, s = B[t].size, g = UI.ghost;
-    const fake = { t, o: 0, tx: g.tx, ty: g.ty, size: s, x: (g.tx + s / 2) * T, y: (g.ty + s / 2) * T, built: true, prog: 1, hp: 1, mhp: 1 };
-    const ok = canPlace(t, 0, g.tx, g.ty, false);
+    const fake = { t, o: G.me, tx: g.tx, ty: g.ty, size: s, x: (g.tx + s / 2) * T, y: (g.ty + s / 2) * T, built: true, prog: 1, hp: 1, mhp: 1 };
+    const ok = canPlace(t, G.me, g.tx, g.ty, false);
     for (let y = g.ty; y < g.ty + s; y++) for (let x = g.tx; x < g.tx + s; x++) {
       let good = inb(x, y) && x > 0 && y > 0 && x < G.W - 1 && y < G.H - 1;
       if (good) { const i = idx(x, y); good = G.ter[i] !== 1 && !G.tree[i] && !G.occ[i] && G.ex[i]; }
@@ -347,13 +347,13 @@ function drawMini() {
   if (!G.revealAll) { c.imageSmoothingEnabled = true; c.drawImage(G.fogCv, ox, oy, G.W * k, G.H * k); }
   for (const b of G.blds) {
     if (b.dead) continue;
-    if (b.o !== 0 && !G.revealAll && !G.ex[idx(b.tx, b.ty)]) continue;
+    if (b.o !== G.me && !G.revealAll && !G.ex[idx(b.tx, b.ty)]) continue;
     c.fillStyle = G.pl[b.o].color; c.fillRect(ox + b.tx * k - 0.5, oy + b.ty * k - 0.5, b.size * k + 1, b.size * k + 1);
     c.strokeStyle = 'rgba(0,0,0,0.6)'; c.lineWidth = 0.6; c.strokeRect(ox + b.tx * k - 0.5, oy + b.ty * k - 0.5, b.size * k + 1, b.size * k + 1);
   }
   for (const u of G.units) {
     if (u.dead) continue;
-    if (u.o !== 0 && !G.revealAll && !visibleAt(u.x, u.y)) continue;
+    if (u.o !== G.me && !G.revealAll && !visibleAt(u.x, u.y)) continue;
     c.fillStyle = G.pl[u.o].color; const s = U[u.t].cls === 'myth' ? 3 : 2;
     c.fillRect(ox + u.x / T * k - s / 2, oy + u.y / T * k - s / 2, s, s);
   }
