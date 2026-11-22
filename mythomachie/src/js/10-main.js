@@ -100,10 +100,10 @@ function deserialize(s) {
   G.cam = s.cam || { x: 0, y: 0, z: 1 };
 }
 function saveGame() {
-  if (!G || G.over) return false;
+  if (!G || G.over || G.mp) return false;
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(serialize()));
-    localStorage.setItem(META_KEY, JSON.stringify({ patron: G.pl[0].patron, time: G.time }));
+    localStorage.setItem(META_KEY, JSON.stringify({ patron: G.pl[G.me].patron, time: G.time }));
     return true;
   } catch (_) { return false; }
 }
@@ -141,7 +141,8 @@ function frame(now) {
   requestAnimationFrame(frame);
   const dt = lastT ? Math.min(0.1, Math.max(0, (now - lastT) / 1000)) : 0.016; lastT = now;
   if (G && G.terCv) {
-    if (!G.paused) { let sim = dt * G.speed; while (sim > 1e-4) { const s = Math.min(0.05, sim); tick(s); sim -= s; } }
+    if (G.mp) netClientFrame(dt);
+    else if (!G.paused) { let sim = dt * G.speed; while (sim > 1e-4) { const s = Math.min(0.05, sim); tick(s); sim -= s; } }
     // qualité adaptative : si l'appareil peine, on passe en résolution 1x
     if (!G.paused && !PERF.low) { PERF.acc += dt; PERF.n++; if (PERF.acc > 3) { if (PERF.acc / PERF.n > 0.034 && DPR > 1) { PERF.low = true; layout(); } PERF.acc = 0; PERF.n = 0; } }
     uiFrame(dt); render();
@@ -152,10 +153,10 @@ function hotBoot() {
   const start = data => {
     if (data && data.save) { try { deserialize(data.save); prepareRender(); enterGame(); } catch (e) { G = null; } }
   };
-  try { if (hot && hot.snapshot) hot.snapshot(() => ({ save: G && !G.over && G.terCv ? serialize() : null })); } catch (_) { }
+  try { if (hot && hot.snapshot) hot.snapshot(() => ({ save: G && !G.over && !G.mp && G.terCv ? serialize() : null })); } catch (_) { }
   if (hot && hot.ready) hot.ready(start); else start((hot && hot.data) || {});
 }
-function boot() { initUI(); hotBoot(); requestAnimationFrame(frame); }
+function boot() { initUI(); initNetUI(); hotBoot(); requestAnimationFrame(frame); }
 window.MYTH = {
   get G() { return G; },
   start(o) { startNewGame(o); },

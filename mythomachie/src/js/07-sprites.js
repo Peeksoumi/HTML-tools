@@ -510,10 +510,11 @@ function glyph(c, kind, color) {
     case 'wood': for (const [x, y] of [[20, 36], [44, 36], [32, 20]]) { RR_(c, x - 14, y - 7, 28, 14, 7, '#8b5a2b', 'rgba(0,0,0,0.35)', 1); C_(c, x + 10, y, 5.5, color); C_(c, x + 10, y, 2.4, '#8b5a2b'); } break;
     case 'gold': for (const [x, y] of [[24, 40], [40, 40], [32, 26]]) { E_(c, x, y, 13, 9, '#a8781a'); E_(c, x, y - 2.5, 13, 9, color); E_(c, x - 3, y - 5, 4, 2, '#fff3b0'); } break;
     case 'foi': c.globalCompositeOperation = 'lighter'; { const g = c.createRadialGradient(32, 34, 2, 32, 34, 26); g.addColorStop(0, 'rgba(190,170,255,0.9)'); g.addColorStop(1, 'rgba(120,90,255,0)'); c.fillStyle = g; c.fillRect(0, 0, 64, 64); } c.globalCompositeOperation = 'source-over'; P_(c, [32, 6, 38, 26, 58, 32, 38, 38, 32, 58, 26, 38, 6, 32, 26, 26], color); break;
+    case 'chat': RR_(c, 8, 10, 48, 34, 10, color); P_(c, [18, 42, 14, 56, 30, 43], color); for (const x of [22, 32, 42]) C_(c, x, 27, 3.6, '#1a2050'); break;
     case 'pop': C_(c, 32, 20, 10, color); c.beginPath(); c.moveTo(12, 58); c.quadraticCurveTo(12, 34, 32, 34); c.quadraticCurveTo(52, 34, 52, 58); c.closePath(); c.fill(); break;
   }
 }
-const GLYPH_COL = { bolt: '#cfe6ff', aegis: '#ffd35a', frost: '#bdf0ff', einherjar: '#8ff0e0', sun: '#ffae42', blessing: '#c8ff7a', tools: '#c9ccd0', walls: '#d8cbb0', iron: '#d7dde3', shields: '#c99a3f', rites: '#ffb347', blood: '#d0283c', stop: '#f2e6c4', amove: '#f2e6c4', rally: '#f2e6c4', del: '#ff8a7a', army: '#f2e6c4', idle: '#f2e6c4', box: '#f2e6c4', city: '#f2e6c4', food: '#e3b23c', wood: '#d9b07a', gold: '#f4cf4a', foi: '#cdb8ff', pop: '#e8e1cf' };
+const GLYPH_COL = { bolt: '#cfe6ff', aegis: '#ffd35a', frost: '#bdf0ff', einherjar: '#8ff0e0', sun: '#ffae42', blessing: '#c8ff7a', tools: '#c9ccd0', walls: '#d8cbb0', iron: '#d7dde3', shields: '#c99a3f', rites: '#ffb347', blood: '#d0283c', stop: '#f2e6c4', amove: '#f2e6c4', rally: '#f2e6c4', del: '#ff8a7a', chat: '#f2e6c4', army: '#f2e6c4', idle: '#f2e6c4', box: '#f2e6c4', city: '#f2e6c4', food: '#e3b23c', wood: '#d9b07a', gold: '#f4cf4a', foi: '#cdb8ff', pop: '#e8e1cf' };
 function glyphIcon(kind, color) { return iconURL('g:' + kind + (color || ''), c => glyph(c, kind, color || GLYPH_COL[kind] || '#fff')); }
 /* Emblèmes des dieux (menu) */
 function drawEmblem(c, patron, size) {

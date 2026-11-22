@@ -12,6 +12,7 @@
       </div>
       <div id="topr">
         <span id="clock">0:00</span>
+        <button id="b-chat" class="tb" type="button" aria-label="Écrire aux joueurs" title="Écrire aux joueurs (Entrée)" hidden><img data-g="chat" alt=""></button>
         <button id="b-speed" class="tb" type="button" title="Vitesse du jeu">×1</button>
         <button id="b-menu" class="tb" type="button" aria-label="Pause et menu">II</button>
       </div>
@@ -30,6 +31,7 @@
     </footer>
     <div id="confirm" hidden><span id="confirm-msg"></span><button id="confirm-ok" class="btn gold" type="button">Valider</button><button id="confirm-no" class="btn" type="button">Annuler</button></div>
     <div id="tip" hidden></div>
+    <form id="chatbar" hidden><input id="chat-in" maxlength="140" autocomplete="off" placeholder="Message aux joueurs" aria-label="Message aux joueurs"><button class="btn gold" type="submit">Envoyer</button></form>
   </div>
 
   <section id="menu" class="screen">
@@ -37,7 +39,7 @@
     <div class="menu-inner">
       <nav class="toplinks" aria-label="Liens de la page">
         <a href="https://github.com/Peeksoumi/HTML-tools/issues/new?title=%5Bmythomachie%5D%20&amp;body=Outil%20concern%C3%A9%20%3A%20mythomachie%20(http%3A%2F%2F141.227.151.70%3A8080%2Fmythomachie%2F)%0A%0A**Ma%20suggestion%20ou%20le%20bug%20rencontr%C3%A9%20%3A**%0A%0A" target="_blank" rel="noopener">💡 Proposer une amélioration</a>
-        <a id="b-download" href="index.html" download="mythomachie.html" title="Enregistrer la page : le jeu entier tient dans ce fichier et fonctionne hors ligne">⬇️ Télécharger la page</a>
+        <a id="b-download" href="index.html" download="mythomachie.html" title="Enregistrer la page : le jeu entier tient dans ce fichier ; seul, il fonctionne hors ligne (le jeu en ligne demande une connexion)">⬇️ Télécharger la page</a>
       </nav>
       <p id="dl-msg" class="note" hidden></p>
       <header class="hero">
@@ -56,6 +58,7 @@
       </section>
       <div class="actions">
         <button id="b-play" class="btn gold big" type="button">Lancer la partie</button>
+        <button id="b-online" class="btn big" type="button">Jouer en ligne</button>
         <button id="b-continue" class="btn big" type="button" hidden>Reprendre la partie</button>
         <button id="b-help" class="btn" type="button">Comment jouer</button>
       </div>
@@ -67,16 +70,19 @@
           <li><b>Déplacements</b> : recherche de chemin A* sur une grille de cases, avec évitement entre unités.</li>
           <li><b>Adversaires</b> : IA à règles (économie, bâtiments, recherches, armée qui contre la vôtre, vagues d’attaque, défense, pouvoirs).</li>
           <li><b>Brouillard de guerre</b> : vous ne voyez que ce que vos unités et bâtiments voient.</li>
-          <li><b>Navigateur seul</b> : tout tourne sur l’appareil ; la sauvegarde reste dans le stockage local du navigateur.</li>
+          <li><b>Seul</b> : tout tourne sur l’appareil ; la sauvegarde reste dans le stockage local du navigateur.</li>
+          <li><b>En ligne</b> : le serveur de jeu du site fait tourner la partie ; chaque navigateur envoie ses ordres et reçoit 10 fois par seconde ce que voit son équipe.</li>
         </ul>
         <h3>Sources de données</h3>
         <ul>
           <li><b>Aucune donnée externe</b> : cartes, graphismes et sons sont générés par le code, sans bibliothèque chargée.</li>
+          <li><b>Serveur de jeu</b> peeksoumi.com (WebSocket), en mode en ligne seulement : reçoit votre nom et vos ordres, rien n’est gardé après la partie.</li>
           <li><b>Mythologies</b> grecque, nordique et égyptienne (domaine public) ; jeu original.</li>
         </ul>
         <h3>Limites</h3>
         <ul>
-          <li>Pas de multijoueur ni de campagne : parties contre 1 à 3 adversaires.</li>
+          <li>Pas de campagne ; 4 camps au maximum, seul ou en ligne.</li>
+          <li>En ligne, une connexion lente fait sauter les unités ; une partie quittée par tous est perdue après 3 min.</li>
           <li>L’IA voit toute la carte ; elle récolte 20 % plus vite en Difficile et 15 % moins vite en Facile.</li>
           <li>La sauvegarde est liée à ce navigateur : effacer ses données l’efface.</li>
           <li>Sur petit téléphone, la grande carte à 4 camps peut ralentir.</li>
@@ -90,7 +96,8 @@
       <h2 id="h-pause">Pause</h2>
       <div class="row"><button id="b-resume" class="btn gold" type="button">Reprendre</button><button id="b-save" class="btn" type="button">Sauvegarder</button><button id="b-help2" class="btn" type="button">Comment jouer</button></div>
       <p id="save-msg"></p>
-      <div class="row"><span class="ol">Vitesse</span><div class="seg" role="group" aria-label="Vitesse du jeu"><button type="button" data-speed="1">×1</button><button type="button" data-speed="1.5">×1,5</button><button type="button" data-speed="2">×2</button></div></div>
+      <ul id="mp-players" class="mp-list" hidden></ul>
+      <div class="row" id="pause-speed"><span class="ol">Vitesse</span><div class="seg" role="group" aria-label="Vitesse du jeu"><button type="button" data-speed="1">×1</button><button type="button" data-speed="1.5">×1,5</button><button type="button" data-speed="2">×2</button></div></div>
       <div class="row"><button id="b-sound" class="btn" type="button">Sons : activés</button><button id="b-quit" class="btn ghost" type="button">Quitter vers le menu</button></div>
     </div>
   </section>
@@ -100,7 +107,35 @@
       <h2 id="end-title">Victoire</h2>
       <p id="end-sub"></p>
       <div id="end-stats" class="tablewrap"></div>
-      <div class="row" style="justify-content:center"><button id="b-again" class="btn gold" type="button">Nouvelle partie</button><button id="b-tomenu" class="btn" type="button">Menu principal</button></div>
+      <div class="row" style="justify-content:center"><button id="b-again" class="btn gold" type="button">Nouvelle partie</button><button id="b-watch" class="btn" type="button" hidden>Regarder la suite</button><button id="b-tomenu" class="btn" type="button">Menu principal</button></div>
+    </div>
+  </section>
+
+  <section id="online" class="screen modal" hidden>
+    <div class="card" role="dialog" aria-modal="true" aria-labelledby="h-online">
+      <div class="row between"><h2 id="h-online">Jouer en ligne</h2><span id="net-state" class="netstate off">Hors ligne</span></div>
+      <div class="row"><label class="ol" for="mp-name">Votre nom</label><input id="mp-name" class="field" maxlength="20" autocomplete="nickname" placeholder="Votre nom"></div>
+      <div class="row"><span class="ol" id="l-mpgod">Votre dieu</span><div class="seg" id="mp-god" role="group" aria-labelledby="l-mpgod"><button type="button" data-v="zeus">Zeus</button><button type="button" data-v="odin">Odin</button><button type="button" data-v="ra">Râ</button></div></div>
+      <div id="mp-room" hidden>
+        <div class="row between"><p class="roomcode">Code du salon <b id="mp-roomcode">----</b></p><button id="mp-copy" class="btn ghost" type="button">Copier le lien d’invitation</button></div>
+        <ul id="mp-members" class="mp-list"></ul>
+        <p id="mp-optsum" class="sub"></p>
+      </div>
+      <div id="mp-opts" class="mp-opts">
+        <div class="opt"><span class="ol">Carte</span><div class="seg" data-mpo="map"><button type="button" data-v="small">Petite</button><button type="button" data-v="medium">Moyenne</button><button type="button" data-v="large">Grande</button></div></div>
+        <div class="opt"><span class="ol">Ordinateurs</span><div class="seg" data-mpo="ais"><button type="button" data-v="0">0</button><button type="button" data-v="1">1</button><button type="button" data-v="2">2</button></div></div>
+        <div class="opt"><span class="ol">Difficulté</span><div class="seg" data-mpo="diff"><button type="button" data-v="easy">Facile</button><button type="button" data-v="normal">Normal</button><button type="button" data-v="hard">Difficile</button></div></div>
+        <div class="opt"><span class="ol">Mode</span><div class="seg" data-mpo="mode"><button type="button" data-v="ffa">Chacun pour soi</button><button type="button" data-v="coop">Ensemble contre l’IA</button></div></div>
+      </div>
+      <div class="row"><button id="mp-create" class="btn gold" type="button" disabled>Créer un salon</button></div>
+      <div id="mp-lobby">
+        <h3 class="mp-h">Rejoindre une partie</h3>
+        <div class="row"><input id="mp-code" class="field code" maxlength="4" autocomplete="off" autocapitalize="characters" placeholder="CODE" aria-label="Code du salon"><button id="mp-join" class="btn" type="button" disabled>Rejoindre</button></div>
+        <div id="mp-rooms" class="mp-rooms"></div>
+      </div>
+      <div id="mp-roomgo" class="row"><button id="mp-go" class="btn gold" type="button" hidden>Lancer la partie</button><p id="mp-wait" class="sub" hidden>En attente du lancement par l’hôte…</p><button id="mp-leave" class="btn ghost" type="button">Quitter le salon</button></div>
+      <p id="mp-msg" class="note" hidden></p>
+      <div class="row end"><button id="mp-close" class="btn" type="button">Retour au menu</button></div>
     </div>
   </section>
 

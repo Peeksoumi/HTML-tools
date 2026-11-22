@@ -11,7 +11,7 @@ function tick(dt) {
   updateZones();
   updateTimers();
   updateFx(dt);
-  G.fogT -= dt; if (G.fogT <= 0) { G.fogT = 0.2; updateFog(); }
+  if (G.me >= 0) { G.fogT -= dt; if (G.fogT <= 0) { G.fogT = 0.2; updateFog(); } }
   for (const ai of G.ai) aiUpdate(ai, dt);
   G.vicT -= dt; if (G.vicT <= 0) { G.vicT = 1; checkVictory(); }
   cleanup();
@@ -172,7 +172,7 @@ function dealDamage(t, dmg, src, o) {
   if (t.dead || dmg <= 0) return;
   if (t.k === 'u' && t.shield > G.time) dmg *= 0.4;
   t.hp -= dmg; t.hitT = G.time;
-  if (t.o === 0 && o !== 0) alertAttacked(t);
+  if (t.o === G.me && o !== G.me) alertAttacked(t);
   if (t.k === 'u' && src && !src.dead) retaliate(t, src);
   if (t.hp <= 0) kill(t, o);
 }
@@ -193,7 +193,7 @@ function retaliate(u, src) {
   }
 }
 function alertAttacked(t) {
-  const pl = G.pl[0];
+  const pl = G.pl[G.me];
   if (G.time - pl.alertT < 12) return;
   pl.alertT = G.time;
   H.toast(t.k === 'b' ? 'Un de vos bâtiments est attaqué !' : (U[t.t].cls === 'vill' ? 'Vos citoyens sont attaqués !' : 'Vos troupes sont attaquées !'), 'warn', { x: t.x, y: t.y, alert: true });
@@ -216,7 +216,7 @@ function kill(e, ko, silent) {
     G.fx.push({ k: 'rubble', x: e.x, y: e.y, size: e.size, t0: G.time, life: 8 });
     addParts(e.x, e.y, 26, '#a89a86', e.size * T, 50, 1.4, 5, -10);
     H.onScorch(e); H.sfxAt('collapse', e.x, e.y, 1);
-    if (e.o === 0 && !silent) H.toast(B[e.t].name + (B[e.t].f ? ' détruite' : ' détruit'), 'bad', { x: e.x, y: e.y });
+    if (e.o === G.me && !silent) H.toast(B[e.t].name + (B[e.t].f ? ' détruite' : ' détruit'), 'bad', { x: e.x, y: e.y });
   } else setFootprint(e, false);
 }
 function healAura(u, dt) {
@@ -277,7 +277,7 @@ function startDrop(u) {
   const b = nearestDrop(u.o, u.x, u.y);
   if (!b) {
     u.st = 'idle'; u.sub = null;
-    if (u.o === 0) H.toast('Aucun dépôt : construisez une cité ou un entrepôt.', 'warn');
+    if (u.o === G.me) H.toast('Aucun dépôt : construisez une cité ou un entrepôt.', 'warn');
     return;
   }
   u.sub = 'drop'; u.dropId = b.id; u.path = null;
@@ -341,7 +341,7 @@ function completeBuilding(b) {
   b.built = true; b.prog = 1;
   const pl = G.pl[b.o]; pl.stats.bBuilt++;
   addParts(b.x, b.y + b.size * T * 0.3, 14, '#d8ccb0', b.size * T, 40, 1, 4, -5);
-  if (b.o === 0) { H.toast(B[b.t].name + (B[b.t].f ? ' terminée' : ' terminé'), 'good'); H.sfx('done'); }
+  if (b.o === G.me) { H.toast(B[b.t].name + (B[b.t].f ? ' terminée' : ' terminé'), 'good'); H.sfx('done'); }
 }
 function afterBuild(u, b) {
   u.st = 'idle';
@@ -401,7 +401,7 @@ function finishUnit(b, t) {
   const u = makeUnit(t, b.o, p.x, p.y);
   pl.stats.trained++;
   if (U[t].cls === 'myth') G.fx.push({ k: 'spawn', x: u.x, y: u.y, t0: G.time, life: 1 });
-  if (b.o === 0) H.sfx(U[t].cls === 'myth' ? 'summon' : 'train');
+  if (b.o === G.me) H.sfx(U[t].cls === 'myth' ? 'summon' : 'train');
   const rp = b.rally;
   if (rp) {
     if (t === 'villager' && rp.spec && specType(rp.spec)) { if (startGather(u, rp.spec)) u.cmd = false; }
@@ -413,7 +413,7 @@ function finishResearch(pl, id) {
   pl.tech[id] = true;
   if (id === 'walls') for (const b of G.blds) if (!b.dead && b.o === pl.i) { const m = bldMhp(pl, b.t); b.hp *= m / b.mhp; b.mhp = m; }
   if (id === 'blood') for (const u of G.units) if (!u.dead && u.o === pl.i && U[u.t].cls === 'myth') { const m = unitMhp(pl, u.t); u.hp *= m / u.mhp; u.mhp = m; }
-  if (pl.i === 0) { H.toast('Recherche terminée : ' + R[id].name, 'good'); H.sfx('done'); }
+  if (pl.i === G.me) { H.toast('Recherche terminée : ' + R[id].name, 'good'); H.sfx('done'); }
 }
 
 /* ----- Collisions ----- */
@@ -465,7 +465,7 @@ function collideTiles(u) {
 function projAim(t) { return t.k === 'u' ? t.y - U[t.t].h * 0.4 - (U[t.t].fly ? 22 : 0) : t.y; }
 function spawnProj(x, y, t, o, acls, atk, kind, splash, srcId) {
   const tx = t.x, ty = projAim(t);
-  G.proj.push({ x, y, sx: x, sy: y, tid: t.id, tx, ty, o, acls, atk, kind, splash, src: srcId, sp: kind === 'fire' ? 280 : 420, d0: Math.max(1, Math.hypot(tx - x, ty - y)), dead: false });
+  G.proj.push({ t0: G.time, x, y, sx: x, sy: y, tid: t.id, tx, ty, o, acls, atk, kind, splash, src: srcId, sp: kind === 'fire' ? 280 : 420, d0: Math.max(1, Math.hypot(tx - x, ty - y)), dead: false });
 }
 function updateProjectiles(dt) {
   if (!G.proj.length) return;
@@ -511,7 +511,7 @@ function castPower(o, pid, x, y) {
     G.fx.push({ k: 'bless', x, y, r, t0: G.time, life: 1.6 }); H.sfxAt('heal', x, y, 1, true);
   }
   pl.stats.powers = (pl.stats.powers || 0) + 1;
-  if (o !== 0) { H.toast(pl.name + ' invoque ' + gp.name + ' !', 'warn', { x, y }); H.ping(x, y, gp.color); }
+  if (o !== G.me && G.me >= 0) { H.toast(pl.name + ' invoque ' + gp.name + ' !', 'warn', { x, y }); H.ping(x, y, gp.color); }
   return true;
 }
 function updateTimers() {
@@ -581,8 +581,9 @@ function updateFog() {
     const cx = Math.floor(x / T), cy = Math.floor(y / T), off = circOffsets(r);
     for (let k = 0; k < off.length; k += 2) { const tx = cx + off[k], ty = cy + off[k + 1]; if (tx >= 0 && ty >= 0 && tx < W && ty < H2) vis[ty * W + tx] = 1; }
   };
-  for (const u of G.units) if (!u.dead && u.o === 0) mark(u.x, u.y, U[u.t].sight);
-  for (const b of G.blds) if (!b.dead && b.o === 0) mark(b.x, b.y, b.built ? B[b.t].sight : 3);
+  const team = G.pl[G.me].team;
+  for (const u of G.units) if (!u.dead && G.pl[u.o].team === team) mark(u.x, u.y, U[u.t].sight);
+  for (const b of G.blds) if (!b.dead && G.pl[b.o].team === team) mark(b.x, b.y, b.built ? B[b.t].sight : 3);
   for (let i = 0; i < vis.length; i++) if (vis[i]) ex[i] = 1;
   G.fogDirty = true;
 }
@@ -598,15 +599,16 @@ function checkVictory() {
     if (!alive) for (const u of G.units) if (!u.dead && u.o === pl.i && u.t === 'villager') { alive = true; break; }
     if (!alive) defeatPlayer(pl);
   }
-  if (!G.over) {
-    if (G.pl[0].defeated) endGame(false);
-    else if (G.pl.every(p => p.i === 0 || p.defeated)) endGame(true);
-  }
+  if (G.over) return;
+  const alive = new Set(); for (const p of G.pl) if (!p.defeated) alive.add(p.team);
+  if (G.mp) { if (alive.size <= 1) { G.over = true; G.winTeam = alive.size ? [...alive][0] : -1; G.endT = G.time; H.onEnd(G.winTeam); } }
+  else if (G.pl[G.me].defeated) endGame(false);
+  else if (alive.size <= 1) endGame(true);
 }
 function defeatPlayer(pl) {
   pl.defeated = true; pl.defeatT = G.time;
   for (const e of G.list) if (!e.dead && e.o === pl.i) kill(e, null, true);
-  if (pl.i !== 0) H.toast(pl.name + ' est vaincu !', 'good');
+  if (pl.i !== G.me && G.me >= 0) H.toast(pl.name + ' est vaincu !', 'good');
 }
 function endGame(win) {
   G.over = true; G.win = win; G.endT = G.time;

@@ -18,11 +18,11 @@ function costHTML(cost) {
   return h || '<span class="ci">—</span>';
 }
 function missingText(cost) {
-  const pl = G.pl[0], parts = [];
+  const pl = G.pl[G.me], parts = [];
   for (const k of RES_ORDER) if (cost[k] && pl.res[k] < cost[k]) parts.push(Math.ceil(cost[k] - pl.res[k]) + ' ' + RES_SHORT[k]);
   return parts.length ? 'Il manque ' + parts.join(' et ') + '.' : '';
 }
-function myStyle() { return P[G.pl[0].patron].style; }
+function myStyle() { return P[G.pl[G.me].patron].style; }
 
 /* ----- Messages ----- */
 function toast(msg, kind, at) {
@@ -40,9 +40,9 @@ function ping(x, y, col) { UI.pings.push({ x, y, col: col || '#ff5a4a', t0: perf
 function mark(x, y, col) { MARKS.push({ x, y, t0: performance.now(), col: col || 'rgba(166,245,160,A)' }); }
 
 /* ----- Sélection ----- */
-function selUnits() { const out = []; for (const id of G.sel) { const e = G.byId.get(id); if (e && e.k === 'u' && e.o === 0) out.push(e); } return out; }
+function selUnits() { const out = []; for (const id of G.sel) { const e = G.byId.get(id); if (e && e.k === 'u' && e.o === G.me) out.push(e); } return out; }
 function selOne() { return G.sel.length === 1 ? G.byId.get(G.sel[0]) : null; }
-function selBld() { const e = selOne(); return e && e.k === 'b' && e.o === 0 ? e : null; }
+function selBld() { const e = selOne(); return e && e.k === 'b' && e.o === G.me ? e : null; }
 function setSel(ids) {
   G.sel = ids.slice(0, 150); UI.demolishArm = 0;
   if (UI.mode === 'amove' || UI.mode === 'rally') cancelMode();
@@ -50,14 +50,14 @@ function setSel(ids) {
   refreshPanels(true);
 }
 function selectSameType(u) {
-  const ids = []; for (const v of G.units) if (!v.dead && v.o === 0 && v.t === u.t && onScreen(v.x, v.y, 0)) ids.push(v.id);
+  const ids = []; for (const v of G.units) if (!v.dead && v.o === G.me && v.t === u.t && onScreen(v.x, v.y, 0)) ids.push(v.id);
   setSel(ids); sfx('click');
 }
 function boxSelect(b, add) {
   if (!b) return;
   const a = s2w(Math.min(b.x0, b.x1), Math.min(b.y0, b.y1)), c = s2w(Math.max(b.x0, b.x1), Math.max(b.y0, b.y1));
   const ids = [];
-  for (const u of G.units) if (!u.dead && u.o === 0 && u.x >= a.x - 4 && u.x <= c.x + 4 && u.y - 8 >= a.y - 12 && u.y - 8 <= c.y + 12) ids.push(u.id);
+  for (const u of G.units) if (!u.dead && u.o === G.me && u.x >= a.x - 4 && u.x <= c.x + 4 && u.y - 8 >= a.y - 12 && u.y - 8 <= c.y + 12) ids.push(u.id);
   if (ids.length) { const cur = add ? selUnits().map(u => u.id) : []; setSel([...new Set(cur.concat(ids))]); sfx('click'); }
   else if (!add && !UI.touch) setSel([]);
 }
@@ -65,7 +65,7 @@ function pick(wx, wy) {
   let best = null, bd = 1e9; const extra = UI.touch ? 7 : 2;
   for (const u of G.units) {
     if (u.dead) continue;
-    if (u.o !== 0 && !G.revealAll && !visibleAt(u.x, u.y)) continue;
+    if (u.o !== G.me && !G.revealAll && !visibleAt(u.x, u.y)) continue;
     const d = U[u.t]; const cy = u.y - d.h * 0.45 - (d.fly ? 22 : 0);
     const dd = Math.hypot(wx - u.x, wy - cy), rr = Math.max(d.r + 6, d.h * 0.55) + extra;
     if (dd < rr && dd < bd) { bd = dd; best = u; }
@@ -73,7 +73,7 @@ function pick(wx, wy) {
   if (best) return best;
   for (const b of G.blds) {
     if (b.dead) continue;
-    if (b.o !== 0 && !G.revealAll && !G.ex[idx(b.tx + (b.size >> 1), b.ty + (b.size >> 1))]) continue;
+    if (b.o !== G.me && !G.revealAll && !G.ex[idx(b.tx + (b.size >> 1), b.ty + (b.size >> 1))]) continue;
     const x0 = b.tx * T, y0 = b.ty * T - (b.t === 'farm' ? 0 : BLD_H[b.t] * 0.55), x1 = x0 + b.size * T, y1 = (b.ty + b.size) * T;
     if (wx >= x0 && wx <= x1 && wy >= y0 && wy <= y1) return b;
   }
@@ -95,27 +95,27 @@ function contextAt(wx, wy, touch, hit) {
     if (hit) { setSel([hit.id]); sfx('click'); } else if (G.sel.length) setSel([]);
     return;
   }
-  if (hit && hit.k === 'u' && hit.o === 0) { if (touch) { setSel([hit.id]); sfx('click'); return; } cmdMove(units, wx, wy); mark(wx, wy); return; }
-  if (hit && (hit.k === 'u' || hit.k === 'b') && hit.o !== 0) { cmdAttack(units, hit); mark(hit.x, hit.y, 'rgba(255,110,90,A)'); sfx('order'); return; }
+  if (hit && hit.k === 'u' && hit.o === G.me) { if (touch) { setSel([hit.id]); sfx('click'); return; } ACT.move(units, wx, wy); mark(wx, wy); return; }
+  if (hit && (hit.k === 'u' || hit.k === 'b') && hit.o !== G.me) { ACT.attack(units, hit); mark(hit.x, hit.y, 'rgba(255,110,90,A)'); sfx('order'); return; }
   const vills = units.filter(u => u.t === 'villager'), mil = units.filter(u => u.t !== 'villager');
-  if (hit && hit.k === 'r') { cmdGather(units, { kind: 'ent', id: hit.id }); mark(hit.x, hit.y, 'rgba(255,224,138,A)'); sfx('order'); return; }
-  if (hit && hit.k === 'b' && hit.o === 0) {
+  if (hit && hit.k === 'r') { ACT.gather(units, { kind: 'ent', id: hit.id }); mark(hit.x, hit.y, 'rgba(255,224,138,A)'); sfx('order'); return; }
+  if (hit && hit.k === 'b' && hit.o === G.me) {
     if (vills.length) {
-      if (!hit.built || hit.hp < hit.mhp) { cmdBuild(vills, hit); if (mil.length) cmdMove(mil, hit.x, (hit.ty + hit.size) * T + 20); mark(hit.x, hit.y); sfx('order'); return; }
-      if (hit.t === 'farm') { cmdGather(vills, { kind: 'ent', id: hit.id }); sfx('order'); return; }
-      if (B[hit.t].drop && vills.some(v => v.carry.amt > 0)) { cmdDeposit(vills, hit); sfx('order'); return; }
+      if (!hit.built || hit.hp < hit.mhp) { ACT.build(vills, hit); if (mil.length) ACT.move(mil, hit.x, (hit.ty + hit.size) * T + 20); mark(hit.x, hit.y); sfx('order'); return; }
+      if (hit.t === 'farm') { ACT.gather(vills, { kind: 'ent', id: hit.id }); sfx('order'); return; }
+      if (B[hit.t].drop && vills.some(v => v.carry.amt > 0)) { ACT.deposit(vills, hit); sfx('order'); return; }
     }
     if (touch) { setSel([hit.id]); sfx('click'); return; }
-    cmdMove(units, wx, wy); mark(wx, wy); return;
+    ACT.move(units, wx, wy); mark(wx, wy); return;
   }
   const tree = treeAt(wx, wy);
-  if (tree && vills.length) { cmdGather(units, { kind: 'tree', tx: tree[0], ty: tree[1] }); mark(tree[0] * T + 16, tree[1] * T + 20, 'rgba(255,224,138,A)'); sfx('order'); return; }
-  cmdMove(units, wx, wy, false); mark(wx, wy); sfx('order');
+  if (tree && vills.length) { ACT.gather(units, { kind: 'tree', tx: tree[0], ty: tree[1] }); mark(tree[0] * T + 16, tree[1] * T + 20, 'rgba(255,224,138,A)'); sfx('order'); return; }
+  ACT.move(units, wx, wy, false); mark(wx, wy); sfx('order');
 }
 function modeClick(w) {
   if (UI.mode === 'amove') {
     const units = selUnits(); const hit = pick(w.x, w.y);
-    if (hit && hit.o !== 0 && hit.k !== 'r') cmdAttack(units, hit); else cmdMove(units, w.x, w.y, true);
+    if (hit && hit.o !== G.me && hit.k !== 'r') ACT.attack(units, hit); else ACT.move(units, w.x, w.y, true);
     mark(w.x, w.y, 'rgba(255,110,90,A)'); sfx('order');
   } else if (UI.mode === 'rally') {
     const b = selBld();
@@ -123,9 +123,9 @@ function modeClick(w) {
       const hit = pick(w.x, w.y), tree = treeAt(w.x, w.y);
       let spec = null;
       if (hit && hit.k === 'r') spec = { kind: 'ent', id: hit.id };
-      else if (hit && hit.k === 'b' && hit.t === 'farm' && hit.o === 0) spec = { kind: 'ent', id: hit.id };
+      else if (hit && hit.k === 'b' && hit.t === 'farm' && hit.o === G.me) spec = { kind: 'ent', id: hit.id };
       else if (tree) spec = { kind: 'tree', tx: tree[0], ty: tree[1] };
-      b.rally = { x: w.x, y: w.y, spec };
+      ACT.rally(b, w.x, w.y, spec);
       mark(w.x, w.y); sfx('order');
     }
   }
@@ -145,22 +145,22 @@ function showConfirm(msg, okLabel) {
 function updateConfirm() {
   if ($('confirm').hidden) return;
   const ok = $('confirm-ok');
-  if (UI.mode === 'place' && UI.ghost) ok.disabled = !canPlace(UI.placeType, 0, UI.ghost.tx, UI.ghost.ty, false) || !afford(G.pl[0], B[UI.placeType].cost);
-  else if (UI.mode === 'power') ok.disabled = !UI.ptarget || !canCast(G.pl[0], UI.powerId);
+  if (UI.mode === 'place' && UI.ghost) ok.disabled = !canPlace(UI.placeType, G.me, UI.ghost.tx, UI.ghost.ty, false) || !afford(G.pl[G.me], B[UI.placeType].cost);
+  else if (UI.mode === 'power') ok.disabled = !UI.ptarget || !canCast(G.pl[G.me], UI.powerId);
   else ok.disabled = false;
 }
 function viewCenterW() { return s2w(VW / 2, (VH - UI.botH + UI.topH) / 2); }
 function startPlace(t) {
-  const pl = G.pl[0];
-  if (t === 'temple' && countB(0, 'temple') >= B.temple.max) { toast('Trois temples au maximum.', 'warn'); sfx('err'); return; }
+  const pl = G.pl[G.me];
+  if (t === 'temple' && countB(G.me, 'temple') >= B.temple.max) { toast('Trois temples au maximum.', 'warn'); sfx('err'); return; }
   if (!afford(pl, B[t].cost)) { toast(missingText(B[t].cost), 'warn'); sfx('err'); return; }
   UI.mode = 'place'; UI.placeType = t;
   const p = (!UI.touch && UI.mouseW) ? UI.mouseW : viewCenterW();
   setGhost(p.x, p.y);
-  if (UI.touch && !canPlace(t, 0, UI.ghost.tx, UI.ghost.ty, false)) {
+  if (UI.touch && !canPlace(t, G.me, UI.ghost.tx, UI.ghost.ty, false)) {
     // premier emplacement libre autour du centre de l'écran
     const g0 = UI.ghost; let best = null;
-    for (let r = 1; r <= 10 && !best; r++) forRing(g0.tx, g0.ty, r, (x, y) => { if (!best && canPlace(t, 0, x, y, true)) best = { tx: x, ty: y }; });
+    for (let r = 1; r <= 10 && !best; r++) forRing(g0.tx, g0.ty, r, (x, y) => { if (!best && canPlace(t, G.me, x, y, true)) best = { tx: x, ty: y }; });
     if (best) { UI.ghost = best; updateConfirm(); }
   }
   showConfirm(UI.touch ? B[t].name + ' : touchez ou glissez l’emplacement' : B[t].name + ' : clic gauche pour bâtir (Maj pour plusieurs)', UI.touch ? 'Construire' : null);
@@ -170,17 +170,15 @@ function setGhost(wx, wy) { const s = B[UI.placeType].size; UI.ghost = { tx: Mat
 function setTarget(wx, wy) { if (UI.mode === 'place') setGhost(wx, wy); else if (UI.mode === 'power') { UI.ptarget = { x: wx, y: wy }; updateConfirm(); } }
 function confirmPlace(keep) {
   const t = UI.placeType, g = UI.ghost; if (!t || !g) return;
-  const pl = G.pl[0];
-  if (!canPlace(t, 0, g.tx, g.ty, false)) { toast('Emplacement impossible : terrain occupé, eau ou zone inexplorée.', 'warn'); sfx('err'); return; }
+  const pl = G.pl[G.me];
+  if (!canPlace(t, G.me, g.tx, g.ty, false)) { toast('Emplacement impossible : terrain occupé, eau ou zone inexplorée.', 'warn'); sfx('err'); return; }
   if (!afford(pl, B[t].cost)) { toast(missingText(B[t].cost), 'warn'); sfx('err'); return; }
-  const b = placeBuilding(pl, t, g.tx, g.ty);
-  const vills = selUnits().filter(u => u.t === 'villager');
-  if (b && vills.length) cmdBuild(vills, b);
-  sfx('place'); mark(b.x, b.y);
+  const b = ACT.place(t, g.tx, g.ty, selUnits().filter(u => u.t === 'villager'));
+  sfx('place'); if (b) mark(b.x, b.y);
   if (!keep || !afford(pl, B[t].cost)) cancelMode();
 }
 function startPower(pid) {
-  const pl = G.pl[0], gp = GP[pid];
+  const pl = G.pl[G.me], gp = GP[pid];
   if (!hasTemple(pl)) { toast('Construisez un temple pour invoquer votre dieu.', 'warn'); sfx('err'); return; }
   const cd = (pl.cd[pid] || 0) - G.time;
   if (cd > 0) { toast(gp.name + ' : encore ' + Math.ceil(cd) + ' s.', 'warn'); sfx('err'); return; }
@@ -193,7 +191,7 @@ function startPower(pid) {
 }
 function confirmPower() {
   if (!UI.ptarget) return;
-  if (castPower(0, UI.powerId, UI.ptarget.x, UI.ptarget.y)) { sfx('cast'); cancelMode(); }
+  if (ACT.power(UI.powerId, UI.ptarget.x, UI.ptarget.y)) { sfx('cast'); cancelMode(); }
   else { toast('Pouvoir indisponible pour le moment.', 'warn'); sfx('err'); }
 }
 function setBoxMode(on) { UI.boxMode = on; $('q-box').setAttribute('aria-pressed', on ? 'true' : 'false'); }
@@ -201,27 +199,26 @@ function setBoxMode(on) { UI.boxMode = on; $('q-box').setAttribute('aria-pressed
 /* ----- Actions des boutons ----- */
 function doAction(a) {
   const i = a.indexOf(':'), k = i < 0 ? a : a.slice(0, i), v = i < 0 ? '' : a.slice(i + 1);
-  const pl = G.pl[0];
+  const pl = G.pl[G.me];
   switch (k) {
     case 'build': startPlace(v); break;
     case 'train': case 'res': {
       const b = selBld(); if (!b) return;
       const cost = k === 'train' ? U[v].cost : R[v].cost;
-      const r = enqueue(b, k === 'train' ? 'u' : 'r', v);
+      const r = ACT.queue(b, k === 'train' ? 'u' : 'r', v);
       if (r === 'cost') { toast(missingText(cost), 'warn'); sfx('err'); }
       else if (r === 'full') { toast('File de production pleine.', 'warn'); sfx('err'); }
       else if (r === 'ok') sfx('click');
       refreshPanels(true); break;
     }
-    case 'unq': { const b = selBld(); if (b) { dequeue(b, +v); sfx('click'); refreshPanels(true); } break; }
-    case 'stop': cmdStop(selUnits()); sfx('click'); break;
+    case 'unq': { const b = selBld(); if (b) { ACT.unq(b, +v); sfx('click'); refreshPanels(true); } break; }
+    case 'stop': ACT.stop(selUnits()); sfx('click'); break;
     case 'amove': UI.mode = 'amove'; showConfirm(UI.touch ? 'Attaque : touchez la destination ou l’ennemi' : 'Attaque : cliquez sur la destination', null); break;
     case 'rally': UI.mode = 'rally'; showConfirm(UI.touch ? 'Ralliement : touchez le point (ou une ressource)' : 'Ralliement : cliquez sur le point (ou une ressource)', null); break;
     case 'del': {
       const b = selBld(); if (!b) return;
       if (UI.demolishArm !== b.id) { UI.demolishArm = b.id; toast('Touchez encore « Démolir » pour confirmer.', 'warn'); refreshPanels(true); return; }
-      if (!b.built) refund(pl, B[b.t].cost, b.prog < 0.05 ? 1 : 0.5);
-      kill(b, null, true); UI.demolishArm = 0; setSel([]); break;
+      ACT.demolish(b); UI.demolishArm = 0; setSel([]); break;
     }
     case 'only': setSel(selUnits().filter(u => u.t === v).map(u => u.id)); break;
     case 'power': startPower(v); break;
@@ -234,7 +231,7 @@ function selKind() {
   const units = selUnits(); const one = selOne();
   if (units.length) return 'u' + (units.some(u => u.t === 'villager') ? 'V' : '') + (units.some(u => u.t !== 'villager') ? 'M' : '');
   if (!one) return 'none';
-  if (one.k === 'b') return one.o === 0 ? 'B' : 'xB';
+  if (one.k === 'b') return one.o === G.me ? 'B' : 'xB';
   return one.k === 'r' ? 'R' : 'xU';
 }
 function selKeyNow() {
@@ -243,8 +240,8 @@ function selKeyNow() {
   return k;
 }
 function cmdKeyNow() {
-  const kind = selKind(), b = selBld(), pl = G.pl[0];
-  return kind + '|' + (b ? b.t + b.built + b.q.length + b.id : '') + '|' + Object.keys(pl.tech).join() + '|' + countB(0, 'temple') + '|' + UI.demolishArm + '|' + (UI.mode || '') + '|' + (b ? b.q.filter(i => i.k === 'r').map(i => i.id).join() : '');
+  const kind = selKind(), b = selBld(), pl = G.pl[G.me];
+  return kind + '|' + (b ? b.t + b.built + b.q.length + b.id : '') + '|' + Object.keys(pl.tech).join() + '|' + countB(G.me, 'temple') + '|' + UI.demolishArm + '|' + (UI.mode || '') + '|' + (b ? b.q.filter(i => i.k === 'r').map(i => i.id).join() : '');
 }
 function refreshPanels(force) {
   if (!G) return;
@@ -264,7 +261,7 @@ function buildSelPanel() {
   if (units.length > 1) {
     const counts = {}; for (const u of units) counts[u.t] = (counts[u.t] || 0) + 1;
     let h = '<div class="multi">';
-    for (const t in counts) h += '<button class="chip" data-a="only:' + t + '" title="Ne garder que : ' + esc(U[t].plural) + '"><img src="' + unitIcon(t, G.pl[0].color, myStyle()) + '" alt=""><b>' + counts[t] + '</b></button>';
+    for (const t in counts) h += '<button class="chip" data-a="only:' + t + '" title="Ne garder que : ' + esc(U[t].plural) + '"><img src="' + unitIcon(t, G.pl[G.me].color, myStyle()) + '" alt=""><b>' + counts[t] + '</b></button>';
     h += '</div><p class="sub">' + units.length + ' unités sélectionnées</p>';
     el.innerHTML = h; return;
   }
@@ -272,13 +269,13 @@ function buildSelPanel() {
   const owner = e.o >= 0 ? G.pl[e.o] : null;
   let name = e.k === 'u' ? U[e.t].name : e.k === 'b' ? B[e.t].name : RES_ENT_NAME[e.t];
   let h = '<div class="one"><img class="por" src="' + portrait(e) + '" alt=""><div class="info">';
-  h += '<div class="nm">' + esc(name) + (owner && e.o !== 0 ? ' <span class="own" style="color:' + owner.color + '">· ' + esc(owner.name) + '</span>' : '') + '</div>';
+  h += '<div class="nm">' + esc(name) + (owner && e.o !== G.me ? ' <span class="own" style="color:' + owner.color + '">· ' + esc(owner.name) + '</span>' : '') + '</div>';
   if (e.k !== 'r') h += '<div class="hp"><i id="sp-hpf"></i><span id="sp-hpt"></span></div>';
   h += '<div class="st" id="sp-st"></div>';
-  if (e.k === 'b' && e.o === 0 && e.q.length) {
+  if (e.k === 'b' && e.o === G.me && e.q.length) {
     h += '<div class="queue">';
     e.q.forEach((it, i) => {
-      const src = it.k === 'u' ? unitIcon(it.id, G.pl[0].color, myStyle()) : glyphIcon(R[it.id].icon);
+      const src = it.k === 'u' ? unitIcon(it.id, G.pl[G.me].color, myStyle()) : glyphIcon(R[it.id].icon);
       h += '<button class="qi" data-a="unq:' + i + '" title="Annuler"><img src="' + src + '" alt="">' + (i === 0 ? '<i class="qp" id="sp-qp"></i>' : '') + '</button>';
     });
     h += '</div>';
@@ -311,9 +308,9 @@ function updateSelPanel() {
         if (d.pop) parts.push('+' + d.pop + ' population');
         if (d.foi && e.o >= 0) parts.push('+' + (d.foi * foiMult(G.pl[e.o]) * 60).toFixed(0) + ' Foi par minute');
         if (d.shoot) parts.push('Tir ' + (d.shoot.atk + (G.pl[e.o].tech.walls ? 3 : 0)) + ', portée ' + d.shoot.range);
-        if (e.t === 'farm') parts.push(e.farmer && G.byId.get(e.farmer) ? 'Cultivée' : 'Libre');
+        if (e.t === 'farm') parts.push(e.farmer && (G.mp || G.byId.get(e.farmer)) ? 'Cultivée' : 'Libre');
         const it = e.q[0];
-        if (it && e.o === 0) parts.unshift((it.blocked ? 'Population maximale : bâtissez des maisons' : (it.k === 'u' ? U[it.id].name : R[it.id].name) + ' ' + Math.floor(it.p * 100) + ' %'));
+        if (it && e.o === G.me) parts.unshift((it.blocked ? 'Population maximale : bâtissez des maisons' : (it.k === 'u' ? U[it.id].name : R[it.id].name) + ' ' + Math.floor(it.p * 100) + ' %'));
         s = parts.join(' · ');
       }
     } else s = Math.ceil(e.amt) + ' ' + (e.t === 'gold' ? 'or' : 'nourriture') + ' restants';
@@ -325,7 +322,7 @@ function cmdBtn(a, img, label, cost, tip, extraCls) {
   return '<button class="cmd ' + (extraCls || '') + '" data-a="' + a + '" data-tip="' + esc(tip || '') + '"' + (cost ? ' data-cost="' + esc(JSON.stringify(cost)) + '"' : '') + '><img src="' + img + '" alt=""><span class="cn">' + esc(label) + '</span>' + (cost ? '<span class="cc">' + costHTML(cost) + '</span>' : '') + '</button>';
 }
 function buildCmdPanel() {
-  const el = $('cmdp'); const units = selUnits(); const pl = G.pl[0]; const sty = myStyle(); let h = '';
+  const el = $('cmdp'); const units = selUnits(); const pl = G.pl[G.me]; const sty = myStyle(); let h = '';
   if (units.length) {
     if (units.some(u => u.t === 'villager')) {
       for (const t of BUILD_LIST) h += cmdBtn('build:' + t, bldIcon(t, sty, pl.color), B[t].name, B[t].cost, B[t].name + ' — ' + B[t].desc, UI.mode === 'place' && UI.placeType === t ? 'on' : '');
@@ -339,7 +336,7 @@ function buildCmdPanel() {
         for (const t of trainable(b)) h += cmdBtn('train:' + t, unitIcon(t, pl.color, sty), U[t].name, U[t].cost, U[t].name + ' — ' + U[t].desc + ' (' + U[t].time + ' s, population ' + U[t].pop + ')');
         for (const r of (B[b.t].research || [])) {
           if (pl.tech[r]) continue;
-          const queued = G.blds.some(x => !x.dead && x.o === 0 && x.q.some(it => it.k === 'r' && it.id === r));
+          const queued = G.blds.some(x => !x.dead && x.o === G.me && x.q.some(it => it.k === 'r' && it.id === r));
           if (queued) continue;
           h += cmdBtn('res:' + r, glyphIcon(R[r].icon), R[r].name, R[r].cost, R[r].name + ' — ' + R[r].desc + ' (' + R[r].time + ' s)');
         }
@@ -351,12 +348,12 @@ function buildCmdPanel() {
   el.innerHTML = h;
 }
 function updateCmdPanel() {
-  const pl = G.pl[0];
+  const pl = G.pl[G.me];
   for (const btn of $('cmdp').children) {
     const c = btn.dataset.cost; if (!c) continue;
     let ok = afford(pl, JSON.parse(c));
     const a = btn.dataset.a;
-    if (a === 'build:temple' && countB(0, 'temple') >= B.temple.max) ok = false;
+    if (a === 'build:temple' && countB(G.me, 'temple') >= B.temple.max) ok = false;
     btn.classList.toggle('na', !ok);
     if (a.startsWith('train:')) {
       const b = selBld(); const n = b ? b.q.filter(it => it.k === 'u' && it.id === a.slice(6)).length : 0;
@@ -367,7 +364,7 @@ function updateCmdPanel() {
   }
 }
 function buildPowers() {
-  const el = $('powers'); const pl = G.pl[0]; let h = '';
+  const el = $('powers'); const pl = G.pl[G.me]; let h = '';
   for (const pid of P[pl.patron].powers) {
     const gp = GP[pid];
     h += '<button class="pw" data-p="' + pid + '" data-tip="' + esc(gp.name + ' — ' + gp.desc + ' Coût : ' + gp.cost + ' Foi, recharge ' + gp.cd + ' s.') + '" aria-label="' + esc(gp.name) + '"><img src="' + glyphIcon(pid) + '" alt=""><span class="pc">' + gp.cost + '</span></button>';
@@ -375,7 +372,7 @@ function buildPowers() {
   el.innerHTML = h;
 }
 function updatePowers() {
-  const pl = G.pl[0]; const temple = hasTemple(pl);
+  const pl = G.pl[G.me]; const temple = hasTemple(pl);
   for (const btn of $('powers').children) {
     const pid = btn.dataset.p, gp = GP[pid], cd = Math.max(0, (pl.cd[pid] || 0) - G.time);
     btn.style.setProperty('--cd', (cd / gp.cd).toFixed(3));
@@ -389,13 +386,13 @@ function syncBars() {
   if (t !== UI.topH || b !== UI.botH) { UI.topH = t; UI.botH = b; document.documentElement.style.setProperty('--topH', t + 'px'); document.documentElement.style.setProperty('--botH', b + 'px'); }
 }
 function hudUpdate() {
-  const pl = G.pl[0];
+  const pl = G.pl[G.me];
   syncBars();
   for (const k of RES_ORDER) { const v = String(Math.floor(pl.res[k])); const el = $('r-' + k); if (el.textContent !== v) el.textContent = v; }
   const pop = pl.popUsed + '/' + pl.popCap; const pe = $('r-pop'); if (pe.textContent !== pop) pe.textContent = pop;
   pe.parentElement.classList.toggle('full', pl.popUsed >= pl.popCap);
   const g = { food: 0, wood: 0, gold: 0 }; let idle = 0;
-  for (const u of G.units) { if (u.dead || u.o !== 0 || u.t !== 'villager') continue; if (u.st === 'gather' && u.lastType) g[u.lastType]++; else if (u.st === 'idle') idle++; }
+  for (const u of G.units) { if (u.dead || u.o !== G.me || u.t !== 'villager') continue; if (u.st === 'gather' && u.lastType) g[u.lastType]++; else if (u.st === 'idle') idle++; }
   for (const k of ['food', 'wood', 'gold']) { const el = $('g-' + k); const v = g[k] ? String(g[k]) : ''; if (el.textContent !== v) el.textContent = v; }
   const ie = $('idle-n'); ie.textContent = idle; ie.hidden = idle === 0; $('q-idle').classList.toggle('alert', idle > 0);
   $('clock').textContent = fmtTime(G.time);
@@ -411,13 +408,13 @@ function hudUpdate() {
   }
 }
 function idleNext() {
-  const idle = G.units.filter(u => !u.dead && u.o === 0 && u.t === 'villager' && u.st === 'idle');
+  const idle = G.units.filter(u => !u.dead && u.o === G.me && u.t === 'villager' && u.st === 'idle');
   if (!idle.length) { toast('Aucun citoyen inactif.', 'info'); return; }
   UI.idleIdx = (UI.idleIdx + 1) % idle.length; const u = idle[UI.idleIdx];
   setSel([u.id]); centerOn(u.x, u.y); sfx('click');
 }
 function selectArmy() {
-  const mil = G.units.filter(u => !u.dead && u.o === 0 && u.t !== 'villager');
+  const mil = G.units.filter(u => !u.dead && u.o === G.me && u.t !== 'villager');
   if (!mil.length) { toast('Vous n’avez pas encore de soldats.', 'info'); return; }
   const now = performance.now();
   setSel(mil.map(u => u.id)); sfx('click');
@@ -521,7 +518,7 @@ function onTap(sx, sy) {
   if (UI.mode === 'place' || UI.mode === 'power') { setTarget(w.x, w.y); return; }
   if (UI.mode === 'amove' || UI.mode === 'rally') { modeClick(w); return; }
   const hit = pick(w.x, w.y), now = performance.now();
-  if (hit && hit.k === 'u' && hit.o === 0 && now - UI.lastTap.t < 340 && UI.lastTap.id === hit.id) { selectSameType(hit); UI.lastTap.t = 0; return; }
+  if (hit && hit.k === 'u' && hit.o === G.me && now - UI.lastTap.t < 340 && UI.lastTap.id === hit.id) { selectSameType(hit); UI.lastTap.t = 0; return; }
   UI.lastTap = { t: now, id: hit ? hit.id : 0 };
   contextAt(w.x, w.y, true, hit);
 }
@@ -550,9 +547,9 @@ function onMouseUp() {
   if (g.k === 'mbox') { const b = UI.box; UI.box = null; boxSelect(b, g.shift); return; }
   if (g.k === 'mdown') {
     const w = s2w(g.sx, g.sy), hit = pick(w.x, w.y), now = performance.now();
-    if (hit && hit.k === 'u' && hit.o === 0 && now - UI.lastTap.t < 340 && UI.lastTap.id === hit.id) { selectSameType(hit); UI.lastTap.t = 0; return; }
+    if (hit && hit.k === 'u' && hit.o === G.me && now - UI.lastTap.t < 340 && UI.lastTap.id === hit.id) { selectSameType(hit); UI.lastTap.t = 0; return; }
     UI.lastTap = { t: now, id: hit ? hit.id : 0 };
-    if (hit && hit.k === 'u' && hit.o === 0 && g.shift) {
+    if (hit && hit.k === 'u' && hit.o === G.me && g.shift) {
       const cur = selUnits().map(u => u.id); const i = cur.indexOf(hit.id);
       if (i >= 0) cur.splice(i, 1); else cur.push(hit.id); setSel(cur);
     } else if (hit) setSel([hit.id]);
@@ -564,7 +561,7 @@ function miniEvent(e) {
   const m = UI.mini; if (!m || !G || !m.k) return;
   const r = $('mini').getBoundingClientRect();
   const x = (e.clientX - r.left - m.ox) / m.k * T, y = (e.clientY - r.top - m.oy) / m.k * T;
-  if (e.button === 2 && selUnits().length) { cmdMove(selUnits(), x, y, false); mark(x, y); return; }
+  if (e.button === 2 && selUnits().length) { ACT.move(selUnits(), x, y, false); mark(x, y); return; }
   centerOn(x, y);
 }
 
@@ -594,8 +591,9 @@ function enterGame() {
   UI.mode = null; UI.box = null; UI.pings = []; MARKS.length = 0; $('confirm').hidden = true; setBoxMode(false);
   layout(); buildPowers(); refreshPanels(true);
   G.paused = false;
+  $('b-speed').hidden = !!G.mp; $('b-chat').hidden = !G.mp; $('chatbar').hidden = true;
   try { UI.hintsOn = !localStorage.getItem('mythomachie.hints'); localStorage.setItem('mythomachie.hints', '1'); } catch (_) { UI.hintsOn = true; }
-  if (G.time > 5) UI.hintsOn = false;
+  if (G.time > 5 || G.mp) UI.hintsOn = false;
   $('b-speed').textContent = '×' + String(G.speed).replace('.', ',');
 }
 function startNewGame(extra) {
@@ -605,35 +603,43 @@ function startNewGame(extra) {
   setupGame(o); prepareRender();
   G.cam.z = VW < 700 ? 1.05 : 1.3;
   enterGame();
-  const city = G.blds.find(b => b.o === 0 && b.t === 'city');
+  const city = G.blds.find(b => b.o === G.me && b.t === 'city');
   if (city) centerOn(city.x, city.y + 40);
   sfx('start');
 }
 function pauseGame() {
-  if (!G || G.over) return;
-  G.paused = true; cancelMode(); hideTip();
+  if (!G || (G.over && !G.mp)) return;
+  G.paused = !G.mp; cancelMode(); hideTip();
   $('pause').hidden = false;
+  $('h-pause').textContent = G.mp ? 'Menu (la partie continue)' : 'Pause';
+  $('b-save').hidden = !!G.mp; $('pause-speed').hidden = !!G.mp;
+  $('b-quit').textContent = G.mp && !G.over ? 'Abandonner et quitter' : 'Quitter vers le menu';
+  $('mp-players').hidden = !G.mp; if (G.mp) $('mp-players').innerHTML = mpPlayersHTML();
   const sp = $('pause').querySelectorAll('[data-speed]'); for (const b of sp) b.setAttribute('aria-pressed', String(+b.dataset.speed === G.speed));
   $('b-sound').textContent = AU.on ? 'Sons : activés' : 'Sons : coupés';
   $('save-msg').textContent = '';
 }
 function resumeGame() { $('pause').hidden = true; if (G) G.paused = false; }
 function quitToMenu() {
-  if (G && !G.over) saveGame(true);
+  if (G && G.mp) { netSend({ t: 'leave' }); NET.want = false; lsSet('mythomachie.enligne', ''); if (NET.ws) try { NET.ws.close(); } catch (_) { } }
+  else if (G && !G.over) saveGame(true);
   $('pause').hidden = true; $('end').hidden = true; $('hud').hidden = true; $('menu').hidden = false;
   G = null; refreshContinue(); layout();
 }
-function showEnd(win) {
-  const pl = G.pl[0];
+function showEnd(win, spectate) {
+  if (!G) return;
   $('end-title').textContent = win ? 'Victoire' : 'Défaite';
+  $('b-watch').hidden = !spectate; $('b-again').textContent = G.mp ? 'Rejouer en ligne' : 'Nouvelle partie';
+  const st = G.mp && NET.endMsg ? NET.endMsg.players : null;
   $('end-title').className = win ? 'win' : 'lose';
   $('end-sub').textContent = win ? 'Les panthéons rivaux sont tombés. Votre dieu règne seul.' : 'Votre peuple est dispersé. Les dieux rivaux se partagent vos terres.';
   let h = '<table><thead><tr><th>Camp</th><th title="Ressources récoltées">Récolte</th><th title="Unités formées">Formées</th><th title="Unités perdues">Perdues</th><th title="Ennemis abattus">Abattus</th><th title="Bâtiments ennemis rasés">Rasés</th></tr></thead><tbody>';
-  for (const p of G.pl) h += '<tr><td><i class="dot" style="background:' + p.color + '"></i>' + esc(p.name) + ' <small>(' + P[p.patron].name + ')</small></td><td>' + Math.floor(p.stats.gathered) + '</td><td>' + p.stats.trained + '</td><td>' + p.stats.lost + '</td><td>' + p.stats.kills + '</td><td>' + p.stats.bKilled + '</td></tr>';
+  for (const p of G.pl) { const s = st ? st[p.i].stats : p.stats; h += '<tr><td><i class="dot" style="background:' + p.color + '"></i>' + esc(p.name) + ' <small>(' + P[p.patron].name + ')</small></td><td>' + Math.floor(s.gathered) + '</td><td>' + s.trained + '</td><td>' + s.lost + '</td><td>' + s.kills + '</td><td>' + s.bKilled + '</td></tr>'; }
   h += '</tbody></table><p class="sub">Durée : ' + fmtTime(G.time) + '</p>';
+  if (G.mp && !st) h = h.replace(/<tbody>.*<\/tbody>/, '<tbody></tbody>') + '<p class="sub">Les scores s’afficheront à la fin de la partie.</p>';
   $('end-stats').innerHTML = h;
   $('end').hidden = false;
-  clearSave();
+  if (!G.mp) clearSave();
   sfx(win ? 'win' : 'lose');
 }
 function refreshContinue() {
@@ -709,7 +715,8 @@ function initUI() {
   $('b-help2').addEventListener('click', () => { UI.helpFrom = 'pause'; $('help').hidden = false; });
   $('b-quit').addEventListener('click', quitToMenu);
   for (const b of $('pause').querySelectorAll('[data-speed]')) b.addEventListener('click', () => { G.speed = +b.dataset.speed; $('b-speed').textContent = '×' + String(G.speed).replace('.', ','); for (const x of $('pause').querySelectorAll('[data-speed]')) x.setAttribute('aria-pressed', String(x === b)); });
-  $('b-again').addEventListener('click', () => { $('end').hidden = true; startNewGame(); });
+  $('b-again').addEventListener('click', () => { $('end').hidden = true; if (G && G.mp) { quitToMenu(); openOnline(); } else startNewGame(); });
+  $('b-watch').addEventListener('click', () => { $('end').hidden = true; });
   $('b-tomenu').addEventListener('click', quitToMenu);
   $('confirm-ok').addEventListener('click', () => { if (UI.mode === 'place') confirmPlace(false); else if (UI.mode === 'power') confirmPower(); });
   $('confirm-no').addEventListener('click', cancelMode);
@@ -746,8 +753,9 @@ function initUI() {
     UI.keys.add(e.code);
     if (e.code === 'Escape') { if (!$('help').hidden) $('help').hidden = true; else if (!$('pause').hidden) resumeGame(); else if (UI.mode) cancelMode(); else if (G.sel.length) setSel([]); else pauseGame(); }
     else if (G.paused) return;
+    else if (e.code === 'Enter' && G.mp) { openChat(); e.preventDefault(); }
     else if (e.code === 'Space') { const us = selUnits(); const one = selOne(); if (us.length) { const c = centroid(us); centerOn(c.x, c.y); } else if (one) centerOn(one.x, one.y); e.preventDefault(); }
-    else if (e.code === 'KeyH') { const c = G.blds.find(b => b.o === 0 && b.t === 'city'); if (c) { setSel([c.id]); centerOn(c.x, c.y); } }
+    else if (e.code === 'KeyH') { const c = G.blds.find(b => b.o === G.me && b.t === 'city'); if (c) { setSel([c.id]); centerOn(c.x, c.y); } }
     else if (e.code === 'Period' || e.code === 'Comma') idleNext();
     else if (e.code === 'KeyP') pauseGame();
     else if (/^Digit[1-5]$/.test(e.code)) {
@@ -764,7 +772,7 @@ function initUI() {
   addEventListener('pagehide', () => { if (G && !G.over) saveGame(true); });
   H.toast = toast; H.ping = ping; H.sfx = sfx; H.sfxAt = sfxAt;
   H.onSelChange = () => refreshPanels(true);
-  H.onEnd = win => { cancelMode(); setTimeout(() => { if (G && G.over) showEnd(win); }, 1800); };
+  H.onEnd = win => { if (G && G.mp) return; cancelMode(); setTimeout(() => { if (G && G.over) showEnd(win); }, 1800); };
   try { AU.on = localStorage.getItem('mythomachie.sound') !== '0'; } catch (_) { }
   layout();
 }
@@ -782,5 +790,5 @@ function uiFrame(dt) {
   UI.miniT -= dt;
   if (UI.miniT <= 0) { UI.miniT = 0.25; drawMini(); }
   G.autoT -= dt;
-  if (G.autoT <= 0 && !G.over) { G.autoT = 45; saveGame(true); }
+  if (G.autoT <= 0 && !G.over && !G.mp) { G.autoT = 45; saveGame(true); }
 }

@@ -15,7 +15,7 @@ function computeTreeVars() {
 function setupGame(opts) {
   G = newState(opts);
   const size = MAPS[opts.map].size; G.W = size; G.H = size;
-  const W = size, H = size, N = W * H, nP = 1 + opts.ais;
+  const W = size, H = size, N = W * H, nP = opts.players ? opts.players.length : 1 + opts.ais;
   const seed = opts.seed >>> 0; const r = mulberry32(seed);
   G.ter = new Uint8Array(N); G.tree = new Float32Array(N); G.occ = new Int32Array(N); G.blk = new Uint8Array(N);
   G.stump = new Uint8Array(N); G.ex = new Uint8Array(N); G.vis = new Uint8Array(N);
@@ -24,7 +24,12 @@ function setupGame(opts) {
   const m = size <= 48 ? 8 : 10;
   const corners = [[m, m], [W - 1 - m, H - 1 - m], [W - 1 - m, m], [m, H - 1 - m]];
   let order;
-  if (nP === 2) order = r() < 0.5 ? [0, 1] : [2, 3];
+  const teams = opts.players ? opts.players.map(p => p.team) : null;
+  if (teams && new Set(teams).size < nP) {
+    // alliés du même côté : gauche (haut-gauche, bas-gauche) puis droite
+    const seq = r() < 0.5 ? [0, 3, 2, 1] : [2, 1, 0, 3], byTeam = teams.map((t, i) => i).sort((a, b) => teams[a] - teams[b]);
+    order = new Array(nP); byTeam.forEach((pi, k) => { order[pi] = seq[k]; });
+  } else if (nP === 2) order = r() < 0.5 ? [0, 1] : [2, 3];
   else order = shuffle([0, 1, 2, 3], r).slice(0, nP);
   const starts = order.map(k => [corners[k][0] + Math.floor(r() * 3) - 1, corners[k][1] + Math.floor(r() * 3) - 1]);
   G.starts = starts;
@@ -69,13 +74,16 @@ function setupGame(opts) {
 
   // Joueurs
   const names = { zeus: 'Olympe', odin: 'Asgard', ra: 'Héliopolis' };
-  G.pl.push(makePlayer(0, opts.patron, false, opts.diff, 'Vous'));
-  const pool = shuffle(PATRONS.filter(p => p !== opts.patron), r);
-  const used = {};
-  for (let i = 1; i < nP; i++) {
-    const pat = i - 1 < pool.length ? pool[i - 1] : PATRONS[Math.floor(r() * 3)];
-    used[pat] = (used[pat] || 0) + 1;
-    G.pl.push(makePlayer(i, pat, true, opts.diff, names[pat] + (used[pat] > 1 || pat === opts.patron ? ' II' : '')));
+  if (opts.players) opts.players.forEach((p, i) => G.pl.push(makePlayer(i, P[p.patron] ? p.patron : 'zeus', !!p.ai, opts.diff, String(p.name || ('Joueur ' + (i + 1))).slice(0, 20), p.team)));
+  else {
+    G.pl.push(makePlayer(0, opts.patron, false, opts.diff, 'Vous'));
+    const pool = shuffle(PATRONS.filter(p => p !== opts.patron), r);
+    const used = {};
+    for (let i = 1; i < nP; i++) {
+      const pat = i - 1 < pool.length ? pool[i - 1] : PATRONS[Math.floor(r() * 3)];
+      used[pat] = (used[pat] || 0) + 1;
+      G.pl.push(makePlayer(i, pat, true, opts.diff, names[pat] + (used[pat] > 1 || pat === opts.patron ? ' II' : '')));
+    }
   }
 
   // Ressources de chaque camp

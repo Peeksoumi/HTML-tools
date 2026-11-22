@@ -9,11 +9,12 @@ function newState(opts) {
     pl: [], ai: [], proj: [], fx: [], parts: [], zones: [], timers: [], pathQ: [],
     sel: [], speed: 1, paused: false, over: false, fogT: 0, vicT: 1, dirty: false, autoT: 45,
     hints: 0, groups: {}, cam: { x: 0, y: 0, z: 1 }, revealAll: false, fogDirty: true,
+    me: 0, mp: false, // me : joueur local (-1 sur le serveur) ; mp : partie en ligne
   };
 }
-function makePlayer(i, patron, ai, diff, name) {
+function makePlayer(i, patron, ai, diff, name, team) {
   return {
-    i, patron, ai, diff, name, color: TEAM[i], res: { food: 300, wood: 250, gold: 150, foi: 0 }, tech: {}, cd: {},
+    i, patron, ai, diff, name, team: team == null ? i : team, color: TEAM[i], res: { food: 300, wood: 250, gold: 150, foi: 0 }, tech: {}, cd: {},
     defeated: false, popUsed: 0, popCap: 0, alertT: -99,
     stats: { gathered: 0, trained: 0, lost: 0, kills: 0, bBuilt: 0, bLost: 0, bKilled: 0 },
   };
@@ -187,7 +188,7 @@ function unitsNear(x, y, r, fn) {
     }
   }
 }
-function isEnemy(a, b) { return a !== b && a >= 0 && b >= 0; }
+function isEnemy(a, b) { return a !== b && a >= 0 && b >= 0 && G.pl[a].team !== G.pl[b].team; }
 
 /* ----- Production ----- */
 function enqueue(b, k, id) {
@@ -213,7 +214,7 @@ function canPlace(t, o, tx, ty, strict) {
   for (let y = ty; y < ty + s; y++) for (let x = tx; x < tx + s; x++) {
     const i = idx(x, y);
     if (G.ter[i] === 1 || G.tree[i] > 0 || G.occ[i]) return false;
-    if (o === 0 && !G.ex[i]) return false;
+    if (o === G.me && !G.ex[i]) return false;
   }
   if (strict) { // l'IA laisse un couloir libre autour de ses bâtiments
     for (let y = ty - 1; y <= ty + s; y++) for (let x = tx - 1; x <= tx + s; x++) {

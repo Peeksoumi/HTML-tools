@@ -210,7 +210,7 @@ function aiPickTarget(ai, pl, x, y) {
   for (const b of G.blds) {
     if (b.dead || !isEnemy(pl.i, b.o) || G.pl[b.o].defeated) continue;
     let d = Math.hypot(b.x - x, b.y - y);
-    if (b.o === 0) d *= 0.8;
+    if (!G.pl[b.o].ai) d *= 0.8;
     if (b.t === 'tower') d *= 1.25;
     if (d < bd) { bd = d; best = b; }
   }
