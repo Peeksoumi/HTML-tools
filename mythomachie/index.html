@@ -141,8 +141,7 @@ button.toast { cursor: pointer; text-decoration: underline dotted rgba(255,255,2
 
 /* ----- Écrans ----- */
 .screen { position: absolute; inset: 0; overflow: auto; -webkit-overflow-scrolling: touch; -webkit-user-select: text; user-select: text; }
-#menu { background: var(--night); }
-#sky { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+#menu { background: var(--night) center / cover no-repeat; }
 .menu-inner { position: relative; max-width: 1060px; margin: 0 auto; display: flex; flex-direction: column; gap: 26px;
   padding: calc(env(safe-area-inset-top, 0px) + clamp(28px, 7vh, 72px)) calc(env(safe-area-inset-right, 0px) + 20px) calc(env(safe-area-inset-bottom, 0px) + 36px) calc(env(safe-area-inset-left, 0px) + 20px); }
 .hero { text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: center; }
@@ -294,7 +293,6 @@ td small { color: var(--mist); }
   </div>
 
   <section id="menu" class="screen">
-    <canvas id="sky" aria-hidden="true"></canvas>
     <div class="menu-inner">
       <nav class="toplinks" aria-label="Liens de la page">
         <a href="https://github.com/Peeksoumi/HTML-tools/issues/new?title=%5Bmythomachie%5D%20&amp;body=Outil%20concern%C3%A9%20%3A%20mythomachie%20(http%3A%2F%2F141.227.151.70%3A8080%2Fmythomachie%2F)%0A%0A**Ma%20suggestion%20ou%20le%20bug%20rencontr%C3%A9%20%3A**%0A%0A" target="_blank" rel="noopener">💡 Proposer une amélioration</a>
@@ -3257,6 +3255,8 @@ function refreshFog() {
   for (let i = 0; i < vis.length; i++) { const o = i * 4; d[o] = 6; d[o + 1] = 8; d[o + 2] = 20; d[o + 3] = vis[i] ? 0 : ex[i] ? 118 : 255; }
   G.fogCtx.putImageData(G.fogImg, 0, 0);
 }
+/* Libère sans attendre la mémoire graphique d'une partie (utile sur téléphone) */
+function freeRender(g) { if (g) for (const k of ['terCv', 'fogCv', 'miniCv']) if (g[k]) { g[k].width = g[k].height = 0; g[k] = null; } }
 function prepareRender() {
   buildTerrain(); buildMini(); buildFog();
   H.onTreeGone = (tx, ty) => { if (!G.miniCtx) return; const c = MINI_COL[G.ter[idx(tx, ty)]]; G.miniCtx.fillStyle = 'rgb(' + c.join(',') + ')'; G.miniCtx.fillRect(tx, ty, 1, 1); };
@@ -4142,7 +4142,8 @@ function miniEvent(e) {
 function layout() {
   DPR = PERF.low ? 1 : Math.min(window.devicePixelRatio || 1, 2);
   VW = window.innerWidth; VH = window.innerHeight;
-  if (CV) { CV.width = Math.round(VW * DPR); CV.height = Math.round(VH * DPR); }
+  if (CV) { const cw = Math.round(VW * DPR), ch = Math.round(VH * DPR); if (CV.width !== cw || CV.height !== ch) { CV.width = cw; CV.height = ch; } }
+  if (!$('menu').hidden) applySky();
   const top = $('top'), bot = $('bottom');
   UI.topH = top && !$('hud').hidden ? top.offsetHeight : 0;
   UI.botH = bot && !$('hud').hidden ? bot.offsetHeight : 0;
@@ -4197,7 +4198,7 @@ function quitToMenu() {
   if (G && G.mp) { netSend({ t: 'leave' }); NET.want = false; lsSet('mythomachie.enligne', ''); if (NET.ws) try { NET.ws.close(); } catch (_) { } }
   else if (G && !G.over) saveGame(true);
   $('pause').hidden = true; $('end').hidden = true; $('hud').hidden = true; $('menu').hidden = false;
-  G = null; refreshContinue(); layout();
+  freeRender(G); G = null; refreshContinue(); layout();
 }
 function showEnd(win, spectate) {
   if (!G) return;
@@ -4235,31 +4236,35 @@ function syncMenu() {
 }
 
 /* ----- Ciel du menu ----- */
-const SKY = { stars: [], links: [], t0: 0 };
+const SKY = { stars: [], links: [], w: 0, h: 0 };
 function initSky() {
   const r = mulberry32(20261121);
   SKY.stars = []; for (let i = 0; i < 160; i++) SKY.stars.push({ x: r(), y: r() * 0.9, s: r() * 1.4 + 0.3, p: r() * TAU });
   SKY.links = [];
   const groups = [[0.12, 0.18], [0.8, 0.14], [0.68, 0.62], [0.2, 0.66]];
   for (const [gx, gy] of groups) { const pts = []; for (let k = 0; k < 6; k++) pts.push({ x: gx + (r() - 0.5) * 0.16, y: gy + (r() - 0.5) * 0.18 }); SKY.links.push(pts); }
+  applySky();
 }
-function drawSky(now) {
-  const cv = $('sky'); if (!cv || $('menu').hidden) return;
-  const w = cv.clientWidth, h = cv.clientHeight, d = Math.min(devicePixelRatio || 1, 2);
-  if (cv.width !== Math.round(w * d) || cv.height !== Math.round(h * d)) { cv.width = Math.round(w * d); cv.height = Math.round(h * d); }
-  const c = cv.getContext('2d'); c.setTransform(d, 0, 0, d, 0, 0);
-  const g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#070a1c'); g.addColorStop(0.55, '#121a4a'); g.addColorStop(1, '#2a2250');
-  c.fillStyle = g; c.fillRect(0, 0, w, h);
-  const t = REDUCED ? 0 : now / 1000;
-  for (const s of SKY.stars) { c.globalAlpha = 0.45 + 0.4 * Math.sin(t * 1.3 + s.p); c.fillStyle = '#f3e9c8'; c.beginPath(); c.arc(s.x * w, s.y * h, s.s, 0, TAU); c.fill(); }
-  c.globalAlpha = 1; c.strokeStyle = 'rgba(217,181,82,0.22)'; c.lineWidth = 1;
-  for (const pts of SKY.links) { c.beginPath(); pts.forEach((p, i) => { const x = p.x * w + Math.sin(t * 0.05 + i) * 2, y = p.y * h; if (i) c.lineTo(x, y); else c.moveTo(x, y); }); c.stroke(); for (const p of pts) { c.fillStyle = 'rgba(243,221,146,0.9)'; c.beginPath(); c.arc(p.x * w, p.y * h, 1.8, 0, TAU); c.fill(); } }
-  const hz = h * 0.82; c.fillStyle = 'rgba(5,7,18,0.85)';
-  c.beginPath(); c.moveTo(0, h); c.lineTo(0, hz);
-  for (let x = 0; x <= w; x += 24) c.lineTo(x, hz - Math.abs(Math.sin(x * 0.006)) * 38 - Math.sin(x * 0.021) * 10);
-  c.lineTo(w, h); c.closePath(); c.fill();
+/* Ciel du menu : une image fixe (SVG en fond de #menu), refaite seulement quand la taille de l'écran change.
+   Pas de canevas redessiné en continu : certains Chrome Android affichaient alors le menu en clignotant. */
+function applySky() {
+  const m = $('menu'), w = Math.round(innerWidth), h = Math.round(innerHeight);
+  if (!m || !SKY.stars.length || (SKY.w === w && SKY.h === h)) return;
+  SKY.w = w; SKY.h = h;
+  const f = n => n.toFixed(1);
+  let v = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="xMidYMid slice">' +
+    '<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#070a1c"/><stop offset=".55" stop-color="#121a4a"/><stop offset="1" stop-color="#2a2250"/></linearGradient></defs>' +
+    '<rect width="' + w + '" height="' + h + '" fill="url(#g)"/><g fill="#f3e9c8">';
+  for (const st of SKY.stars) v += '<circle cx="' + f(st.x * w) + '" cy="' + f(st.y * h) + '" r="' + f(st.s) + '" fill-opacity="' + (0.45 + 0.4 * Math.sin(st.p)).toFixed(2) + '"/>';
+  v += '</g><g fill="none" stroke="#d9b552" stroke-opacity="0.22">';
+  for (const pts of SKY.links) v += '<polyline points="' + pts.map(p => f(p.x * w) + ',' + f(p.y * h)).join(' ') + '"/>';
+  v += '</g><g fill="#f3dd92" fill-opacity="0.9">';
+  for (const pts of SKY.links) for (const p of pts) v += '<circle cx="' + f(p.x * w) + '" cy="' + f(p.y * h) + '" r="1.8"/>';
+  const hz = h * 0.82; let d = 'M0 ' + h + 'L0 ' + f(hz);
+  for (let x = 0; x <= w; x += 24) d += 'L' + x + ' ' + f(hz - Math.abs(Math.sin(x * 0.006)) * 38 - Math.sin(x * 0.021) * 10);
+  v += '</g><path d="' + d + 'L' + w + ' ' + h + 'Z" fill="#050712" fill-opacity="0.85"/></svg>';
+  m.style.backgroundImage = 'url("data:image/svg+xml,' + encodeURIComponent(v) + '")';
 }
-const REDUCED = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* ----- Initialisation ----- */
 function initUI() {
@@ -4514,7 +4519,7 @@ function frame(now) {
     // qualité adaptative : si l'appareil peine, on passe en résolution 1x
     if (!G.paused && !PERF.low) { PERF.acc += dt; PERF.n++; if (PERF.acc > 3) { if (PERF.acc / PERF.n > 0.034 && DPR > 1) { PERF.low = true; layout(); } PERF.acc = 0; PERF.n = 0; } }
     uiFrame(dt); render();
-  } else drawSky(now);
+  }
 }
 function hotBoot() {
   const hot = window.claude && window.claude.hot;
@@ -4588,7 +4593,7 @@ function netWake() {
   if (!NET.ws || NET.ws.readyState > 1) { NET.retry = 0; netConnect(); return; }
   if (NET.ws.readyState !== 1) return;
   const t0 = performance.now(); netSend({ t: 'ping', k: 1 });
-  setTimeout(() => { if (NET.ws && NET.ws.readyState === 1 && NET.lastMsg < t0) netDrop(); }, 4000);
+  setTimeout(() => { if (performance.now() - t0 > 11000) return; if (NET.ws && NET.ws.readyState === 1 && NET.lastMsg < t0) netDrop(); }, 8000);
 }
 function netSend(o) { if (NET.ws && NET.ws.readyState === 1) { NET.ws.send(JSON.stringify(o)); return true; } return false; }
 function netCmd(c) { if (!netSend({ t: 'c', c })) toast('Connexion perdue : ordre non transmis.', 'warn'); }
@@ -4601,6 +4606,7 @@ function netOnMessage(m) {
       break;
     case 'rooms': // le serveur nous considère hors salon
       NET.rooms = m.rooms;
+      if (G && G.mp && !G.over) { mpLost('Cette partie n’existe plus sur le serveur (abandonnée ou serveur relancé).'); break; }
       if (!(G && G.mp)) lsSet('mythomachie.enligne', '');
       if (NET.room) { mpMsg('Le salon ' + NET.room.code + ' n’existe plus : créez-en un autre.'); NET.room = null; }
       renderOnline(); break;
@@ -4626,9 +4632,25 @@ function netOnMessage(m) {
     case 'chat': chatToast(m); break;
   }
 }
+/* La partie en ligne n'existe plus côté serveur : retour à l'écran en ligne, connexion gardée */
+function mpLost(msg) {
+  $('pause').hidden = true; $('end').hidden = true; $('hud').hidden = true; $('menu').hidden = false;
+  freeRender(G); G = null; refreshContinue(); layout();
+  lsSet('mythomachie.enligne', '');
+  openOnline(); mpMsg(msg);
+}
 function mpBegin(m) {
-  const keep = G && G.mp && G.terCv ? Object.assign({}, G.cam) : null;
-  netClientStart(m); prepareRender();
+  const old = G && G.mp && G.terCv ? G : null;
+  const keep = old ? Object.assign({}, old.cam) : null;
+  // Reprise de la même partie (reconnexion) : on garde le terrain déjà dessiné au lieu de tout refaire
+  const same = old && old.opts.seed === m.opts.seed && old.W === m.W && old.H === m.H && old.me === m.me;
+  netClientStart(m);
+  if (same) {
+    for (const k of ['terCv', 'terCtx', 'terSc', 'wdepth', 'miniCv', 'miniCtx', 'fogCv', 'fogCtx', 'fogImg']) G[k] = old[k];
+    G.fogDirty = true;
+    for (let i = 0; i < G.W * G.H; i++) if (old.tree[i] > 0 && !(G.tree[i] > 0)) H.onTreeGone(i % G.W, (i / G.W) | 0); // arbres coupés pendant la coupure
+  }
+  else { freeRender(old); prepareRender(); }
   $('online').hidden = true; $('menu').hidden = true;
   G.cam.z = VW < 700 ? 1.05 : 1.3;
   NET.room = null; NET.wasDefeated = false; NET.endMsg = null;
@@ -4785,7 +4807,14 @@ function initNetUI() {
   addEventListener('hashchange', joinFromHash); // lien d'invitation ouvert dans un onglet où le jeu est déjà affiché
   document.addEventListener('visibilitychange', () => { if (!document.hidden) netWake(); });
   addEventListener('online', netWake); addEventListener('pageshow', e => { if (e.persisted) netWake(); });
-  setInterval(() => { if (G && G.mp && !G.over && !document.hidden && NET.ws && NET.ws.readyState === 1 && performance.now() - NET.lastMsg > 8000) netDrop(); }, 2000);
+  // En partie, 10 s sans nouvelles : ping ; 10 s de plus sans réponse : nouvelle connexion. Si le téléphone a été bloqué, on attend.
+  let wd = performance.now();
+  setInterval(() => {
+    const now = performance.now(), late = now - wd > 4000; wd = now;
+    if (late || !(G && G.mp && !G.over) || document.hidden || !NET.ws || NET.ws.readyState !== 1 || now - NET.lastMsg < 10000) { NET.pingAt = 0; return; }
+    if (!NET.pingAt) { NET.pingAt = now; netSend({ t: 'ping', k: 2 }); }
+    else if (now - NET.pingAt > 10000 && NET.lastMsg < NET.pingAt) { NET.pingAt = 0; netDrop(); }
+  }, 2000);
 }
 /* Lien d'invitation …/mythomachie/#CODE : ouvre l'écran en ligne et rejoint le salon. */
 function joinFromHash() {

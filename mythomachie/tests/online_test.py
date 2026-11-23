@@ -121,6 +121,9 @@ async def main():
             if not back:
                 print("diagnostic Bob :", await pb.evaluate("({ net: NET.state, room: NET.room && NET.room.code, flag: localStorage.getItem('mythomachie.enligne'), g: !!G, mp: G && G.mp, me: G && G.me, blds: G && G.blds.filter(b => b.o === G.me).map(b => b.t), online: !document.getElementById('online').hidden, msg: document.getElementById('mp-msg').textContent })"))
             ok(back, "après rechargement, Bob reprend sa partie")
+            # Coupure réseau d'Alice : la reprise garde le terrain déjà dessiné (pas de reconstruction sur téléphone)
+            await pa.evaluate("window.__ter = G.terCv; netDrop()")
+            ok(await until(pa, "NET.state === 'on' && G && G.mp && G.netTime > 0 && G.terCv === window.__ter && !G.netFirst", 8000), "après une coupure, Alice reprend sa partie sans redessiner le terrain")
             n1 = await pa.evaluate("G.netTime"); await asyncio.sleep(2); n2 = await pa.evaluate("G.netTime")
             ok(await pa.evaluate("NET.state") == "on" and n2 - n1 > 1.5, "la partie continue chez Alice (horloge du serveur %.1f → %.1f s)" % (n1, n2))
             # Carla crée un salon, puis le serveur est relancé (salons perdus) : elle en est avertie
@@ -129,6 +132,8 @@ async def main():
             srv.terminate(); srv.wait(); old_log = srv.stdout.read().decode(errors="replace"); srv = start_server()
             ok(await until(pc, "!NET.room && NET.state === 'on' && document.getElementById('mp-msg').textContent.includes('existe plus')", 15000),
                "après relance du serveur, Carla apprend que son salon n’existe plus")
+            ok(await until(pa, "!G && !document.getElementById('online').hidden && document.getElementById('mp-msg').textContent.includes('n’existe plus')", 15000),
+               "Alice, en pleine partie perdue par le serveur, revient à l’écran en ligne au lieu de rester figée")
             ok(not errs, "aucune erreur dans les pages" + (" : " + " | ".join(errs) if errs else ""))
             await b.close()
     finally:

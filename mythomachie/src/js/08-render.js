@@ -81,6 +81,8 @@ function refreshFog() {
   for (let i = 0; i < vis.length; i++) { const o = i * 4; d[o] = 6; d[o + 1] = 8; d[o + 2] = 20; d[o + 3] = vis[i] ? 0 : ex[i] ? 118 : 255; }
   G.fogCtx.putImageData(G.fogImg, 0, 0);
 }
+/* Libère sans attendre la mémoire graphique d'une partie (utile sur téléphone) */
+function freeRender(g) { if (g) for (const k of ['terCv', 'fogCv', 'miniCv']) if (g[k]) { g[k].width = g[k].height = 0; g[k] = null; } }
 function prepareRender() {
   buildTerrain(); buildMini(); buildFog();
   H.onTreeGone = (tx, ty) => { if (!G.miniCtx) return; const c = MINI_COL[G.ter[idx(tx, ty)]]; G.miniCtx.fillStyle = 'rgb(' + c.join(',') + ')'; G.miniCtx.fillRect(tx, ty, 1, 1); };
