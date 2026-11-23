@@ -32,6 +32,20 @@ emoji sur une pastille colorée aux coins arrondis. Utiliser la même icône et 
 - À vérifier avant chaque commit : `grep -c 'rel="icon"' <dossier>/index.html` doit donner 1.
 - Tout nouvel outil ajoute aussi sa tuile (icône + nom court) dans la grille de raccourcis `.launcher` en haut de `index.html` (style écran d'accueil Android).
 
+## Règle obligatoire : page installable (PWA) sur CHAQUE page
+Chrome Android ne propose « Installer » que si la page ouverte déclare le manifeste ET que le service worker est enregistré. Un utilisateur qui arrive
+directement sur un outil (sans passer par l'accueil) obtient sinon « Impossible d'installer cette appli ». Toute page HTML (accueil comprise) contient donc,
+dans son `<head>`, juste après `<link rel="icon" …>` :
+
+```html
+<link rel="manifest" href="/manifest.json">
+<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(function(){});</script>
+```
+
+- Chemins absolus (`/manifest.json`, `/sw.js`) : le manifeste (`start_url` et `scope` = `/`) et le service worker sont à la racine du site.
+- Pages générées : modifier le gabarit (`src/template.html` ou `build.py`) puis relancer `build.py`. Dans `mythomachie/build.py` (f-string), écrire `{{}}` pour `{}`, et ne pas marquer ces deux lignes `data-m` (elles ne doivent pas être dans la page téléchargée).
+- À vérifier avant chaque commit : `grep -c 'rel="manifest"' <dossier>/index.html` doit donner 1.
+
 ## Règle : bouton « Télécharger la page » si l'outil est utilisable seul
 Quand un outil fonctionne de façon autonome (tout le traitement se fait dans le navigateur, sans serveur ni API maison), la page doit proposer
 un bouton pour télécharger le fichier HTML et l'utiliser hors du site, à côté du lien « Proposer une amélioration » :
