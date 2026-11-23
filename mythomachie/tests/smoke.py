@@ -23,6 +23,9 @@ async def main():
         errs = []
         pg.on("pageerror", lambda e: errs.append(str(e)))
         await pg.goto(page.as_uri())
+        # menu : ciel en image fixe (aucun canevas redessiné en continu derrière le menu)
+        sky = await pg.evaluate("[getComputedStyle(document.getElementById('menu')).backgroundImage.startsWith('url(\"data:image/svg+xml'), !!document.getElementById('sky')]")
+        assert sky == [True, False], ("ciel du menu", sky)
         await pg.click("#b-play")
         await pg.wait_for_timeout(500)
         # un clic sur un citoyen le sélectionne

@@ -146,7 +146,7 @@ function frame(now) {
     // qualité adaptative : si l'appareil peine, on passe en résolution 1x
     if (!G.paused && !PERF.low) { PERF.acc += dt; PERF.n++; if (PERF.acc > 3) { if (PERF.acc / PERF.n > 0.034 && DPR > 1) { PERF.low = true; layout(); } PERF.acc = 0; PERF.n = 0; } }
     uiFrame(dt); render();
-  } else drawSky(now);
+  }
 }
 function hotBoot() {
   const hot = window.claude && window.claude.hot;

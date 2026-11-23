@@ -597,7 +597,8 @@ function miniEvent(e) {
 function layout() {
   DPR = PERF.low ? 1 : Math.min(window.devicePixelRatio || 1, 2);
   VW = window.innerWidth; VH = window.innerHeight;
-  if (CV) { CV.width = Math.round(VW * DPR); CV.height = Math.round(VH * DPR); }
+  if (CV) { const cw = Math.round(VW * DPR), ch = Math.round(VH * DPR); if (CV.width !== cw || CV.height !== ch) { CV.width = cw; CV.height = ch; } }
+  if (!$('menu').hidden) applySky();
   const top = $('top'), bot = $('bottom');
   UI.topH = top && !$('hud').hidden ? top.offsetHeight : 0;
   UI.botH = bot && !$('hud').hidden ? bot.offsetHeight : 0;
@@ -652,7 +653,7 @@ function quitToMenu() {
   if (G && G.mp) { netSend({ t: 'leave' }); NET.want = false; lsSet('mythomachie.enligne', ''); if (NET.ws) try { NET.ws.close(); } catch (_) { } }
   else if (G && !G.over) saveGame(true);
   $('pause').hidden = true; $('end').hidden = true; $('hud').hidden = true; $('menu').hidden = false;
-  G = null; refreshContinue(); layout();
+  freeRender(G); G = null; refreshContinue(); layout();
 }
 function showEnd(win, spectate) {
   if (!G) return;
@@ -690,31 +691,35 @@ function syncMenu() {
 }
 
 /* ----- Ciel du menu ----- */
-const SKY = { stars: [], links: [], t0: 0 };
+const SKY = { stars: [], links: [], w: 0, h: 0 };
 function initSky() {
   const r = mulberry32(20261121);
   SKY.stars = []; for (let i = 0; i < 160; i++) SKY.stars.push({ x: r(), y: r() * 0.9, s: r() * 1.4 + 0.3, p: r() * TAU });
   SKY.links = [];
   const groups = [[0.12, 0.18], [0.8, 0.14], [0.68, 0.62], [0.2, 0.66]];
   for (const [gx, gy] of groups) { const pts = []; for (let k = 0; k < 6; k++) pts.push({ x: gx + (r() - 0.5) * 0.16, y: gy + (r() - 0.5) * 0.18 }); SKY.links.push(pts); }
+  applySky();
 }
-function drawSky(now) {
-  const cv = $('sky'); if (!cv || $('menu').hidden) return;
-  const w = cv.clientWidth, h = cv.clientHeight, d = Math.min(devicePixelRatio || 1, 2);
-  if (cv.width !== Math.round(w * d) || cv.height !== Math.round(h * d)) { cv.width = Math.round(w * d); cv.height = Math.round(h * d); }
-  const c = cv.getContext('2d'); c.setTransform(d, 0, 0, d, 0, 0);
-  const g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#070a1c'); g.addColorStop(0.55, '#121a4a'); g.addColorStop(1, '#2a2250');
-  c.fillStyle = g; c.fillRect(0, 0, w, h);
-  const t = REDUCED ? 0 : now / 1000;
-  for (const s of SKY.stars) { c.globalAlpha = 0.45 + 0.4 * Math.sin(t * 1.3 + s.p); c.fillStyle = '#f3e9c8'; c.beginPath(); c.arc(s.x * w, s.y * h, s.s, 0, TAU); c.fill(); }
-  c.globalAlpha = 1; c.strokeStyle = 'rgba(217,181,82,0.22)'; c.lineWidth = 1;
-  for (const pts of SKY.links) { c.beginPath(); pts.forEach((p, i) => { const x = p.x * w + Math.sin(t * 0.05 + i) * 2, y = p.y * h; if (i) c.lineTo(x, y); else c.moveTo(x, y); }); c.stroke(); for (const p of pts) { c.fillStyle = 'rgba(243,221,146,0.9)'; c.beginPath(); c.arc(p.x * w, p.y * h, 1.8, 0, TAU); c.fill(); } }
-  const hz = h * 0.82; c.fillStyle = 'rgba(5,7,18,0.85)';
-  c.beginPath(); c.moveTo(0, h); c.lineTo(0, hz);
-  for (let x = 0; x <= w; x += 24) c.lineTo(x, hz - Math.abs(Math.sin(x * 0.006)) * 38 - Math.sin(x * 0.021) * 10);
-  c.lineTo(w, h); c.closePath(); c.fill();
+/* Ciel du menu : une image fixe (SVG en fond de #menu), refaite seulement quand la taille de l'écran change.
+   Pas de canevas redessiné en continu : certains Chrome Android affichaient alors le menu en clignotant. */
+function applySky() {
+  const m = $('menu'), w = Math.round(innerWidth), h = Math.round(innerHeight);
+  if (!m || !SKY.stars.length || (SKY.w === w && SKY.h === h)) return;
+  SKY.w = w; SKY.h = h;
+  const f = n => n.toFixed(1);
+  let v = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="xMidYMid slice">' +
+    '<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#070a1c"/><stop offset=".55" stop-color="#121a4a"/><stop offset="1" stop-color="#2a2250"/></linearGradient></defs>' +
+    '<rect width="' + w + '" height="' + h + '" fill="url(#g)"/><g fill="#f3e9c8">';
+  for (const st of SKY.stars) v += '<circle cx="' + f(st.x * w) + '" cy="' + f(st.y * h) + '" r="' + f(st.s) + '" fill-opacity="' + (0.45 + 0.4 * Math.sin(st.p)).toFixed(2) + '"/>';
+  v += '</g><g fill="none" stroke="#d9b552" stroke-opacity="0.22">';
+  for (const pts of SKY.links) v += '<polyline points="' + pts.map(p => f(p.x * w) + ',' + f(p.y * h)).join(' ') + '"/>';
+  v += '</g><g fill="#f3dd92" fill-opacity="0.9">';
+  for (const pts of SKY.links) for (const p of pts) v += '<circle cx="' + f(p.x * w) + '" cy="' + f(p.y * h) + '" r="1.8"/>';
+  const hz = h * 0.82; let d = 'M0 ' + h + 'L0 ' + f(hz);
+  for (let x = 0; x <= w; x += 24) d += 'L' + x + ' ' + f(hz - Math.abs(Math.sin(x * 0.006)) * 38 - Math.sin(x * 0.021) * 10);
+  v += '</g><path d="' + d + 'L' + w + ' ' + h + 'Z" fill="#050712" fill-opacity="0.85"/></svg>';
+  m.style.backgroundImage = 'url("data:image/svg+xml,' + encodeURIComponent(v) + '")';
 }
-const REDUCED = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* ----- Initialisation ----- */
 function initUI() {

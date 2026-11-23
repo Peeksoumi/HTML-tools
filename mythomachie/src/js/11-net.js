@@ -52,7 +52,7 @@ function netWake() {
   if (!NET.ws || NET.ws.readyState > 1) { NET.retry = 0; netConnect(); return; }
   if (NET.ws.readyState !== 1) return;
   const t0 = performance.now(); netSend({ t: 'ping', k: 1 });
-  setTimeout(() => { if (NET.ws && NET.ws.readyState === 1 && NET.lastMsg < t0) netDrop(); }, 4000);
+  setTimeout(() => { if (performance.now() - t0 > 11000) return; if (NET.ws && NET.ws.readyState === 1 && NET.lastMsg < t0) netDrop(); }, 8000);
 }
 function netSend(o) { if (NET.ws && NET.ws.readyState === 1) { NET.ws.send(JSON.stringify(o)); return true; } return false; }
 function netCmd(c) { if (!netSend({ t: 'c', c })) toast('Connexion perdue : ordre non transmis.', 'warn'); }
@@ -65,6 +65,7 @@ function netOnMessage(m) {
       break;
     case 'rooms': // le serveur nous considère hors salon
       NET.rooms = m.rooms;
+      if (G && G.mp && !G.over) { mpLost('Cette partie n’existe plus sur le serveur (abandonnée ou serveur relancé).'); break; }
       if (!(G && G.mp)) lsSet('mythomachie.enligne', '');
       if (NET.room) { mpMsg('Le salon ' + NET.room.code + ' n’existe plus : créez-en un autre.'); NET.room = null; }
       renderOnline(); break;
@@ -90,9 +91,25 @@ function netOnMessage(m) {
     case 'chat': chatToast(m); break;
   }
 }
+/* La partie en ligne n'existe plus côté serveur : retour à l'écran en ligne, connexion gardée */
+function mpLost(msg) {
+  $('pause').hidden = true; $('end').hidden = true; $('hud').hidden = true; $('menu').hidden = false;
+  freeRender(G); G = null; refreshContinue(); layout();
+  lsSet('mythomachie.enligne', '');
+  openOnline(); mpMsg(msg);
+}
 function mpBegin(m) {
-  const keep = G && G.mp && G.terCv ? Object.assign({}, G.cam) : null;
-  netClientStart(m); prepareRender();
+  const old = G && G.mp && G.terCv ? G : null;
+  const keep = old ? Object.assign({}, old.cam) : null;
+  // Reprise de la même partie (reconnexion) : on garde le terrain déjà dessiné au lieu de tout refaire
+  const same = old && old.opts.seed === m.opts.seed && old.W === m.W && old.H === m.H && old.me === m.me;
+  netClientStart(m);
+  if (same) {
+    for (const k of ['terCv', 'terCtx', 'terSc', 'wdepth', 'miniCv', 'miniCtx', 'fogCv', 'fogCtx', 'fogImg']) G[k] = old[k];
+    G.fogDirty = true;
+    for (let i = 0; i < G.W * G.H; i++) if (old.tree[i] > 0 && !(G.tree[i] > 0)) H.onTreeGone(i % G.W, (i / G.W) | 0); // arbres coupés pendant la coupure
+  }
+  else { freeRender(old); prepareRender(); }
   $('online').hidden = true; $('menu').hidden = true;
   G.cam.z = VW < 700 ? 1.05 : 1.3;
   NET.room = null; NET.wasDefeated = false; NET.endMsg = null;
@@ -249,7 +266,14 @@ function initNetUI() {
   addEventListener('hashchange', joinFromHash); // lien d'invitation ouvert dans un onglet où le jeu est déjà affiché
   document.addEventListener('visibilitychange', () => { if (!document.hidden) netWake(); });
   addEventListener('online', netWake); addEventListener('pageshow', e => { if (e.persisted) netWake(); });
-  setInterval(() => { if (G && G.mp && !G.over && !document.hidden && NET.ws && NET.ws.readyState === 1 && performance.now() - NET.lastMsg > 8000) netDrop(); }, 2000);
+  // En partie, 10 s sans nouvelles : ping ; 10 s de plus sans réponse : nouvelle connexion. Si le téléphone a été bloqué, on attend.
+  let wd = performance.now();
+  setInterval(() => {
+    const now = performance.now(), late = now - wd > 4000; wd = now;
+    if (late || !(G && G.mp && !G.over) || document.hidden || !NET.ws || NET.ws.readyState !== 1 || now - NET.lastMsg < 10000) { NET.pingAt = 0; return; }
+    if (!NET.pingAt) { NET.pingAt = now; netSend({ t: 'ping', k: 2 }); }
+    else if (now - NET.pingAt > 10000 && NET.lastMsg < NET.pingAt) { NET.pingAt = 0; netDrop(); }
+  }, 2000);
 }
 /* Lien d'invitation …/mythomachie/#CODE : ouvre l'écran en ligne et rejoint le salon. */
 function joinFromHash() {
