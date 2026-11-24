@@ -1,0 +1,2038 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ladder Yaskawa – CIOPRG.LST</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230f766e'/%3E%3Ctext x='50' y='70' font-size='60' text-anchor='middle'%3E🪜%3C/text%3E%3C/svg%3E">
+<link rel="manifest" href="/manifest.json">
+<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(function(){});</script>
+<style>
+:root{
+  --bg:#f2f3ee; --card:#fff; --ink:#1b2128; --muted:#5f6a75; --line:#26303a; --rule:#d8dcd2;
+  --accent:#0f766e; --accent-soft:#e3f2ef; --sel:#ea580c; --hl:#fde68a; --warn:#b45309; --err:#b91c1c;
+  --mono:ui-monospace,"Cascadia Mono",Consolas,"DejaVu Sans Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+a{color:var(--accent)}
+header.top{display:flex;align-items:center;gap:14px;padding:10px 16px;background:#1b2128;color:#fff;flex-wrap:wrap}
+header.top h1{font-size:17px;margin:0;letter-spacing:.2px}
+header.top .sub{color:#aab4bf;font-size:12.5px}
+header.top .right{margin-left:auto;display:flex;gap:8px;align-items:center}
+header.top a,header.top button{color:#fff;background:transparent;border:1px solid #47525e;border-radius:6px;padding:5px 10px;text-decoration:none;font:inherit;font-size:13px;cursor:pointer}
+header.top a:hover,header.top button:hover{border-color:#14b8a6}
+.bar{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;padding:8px 16px;background:#fff;border-bottom:1px solid var(--rule)}
+.bar.tools{position:sticky;top:0;z-index:5;background:#fafbf8}
+.bar .grp{display:flex;gap:4px;align-items:center;padding-right:8px;border-right:1px solid var(--rule)}
+.bar .grp:last-child{border-right:0}
+.bar label{font-size:12.5px;color:var(--muted);display:flex;gap:6px;align-items:center}
+input[type=text],select{font:inherit;font-size:13px;border:1px solid #c5cbc2;border-radius:6px;padding:4px 7px;background:#fff;color:var(--ink)}
+input.mono{font-family:var(--mono)}
+#defPath{width:260px} #exportName{width:150px} #search{width:200px}
+button{font:inherit;font-size:13px;border:1px solid #c5cbc2;background:#fff;color:var(--ink);border-radius:6px;padding:4px 10px;cursor:pointer;white-space:nowrap}
+button:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+button:disabled{opacity:.45;cursor:default}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.primary:hover:not(:disabled){filter:brightness(1.1);color:#fff}
+button.danger:hover:not(:disabled){border-color:var(--err);color:var(--err)}
+.spacer{flex:1}
+#fileInfo{font-size:12.5px;color:var(--muted)}
+#fileInfo b{color:var(--ink)}
+.ok{color:var(--accent)} .bad{color:var(--err)}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px;padding:14px 16px;align-items:start}
+.panel{position:sticky;top:calc(var(--tbh,58px) + 8px);max-height:calc(100vh - var(--tbh,58px) - 20px);overflow:auto;background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:12px 14px;font-size:13px}
+.panel h3{margin:0 0 8px;font-size:14px}
+.panel h4{margin:14px 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+.panel .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:6px 0}
+.panel .row label{display:flex;gap:6px;align-items:center}
+.panel input[type=text]{width:140px}
+.panel .wide{width:100%!important}
+.panel pre{background:#f6f7f3;border:1px solid #e6e9e1;border-radius:6px;padding:6px 8px;font:12px/1.4 var(--mono);max-height:220px;overflow:auto;margin:6px 0}
+.panel .hint{color:var(--muted);font-size:12px}
+.panel ul{margin:4px 0;padding-left:18px}
+.panel li{margin:2px 0}
+.chip{display:inline-block;font:11.5px var(--mono);background:#eef0ea;border-radius:4px;padding:1px 5px;margin:1px;cursor:pointer}
+.chip:hover{background:var(--accent-soft)}
+.empty{border:2px dashed #c5cbc2;border-radius:12px;padding:40px 20px;text-align:center;color:var(--muted);background:#fbfcf9}
+.empty.drag{border-color:var(--accent);background:var(--accent-soft)}
+.empty h2{color:var(--ink);font-size:18px;margin:0 0 8px}
+.part{display:flex;align-items:center;gap:10px;margin:14px 0 8px;font-weight:600;font-size:13px;color:#fff;background:#3b4652;border-radius:6px;padding:6px 10px}
+.part.sys{background:#6b4f2a}
+.part .lock{font-weight:400;font-size:12px;opacity:.85}
+.endmark{margin:14px 0 4px;font:600 13px var(--mono);color:var(--muted);text-align:center;border-top:2px solid var(--line);padding-top:6px}
+.rung{background:var(--card);border:1px solid var(--rule);border-radius:8px;margin-bottom:7px;position:relative}
+.rung.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.rung.focus{outline:2px solid #94a3b8;outline-offset:1px}
+.rung.dirty .rh{background:#fff4e6}
+.rung.locked .rb{opacity:.92}
+.rung.dropbefore::before,.rung.dropafter::after{content:"";position:absolute;left:0;right:0;height:3px;background:var(--sel);border-radius:2px}
+.rung.dropbefore::before{top:-5px} .rung.dropafter::after{bottom:-5px}
+.rh{display:flex;gap:8px;align-items:center;padding:3px 8px;border-bottom:1px solid #eef0ea;font-size:12.5px;cursor:pointer;user-select:none;border-radius:8px 8px 0 0}
+.rh .grip{cursor:grab;color:#9aa3ab;font-size:15px;padding:0 2px;letter-spacing:-2px}
+.rh .rno{font-weight:600;min-width:52px}
+.rh .rout{font-family:var(--mono);color:var(--muted)}
+.rh .rbtns{margin-left:auto;display:flex;gap:3px}
+.rh .rbtns button{padding:1px 7px;font-size:12px}
+.badge{font-size:11px;border-radius:10px;padding:0 7px;background:#eef0ea;color:var(--muted)}
+.badge.mod{background:#fed7aa;color:#7c2d12}
+.badge.new{background:#bbf7d0;color:#14532d}
+.badge.mv{background:#dbeafe;color:#1e3a8a}
+.badge.txt{background:#fee2e2;color:#7f1d1d}
+.rb{display:flex;gap:10px;overflow-x:auto;padding:2px 0}
+.rb pre.il{margin:6px 8px 6px auto;font:11.5px/1.35 var(--mono);color:#475569;background:#f6f7f3;border-radius:6px;padding:5px 8px;flex:none;align-self:flex-start}
+.rb pre.raw{margin:8px;font:12.5px/1.4 var(--mono)}
+.rb .rawmsg{margin:8px;font-size:12px;color:var(--err)}
+svg.lad{display:block;flex:none}
+svg .w{stroke:var(--line);stroke-width:1.6;fill:none}
+svg .rail{stroke:var(--line);stroke-width:3.2}
+svg .sym{stroke:var(--line);stroke-width:2.2;fill:none}
+svg .neg{stroke:var(--err);stroke-width:2}
+svg .boxr{fill:#f8faf7;stroke:var(--line);stroke-width:1.6}
+svg .el{cursor:pointer}
+svg .el .hit{fill:transparent;stroke:none}
+svg .el:hover .hit{fill:#0f766e16}
+svg .el.hl .hit{fill:#fde68a}
+svg .el.sel .hit{fill:#ea580c24;stroke:var(--sel);stroke-width:1.5;stroke-dasharray:4 2}
+svg .lbl{font:12px var(--mono);fill:var(--ink)}
+svg .lbl.b{font-weight:700}
+svg .sub{font:10px system-ui,sans-serif;fill:var(--muted)}
+svg .coiltxt{font:bold 11px system-ui,sans-serif;fill:var(--line)}
+.rung.hide{display:none}
+dialog{border:1px solid var(--rule);border-radius:12px;padding:0;max-width:min(760px,94vw);width:100%;box-shadow:0 20px 60px #0004}
+dialog::backdrop{background:#0006}
+dialog .dh{padding:12px 16px;border-bottom:1px solid var(--rule);font-weight:600}
+dialog .dbody{padding:12px 16px;max-height:65vh;overflow:auto}
+dialog .df{padding:10px 16px;border-top:1px solid var(--rule);display:flex;gap:8px;justify-content:flex-end}
+dialog textarea{width:100%;min-height:260px;font:13px/1.45 var(--mono);border:1px solid #c5cbc2;border-radius:6px;padding:8px}
+dialog .diff{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 14px}
+dialog .diff pre{margin:0;font:12px/1.35 var(--mono);background:#f6f7f3;border-radius:6px;padding:6px 8px;overflow:auto}
+dialog .diff .a{background:#fef2f2} dialog .diff .b{background:#f0fdf4}
+#toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#1b2128;color:#fff;padding:9px 16px;border-radius:8px;font-size:13px;box-shadow:0 8px 24px #0004;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90vw;z-index:50}
+#toast.on{opacity:1}
+#resume{display:none;background:#fff7ed;border-bottom:1px solid #fed7aa;padding:7px 16px;font-size:13px}
+#resume button{margin-left:8px}
+section.howto{margin:10px 16px 30px;background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:14px 18px;font-size:13.5px}
+section.howto h2{font-size:16px;margin:0 0 10px}
+section.howto h3{font-size:13.5px;margin:14px 0 4px}
+section.howto ul{margin:4px 0;padding-left:20px}
+section.howto li{margin:3px 0}
+.fonct{margin:10px 16px 30px;padding:14px 18px;border:1px solid var(--rule);border-radius:10px;background:var(--card);font-size:13.5px;line-height:1.45}
+.fonct h2{font-size:16px;margin:0 0 4px}
+.fonct h3{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:12px 0 4px}
+.fonct ul{margin:0;padding-left:18px} .fonct li{margin:2px 0}
+dialog.wide{max-width:min(1250px,97vw)}
+.cmpbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#eef4ff;border:1px solid #bfd3fb;border-radius:8px;padding:6px 10px;margin-bottom:10px;font-size:13px}
+.badge.cmod{background:#e9d5ff;color:#581c87}
+.badge.conly{background:#fde68a;color:#713f12}
+.cmpitem{border:1px solid var(--rule);border-radius:8px;padding:8px 10px;margin:0 0 12px}
+.cmpitem .t{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.cmpcols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cmpcols>div{overflow-x:auto;background:#fafbf8;border-radius:6px;padding:4px}
+.cmpcols .cap{font-size:11.5px;color:var(--muted);margin:2px 4px}
+.cmpil{font:11.5px/1.35 var(--mono);margin:4px;white-space:pre}
+.cmpil .a{background:#fee2e2} .cmpil .b{background:#dcfce7}
+#sigSearch{width:190px}
+.ghost{position:fixed;z-index:60;pointer-events:none;background:#1b2128;color:#fff;font:12px var(--mono);padding:3px 8px;border-radius:5px;box-shadow:0 4px 12px #0004;display:none}
+.dropind{position:fixed;z-index:59;pointer-events:none;background:var(--sel);border-radius:2px;display:none}
+body.cdragging, body.cdragging *{cursor:grabbing!important}
+svg .el{touch-action:none}
+svg.lad{user-select:none}
+.xref li{list-style:none;margin:2px 0}
+.xref{padding-left:0!important}
+.role{font-size:11px;border-radius:8px;padding:0 6px}
+.role.w{background:#fecaca;color:#7f1d1d} .role.r{background:#bfdbfe;color:#1e3a8a}
+.xref li.cur{background:var(--accent-soft);border-radius:4px}
+@media (max-width:980px){.cmpcols{grid-template-columns:1fr}}
+.bktabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;position:sticky;top:-12px;background:#fff;padding:6px 0;z-index:2}
+.bktabs button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+table.bk{border-collapse:collapse;width:100%;font-size:12.5px}
+table.bk th,table.bk td{border-bottom:1px solid #eceee8;padding:3px 6px;text-align:left;vertical-align:top}
+table.bk th{background:#f6f7f3;position:sticky;top:34px}
+table.bk td.mono,table.bk code{font-family:var(--mono);font-size:12px}
+.bar1{display:inline-block;height:9px;background:var(--accent);border-radius:2px;vertical-align:middle}
+.ifgrid{display:grid;grid-template-columns:28px repeat(8,minmax(92px,1fr));gap:4px;margin:6px 0 16px;font-size:11.5px}
+.ifgrid .hd{color:var(--muted);text-align:center;align-self:center;font-weight:600}
+.ifcell{border-radius:8px;min-height:74px;padding:5px;border:1px solid #0002;display:flex;flex-direction:column;gap:2px;overflow:hidden}
+.ifcell.off{background:repeating-linear-gradient(45deg,#f3f4f1,#f3f4f1 6px,#e9ebe5 6px,#e9ebe5 12px);color:#9aa3ab;border-style:dashed}
+.ifcell .nm{font-weight:600;line-height:1.15}
+.ifcell .ty{font-size:10.5px;opacity:.8}
+.ifcell .chip{background:#fffc;color:#1b2128}
+details.job{border:1px solid var(--rule);border-radius:6px;margin:4px 0;padding:4px 8px}
+details.job summary{cursor:pointer;font-weight:600}
+details.job pre{margin:4px 0;font:12px/1.4 var(--mono);white-space:pre-wrap}
+.trsec textarea{width:100%;min-height:120px;font:12.5px/1.4 var(--mono)}
+@media (max-width:980px){.layout{grid-template-columns:1fr}.panel{position:static;max-height:none}#defPath{width:180px}}
+</style>
+</head>
+<body>
+<header class="top">
+  <svg width="30" height="30" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="12" fill="#2b3540"/><path d="M10 12v40M54 12v40M10 24h14M30 24h12M10 42h14M30 42h4" stroke="#fff" stroke-width="3.5" fill="none"/><path d="M24 16v16M30 16v16M24 34v16M30 34v16" stroke="#14b8a6" stroke-width="4"/><path d="M42 18a7 7 0 0 0 0 12M48 18a7 7 0 0 1 0 12" stroke="#f59e0b" stroke-width="3.5" fill="none"/></svg>
+  <div>
+    <h1>Ladder Yaskawa — CIOPRG.LST</h1>
+    <div class="sub">Visualiser, trier, modifier graphiquement et exporter le ladder E/S concurrentes (DX100 / DX200 / YRC1000 / FS100)</div>
+  </div>
+  <div class="right">
+    <a href="https://github.com/Peeksoumi/HTML-tools/issues/new?title=%5Bladder-yaskawa%5D%20&amp;body=Outil%20concern%C3%A9%20%3A%20ladder-yaskawa%20(http%3A%2F%2F141.227.151.70%3A8080%2Fladder-yaskawa%2F)%0A%0A**Ma%20suggestion%20ou%20le%20bug%20rencontr%C3%A9%20%3A**%0A%0A" target="_blank" rel="noopener" title="Signaler un bug ou proposer une amélioration">💡 Proposer une amélioration</a>
+    <a href="index.html" download="ladder-yaskawa.html" title="Enregistrer la page pour l'utiliser hors ligne (aucune connexion requise)">⬇️ Télécharger la page</a>
+  </div>
+</header>
+
+<div id="resume">Une session non exportée a été trouvée : <b id="resumeInfo"></b>
+  <button id="btnResume">Reprendre</button><button id="btnDropResume">Ignorer</button></div>
+
+<section class="bar">
+  <label>Chemin par défaut <input type="text" id="defPath" class="mono" spellcheck="false"></label>
+  <button id="btnOpenDefault" title="Ouvrir le fichier au chemin par défaut (ou le dernier fichier ouvert)">📂 Ouvrir</button>
+  <button id="btnBrowse" title="Choisir CIOPRG.LST (et éventuellement IONAME.DAT, EXIONAME.DAT… en sélection multiple)">Parcourir…</button>
+  <button id="btnFolder" title="Ouvrir un dossier de sauvegarde : CIOPRG.LST + noms de signaux (IONAME.DAT, EXIONAME.DAT, IOMNAME.DAT)">📁 Dossier…</button>
+  <input type="file" id="fileInput" accept=".lst,.LST,.dat,.DAT,.csv,.CSV,text/plain" multiple hidden>
+  <input type="file" id="dirInput" webkitdirectory hidden>
+  <input type="file" id="cmpInput" accept=".lst,.LST,text/plain" hidden>
+  <button id="btnSample" title="Charger un petit ladder d'exemple">Exemple</button>
+  <span id="fileInfo">Aucun fichier chargé</span>
+  <span class="spacer"></span>
+  <button id="btnBackup" disabled title="Alarmes, IF panel, jobs et informations système de la sauvegarde">🗂 Sauvegarde</button>
+  <button id="btnCompare" disabled title="Comparer le ladder courant avec un autre fichier CIOPRG.LST">⇄ Comparer…</button>
+  <label>Fichier exporté <input type="text" id="exportName" class="mono" value="CIOPRG.LST" spellcheck="false"></label>
+  <button id="btnDiff" disabled>Modifications</button>
+  <button id="btnExport" class="primary" disabled>⬇ Exporter .LST</button>
+</section>
+
+<section class="bar tools" id="tools">
+  <div class="grp">
+    <button id="btnUndo" title="Annuler (Ctrl+Z)" disabled>↶</button>
+    <button id="btnRedo" title="Rétablir (Ctrl+Y)" disabled>↷</button>
+  </div>
+  <div class="grp">
+    <input type="text" id="search" placeholder="Filtrer : #40010, OUT, 40010-40237…" class="mono" spellcheck="false">
+    <button id="btnSelVisible" title="Sélectionner les rungs affichés">Sélect. visibles</button>
+    <button id="btnSelNone">Aucun</button>
+    <span id="selCount" class="badge">0 sélectionné</span>
+  </div>
+  <div class="grp">
+    <input type="text" id="sigSearch" list="sigList" placeholder="🔎 Signal : #70017 ou nom" class="mono" spellcheck="false" title="Recherche globale : qui écrit et qui lit ce signal (Entrée)">
+    <datalist id="sigList"></datalist>
+    <button id="btnSigPrev" title="Utilisation précédente">◀</button>
+    <button id="btnSigNext" title="Utilisation suivante">▶</button>
+    <label title="N'afficher que les rungs qui utilisent le signal recherché"><input type="checkbox" id="chkSigOnly"> ces rungs</label>
+  </div>
+  <div class="grp">
+    <select id="sortBy" title="Critère de tri">
+      <option value="out">Tri : n° de sortie</option>
+      <option value="outType">Tri : type de sortie, puis n°</option>
+      <option value="in">Tri : n° de 1re entrée</option>
+      <option value="name">Tri : nom de la sortie</option>
+      <option value="dep">Tri : dépendances (écriture avant lecture)</option>
+      <option value="size">Tri : taille du rung</option>
+      <option value="orig">Tri : ordre d'origine du fichier</option>
+    </select>
+    <button id="btnSortAsc" title="Trier les rungs sélectionnés (croissant)">↑</button>
+    <button id="btnSortDesc" title="Trier les rungs sélectionnés (décroissant)">↓</button>
+    <button id="btnUp" title="Monter les rungs sélectionnés">▲</button>
+    <button id="btnDown" title="Descendre les rungs sélectionnés">▼</button>
+  </div>
+  <div class="grp">
+    <button id="btnNew">+ Rung</button>
+    <button id="btnDup" title="Dupliquer les rungs sélectionnés">Dupliquer</button>
+    <button id="btnCut" title="Couper les rungs sélectionnés (Ctrl+X)">✂ Couper</button>
+    <button id="btnCopy" title="Copier les rungs sélectionnés (Ctrl+C)">Copier</button>
+    <button id="btnPaste" title="Coller après le rung actif (Ctrl+V) — fonctionne aussi entre deux onglets ou depuis un éditeur de texte">Coller</button>
+    <button id="btnDel" class="danger" title="Supprimer les rungs sélectionnés">Supprimer</button>
+  </div>
+  <div class="grp">
+    <label><input type="checkbox" id="chkUnlock"> Déverrouiller PART 1 (système)</label>
+    <label><input type="checkbox" id="chkIL"> Code texte</label>
+    <label>Zoom <input type="range" id="zoom" min="0.6" max="1.6" step="0.1" value="1" style="width:80px"></label>
+  </div>
+</section>
+
+<main class="layout">
+  <div id="rungs">
+    <div class="empty" id="dropzone">
+      <h2>Ouvrez un fichier CIOPRG.LST</h2>
+      <p>Utilisez <b>📂 Ouvrir</b> (chemin par défaut), <b>Parcourir…</b>, ou glissez-déposez le fichier ici.<br>
+      Le fichier se sauvegarde depuis le pupitre : <i>EX. MEMORY → SAVE → I/O DATA → C.IO PGM</i>.</p>
+      <p><button id="btnSample2">Essayer avec un exemple</button></p>
+    </div>
+  </div>
+  <aside class="panel" id="panel"><p class="hint">Chargez un fichier pour commencer.</p></aside>
+</main>
+
+<section class="howto" id="howto">
+  <h2>Mode d'emploi</h2>
+  <ul>
+    <li><b>Ouvrir</b> : le bouton 📂 essaie d'abord le chemin par défaut (fichier ou dossier), puis le dernier dossier ou fichier choisi (mémorisé par le navigateur). Pour des raisons de sécurité, un navigateur ne peut pas lire un chemin du disque sans votre accord : au premier usage il vous demande de choisir le dossier, puis le rouvre en un clic.</li>
+    <li><b>Noms de signaux</b> : « 📁 Dossier… » ouvre un dossier de sauvegarde et lit <code>CIOPRG.LST</code> et, s'ils sont présents, <code>IONAME.DAT</code> (entrées/sorties générales), <code>EXIONAME.DAT</code> (entrées/sorties externes), <code>IOMNAME.DAT</code> (registres M) et tout fichier <code>.CSV</code> au format <code>#70017;Nom</code>. On peut aussi les sélectionner ensemble avec « Parcourir… ». Les noms s'affichent sous les contacts et bobines ; un nom personnalisé (relais auxiliaires…) peut être saisi dans le panneau et reste enregistré dans le navigateur.</li>
+    <li><b>Recherche globale d'un signal</b> : tapez une adresse (<code>#70017</code>, <code>70017</code>, <code>IN12</code>, <code>OUT3</code>, <code>M479</code>) ou une partie de nom, puis Entrée. Le panneau liste chaque rung qui l'écrit ou le lit, avec l'instruction ; ◀ ▶ (ou F3 / Maj+F3) passent d'une utilisation à l'autre, « ces rungs » masque les autres. Cliquer un contact lance aussi la recherche.</li>
+    <li><b>Comparer</b> : « ⇄ Comparer… » charge un second CIOPRG.LST (B) et liste les rungs identiques, modifiés, absents ou ajoutés, côte à côte, avec les lignes différentes surlignées. Chaque écart peut être repris : remplacer par B, insérer dans A, supprimer de A. Les rungs concernés sont marqués dans la vue.</li>
+    <li><b>Glisser un contact</b> : faites glisser un contact sur un autre élément : moitié gauche = en série avant, moitié droite = en série après, bas = en parallèle. Maintenez Ctrl (ou Alt) pour copier au lieu de déplacer. Fonctionne aussi d'un rung à l'autre.</li>
+    <li><b>Couper / copier / coller</b> : Ctrl+X, Ctrl+C, Ctrl+V (ou les boutons) sur les rungs sélectionnés ; le collage se fait après le rung actif. Le texte copié est la liste d'instructions : on peut coller entre deux onglets ouverts sur deux fichiers, ou depuis un éditeur de texte.</li>
+    <li><b>Sélection</b> : cliquez sur l'en-tête d'un rung (ou sa case), Maj+clic pour une plage, ou filtrez puis « Sélect. visibles ». Le filtre accepte une adresse (<code>#40010</code>), un mot (<code>TMR</code>) ou une plage de sorties (<code>40010-40237</code>).</li>
+    <li><b>Tri</b> : choisissez le critère puis ↑ / ↓ pour réordonner les rungs sélectionnés : n° du premier relais de sortie, type de sortie (OUT, PLS, GOUT, BMOV…) puis n°, n° de la première entrée, nom de la sortie, taille du rung, ordre d'origine du fichier, ou <b>dépendances</b> (un rung qui écrit un signal passe avant ceux qui le lisent, en conservant au mieux l'ordre actuel ; le nombre de lectures avant écriture est affiché avant/après). Les rungs triés reprennent les emplacements occupés par la sélection. Tri manuel : glisser la poignée ⋮⋮, ou ▲ ▼. Le tri reste à l'intérieur d'une même PART.</li>
+    <li><b>Édition graphique</b> : cliquez sur un contact, une bobine ou un bloc pour le modifier dans le panneau (adresse, contact inversé, insertion en série ou en parallèle, suppression). Ctrl+clic sur plusieurs contacts consécutifs en série pour les mettre en parallèle avec une nouvelle branche. Le bouton <b>IL</b> d'un rung permet aussi de l'éditer en texte. Ctrl+Z / Ctrl+Y pour annuler / rétablir.</li>
+    <li><b>Sauvegarde</b> : avec le dossier de sauvegarde complet, « 🗂 Sauvegarde » présente : l'historique des alarmes (<code>ALMHIST.DAT</code>, codes les plus fréquents), les alarmes et messages utilisateur pilotés par le ladder (relais #79700–#79777 = alarmes 1–64, codes 9064–9127 ; #79810–#79887 = messages 1–64) avec les rungs qui les déclenchent, les textes //ALARM et //MESSAGE de CIOPRG.LST (modifiables), le panneau d'interface (fichier contenant <code>//IFPANEL</code> : grille 1A–4H, couleurs, signaux affichés et commandés), les jobs <code>*.JBI</code> (lignes qui lisent ou écrivent des E/S) et <code>SYSTEM.SYS</code>. La recherche de signal liste aussi ces utilisations « hors ladder ».</li>
+    <li><b>Export</b> : « Modifications » récapitule les rungs ajoutés, modifiés, déplacés ou supprimés ; « Exporter .LST » produit le nouveau fichier. Le contrôleur ne charge qu'un fichier nommé <code>CIOPRG.LST</code>.</li>
+  </ul>
+  </section>
+
+<div class="fonct" id="fonctionnement">
+  <h2>Fonctionnement et sources</h2>
+  <h3>Fonctionnement</h3><ul>
+    <li><b>Lecture</b> : CIOPRG.LST est lu octet par octet et découpé en rungs ; la liste d'instructions à pile (STR, AND, OR, AND-STR, OR-STR…) devient un arbre série/parallèle dessiné en SVG.</li>
+    <li><b>Export</b> : rungs non modifiés, en-tête, textes d'alarmes, fins de ligne et encodage recopiés à l'identique ; un rung modifié est recompilé depuis l'arbre puis relu pour validation.</li>
+    <li><b>Tri</b> : critère au choix sur la sélection, dans une même PART ; « dépendances » = tri topologique (un rung qui écrit un signal passe avant ceux qui le lisent).</li>
+    <li><b>Comparaison</b> : plus longue sous-suite commune des rungs normalisés, puis appariement des rungs restants de même sortie (« modifiés »).</li>
+    <li><b>Noms</b> : le n-ième nom d'IONAME.DAT / EXIONAME.DAT est associé au n-ième signal (n°1 = #x0010, n°9 = #x0020).</li>
+    <li><b>Sauvegarde</b> : ALMHIST.DAT (code et date repérés automatiquement), IF panel (<code>//IFPANEL</code>, 23 champs), jobs *.JBI (IN#, OT#, IG#, OG#, SIN#, SOUT#), SYSTEM.SYS.</li>
+    <li><b>Confidentialité</b> : tout le traitement se fait dans le navigateur, aucun fichier n'est envoyé.</li>
+  </ul>
+  <h3>Sources de données</h3><ul>
+    <li><b>Aucune donnée externe</b> ni bibliothèque : seuls les fichiers que vous ouvrez sont lus.</li>
+    <li><b>Format du ladder</b> : <a href="https://www.motoman.com/getmedia/E9027AFA-478B-4F88-BC14-245CDD6D51BE/178648-1CD" target="_blank" rel="noopener">YRC1000 Concurrent I/O (RE-CKI-A467)</a>, <a href="https://knowledge.motoman.com/hc/en-us/articles/1500012236161-Concurrent-I-O-Overview" target="_blank" rel="noopener">Concurrent I/O Overview</a>, <a href="https://www.motoman.com/getmedia/7DCAB851-59B3-4698-97FB-AE39E45FD106/179482-1CD.pdf.aspx?ext=.pdf" target="_blank" rel="noopener">Ladder Editor (HW1483388)</a>, <a href="https://github.com/ros-industrial-attic/swri-ros-pkg/blob/master/swri_demos/longhorn/ladder/CIOPRG.LST" target="_blank" rel="noopener">exemple réel</a>.</li>
+    <li><b>Fichiers de noms</b> : <a href="https://www.motoman.com/getmedia/7B00B4EE-ED2E-47C7-8BD4-9FA8BB89A936/159584-1CD.pdf.aspx?ext=.pdf" target="_blank" rel="noopener">Yaskawa 159584-1CD</a>, <a href="https://www.robot-forum.com/robotforum/thread/22438-transferring-application-from-one-robot-to-another/" target="_blank" rel="noopener">Robot-Forum</a>, <a href="https://github.com/jerkey/yasnac/blob/master/dat/IONAME.DAT" target="_blank" rel="noopener">exemple IONAME.DAT</a>.</li>
+    <li><b>Alarmes</b> : Yaskawa <a href="https://knowledge.motoman.com/hc/en-us/articles/33604961700242-Yaskawa-s-User-Alarms-DX100-DX200-YRC1000" target="_blank" rel="noopener">User Alarms</a>, <a href="https://knowledge.motoman.com/hc/en-us/articles/33605379403282-Yaskawa-s-User-Messages-DX100-DX200-YRC1000" target="_blank" rel="noopener">User Messages</a>, <a href="https://knowledge.motoman.com/hc/en-us/articles/4405159162263-Handling-Alarms" target="_blank" rel="noopener">Handling Alarms</a>, <a href="https://motologix.yaskawa.eu/robot-alarms/alarm-history/" target="_blank" rel="noopener">MotoLogix</a>.</li>
+    <li><b>IF panel</b> : <a href="https://gab.wallawalla.edu/~ralph.stirling/classes/engr480/docs/Motoman/dx100_interface_panel_156443-1CD.pdf" target="_blank" rel="noopener">DX100 Interface Panel Function (156443-1CD)</a>, chapitre 5.</li>
+  </ul>
+  <h3>Limites</h3><ul>
+    <li>PART 1 est supposée système (verrouillée) et PART 2 utilisateur ; CMP et instructions rares restent affichées en texte.</li>
+    <li>Trier ou déplacer peut décaler d'un cycle un relais interne ; le tri par dépendances ignore BMOV, ADD, MOV… et les boucles volontaires.</li>
+    <li>Formats d'ALMHIST.DAT et des fichiers de noms non publiés : vérifiez quelques noms et codes sur le pupitre.</li>
+    <li>Plages #797xx / #798xx (alarmes / messages utilisateur) et SIN# / SOUT# → #4xxxx / #5xxxx : DX100, DX200, YRC1000 uniquement.</li>
+    <li>Pas de contrôle de compatibilité avec l'application du contrôleur : un fichier mal construit est refusé au chargement.</li>
+    <li>Un navigateur ne lit pas un chemin du disque sans accord : le dossier doit être choisi une première fois.</li>
+  </ul>
+</div>
+
+<dialog id="dlg"><div class="dh" id="dlgTitle"></div><div class="dbody" id="dlgBody"></div><div class="df" id="dlgFoot"></div></dialog>
+<div id="toast"></div>
+<div class="ghost" id="ghost"></div><div class="dropind" id="dropind"></div>
+
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ================= Jeux d'instructions ================= */
+const START_OPS = new Set(['STR','STR-NOT','GSTR']);
+const COIL_OPS = new Set(['OUT','PLS','PLF','GOUT','SET','RST']);
+const FUNC_OPS = new Set(['ADD','SUB','MUL','DIV','MOD','WAND','WOR','WXOR','WNOT','MOV','MOVE','BMOV','BIN','BCD','SHL','SHR','ROTL','ROTR','INC','DEC']);
+const BIT_OUT_OPS = new Set(['OUT','PLS','PLF','SET','RST']);
+const isOutOp = op => COIL_OPS.has(op) || FUNC_OPS.has(op);
+const HEADER_END_RE = /^\s*(PART|STR|STR-NOT|GSTR)(\s|$)/i;
+
+/* ================= État ================= */
+const S = { fileName:null, eol:'\r\n', header:[], trailer:[], items:[], origRungs:{}, origOrder:[], loaded:false, fidelity:null };
+let uid = 1;
+const nid = () => 'n' + (uid++);
+let selRungs = new Set(), selEls = [], selElRung = null, focusRung = null, anchorRung = null, hlAddr = null;
+let unlockSystem = false, showIL = false, zoom = 1, filterText = '';
+let newAddr = '#70010', newOutAddr = '#70017';
+const undoStack = [], redoStack = [];
+let dragIds = null;
+let CMP = null, CLIP = [], sigUses = [], sigIdx = -1, sigOnly = false, sigMatches = null, suppressClick = false, cdrag = null;
+
+/* ================= Octets <-> texte (aller-retour exact) ================= */
+function bytesToStr(buf){ const u = new Uint8Array(buf); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return s; }
+function strToBytes(s){ const u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++){ const c = s.charCodeAt(i); u[i] = c < 256 ? c : 63; } return u; }
+
+/* ================= Analyse ================= */
+function splitInstr(line){ const m = String(line).trim().match(/^(\S+)\s*(.*)$/); return m ? {op:m[1].toUpperCase(), args:m[2].trim()} : {op:'', args:''}; }
+const fmt = (op, args) => args ? op + ' ' + args : op;
+
+function parseLST(text){
+  const eol = text.includes('\r\n') ? '\r\n' : (text.includes('\r') ? '\r' : '\n');
+  const lines = text.split(/\r\n|\r|\n/);
+  const h = lines.findIndex(l => HEADER_END_RE.test(l));
+  if (h < 0) throw new Error("Aucune instruction ladder trouvée (PART / STR…). Est-ce bien un fichier CIOPRG.LST ?");
+  let endIdx = -1;
+  for (let i = h; i < lines.length; i++) if (splitInstr(lines[i]).op === 'END'){ endIdx = i; break; }
+  const body = lines.slice(h, endIdx < 0 ? lines.length : endIdx + 1);
+  return {eol, header:lines.slice(0, h), trailer:endIdx < 0 ? [] : lines.slice(endIdx + 1), items:segment(body)};
+}
+function parseText(text, name){
+  const P = parseLST(text);
+  S.fileName = name; S.eol = P.eol; S.header = P.header; S.trailer = P.trailer; S.items = P.items;
+  CMP = null;
+  S.origRungs = {}; S.origOrder = []; S.origTrailer = S.trailer.slice();
+  let no = 0;
+  for (const it of S.items) if (it.type === 'rung'){ it.no = ++no; S.origRungs[no] = it.raw.slice(); S.origOrder.push(no); }
+  S.loaded = true;
+  S.fidelity = (buildText() === text);
+  undoStack.length = 0; redoStack.length = 0;
+  selRungs.clear(); selEls = []; selElRung = null; focusRung = null; hlAddr = null; anchorRung = null;
+}
+
+function segment(lines){
+  const items = []; let cur = null;
+  const flush = () => { if (cur){ items.push(makeRung(cur.lines)); cur = null; } };
+  for (const line of lines){
+    const {op, args} = splitInstr(line);
+    if (!op){ if (cur) cur.lines.push(line); else items.push({type:'blank', id:nid(), raw:line}); continue; }
+    if (op === 'PART'){ flush(); items.push({type:'part', id:nid(), raw:line, num:args}); continue; }
+    if (op === 'END'){ flush(); items.push({type:'end', id:nid(), raw:line}); continue; }
+    if (cur && cur.hasOut && START_OPS.has(op)) flush();
+    if (!cur) cur = {lines:[], hasOut:false};
+    cur.lines.push(line);
+    if (isOutOp(op)) cur.hasOut = true;
+  }
+  flush();
+  return items;
+}
+
+function makeRung(lines){
+  const r = {type:'rung', id:nid(), raw:lines.slice(), no:null, dirty:false, orig:null};
+  try { const t = buildTree(lines); r.logic = t.logic; r.outputs = t.outputs; r.ok = true; }
+  catch (e){ r.ok = false; r.err = e.message; r.logic = null; r.outputs = []; }
+  return r;
+}
+
+const mkContact = (addr, neg, group) => ({type:'contact', id:nid(), addr, neg:!!neg, group:!!group});
+function ser(a, b){ return {type:'series', id:nid(), children:[...(a.type === 'series' ? a.children : [a]), ...(b.type === 'series' ? b.children : [b])]}; }
+function par(a, b){ return {type:'parallel', id:nid(), children:[...(a.type === 'parallel' ? a.children : [a]), ...(b.type === 'parallel' ? b.children : [b])]}; }
+
+function buildTree(lines){
+  const st = []; let cur = null; const outs = []; let outPhase = false;
+  for (const line of lines){
+    const {op, args} = splitInstr(line);
+    if (!op) continue;
+    if (outPhase && !isOutOp(op)) throw new Error('Logique après une sortie (' + op + ')');
+    const need = n => { if (!cur) throw new Error(op + ' sans condition préalable'); if (n && st.length < n) throw new Error(op + ' : pile vide'); };
+    switch (op){
+      case 'STR': case 'STR-NOT': case 'GSTR':
+        if (cur) st.push(cur);
+        cur = mkContact(args, op === 'STR-NOT', op === 'GSTR'); break;
+      case 'AND': case 'AND-NOT': need(); cur = ser(cur, mkContact(args, op === 'AND-NOT')); break;
+      case 'OR': case 'OR-NOT': need(); cur = par(cur, mkContact(args, op === 'OR-NOT')); break;
+      case 'AND-STR': need(1); cur = ser(st.pop(), cur); break;
+      case 'OR-STR': need(1); cur = par(st.pop(), cur); break;
+      case 'TMR': need(); cur = ser(cur, {type:'box', id:nid(), op, args}); break;
+      case 'CNT': { need(1); const a = st.pop(); cur = {type:'cnt', id:nid(), op, args, inputs:[a, cur]}; break; }
+      default:
+        if (isOutOp(op)){ need(); outPhase = true; outs.push({id:nid(), op, args}); break; }
+        throw new Error('Instruction non représentée graphiquement : ' + op);
+    }
+  }
+  if (!cur) throw new Error('Rung vide');
+  if (st.length) throw new Error('Pile non vide en fin de rung (' + st.length + ')');
+  if (!outs.length) throw new Error('Aucune sortie');
+  return {logic:cur, outputs:outs};
+}
+
+/* ================= Compilation arbre -> liste d'instructions ================= */
+function gen(n, out){
+  switch (n.type){
+    case 'contact': out.push(fmt(n.group ? 'GSTR' : (n.neg ? 'STR-NOT' : 'STR'), n.addr)); break;
+    case 'box': out.push(fmt(n.op, n.args)); break;
+    case 'cnt': gen(n.inputs[0], out); gen(n.inputs[1], out); out.push(fmt(n.op, n.args)); break;
+    case 'series':
+      gen(n.children[0], out);
+      for (const c of n.children.slice(1)){
+        if (c.type === 'contact' && !c.group) out.push(fmt(c.neg ? 'AND-NOT' : 'AND', c.addr));
+        else if (c.type === 'box') out.push(fmt(c.op, c.args));
+        else { gen(c, out); out.push('AND-STR'); }
+      }
+      break;
+    case 'parallel':
+      gen(n.children[0], out);
+      for (const c of n.children.slice(1)){
+        if (c.type === 'contact' && !c.group) out.push(fmt(c.neg ? 'OR-NOT' : 'OR', c.addr));
+        else { gen(c, out); out.push('OR-STR'); }
+      }
+      break;
+  }
+}
+function compileRung(r){ const out = []; gen(r.logic, out); for (const o of r.outputs) out.push(fmt(o.op, o.args)); return out; }
+
+function norm(n){
+  if (!n) return null;
+  if (n.type === 'series' || n.type === 'parallel'){
+    const ch = [];
+    for (const c of n.children){ const k = norm(c); if (!k) continue; if (k.type === n.type) ch.push(...k.children); else ch.push(k); }
+    if (!ch.length) return null;
+    if (ch.length === 1) return ch[0];
+    n.children = ch; return n;
+  }
+  if (n.type === 'cnt'){
+    n.inputs = n.inputs.map(norm);
+    if (n.inputs.some(x => !x)) throw new Error("Une entrée du compteur ne peut pas être vide");
+  }
+  return n;
+}
+
+/* ================= Reconstruction du fichier ================= */
+function bodyLines(){ const out = []; for (const it of S.items){ if (it.type === 'rung') out.push(...it.raw); else out.push(it.raw); } return out; }
+function buildText(){ return [...S.header, ...bodyLines(), ...S.trailer].join(S.eol); }
+
+/* ================= Utilitaires ================= */
+const rungs = () => S.items.filter(i => i.type === 'rung');
+const getItem = id => S.items.find(i => i.id === id);
+function partOf(id){ let p = null; for (const it of S.items){ if (it.type === 'part') p = it.num; if (it.id === id) return p; } return p; }
+function partIndexMap(){ const m = {}; let p = 0; for (const it of S.items){ if (it.type === 'part' || it.type === 'end') p++; m[it.id] = p; } return m; }
+const isSys = id => partOf(id) === '1';
+const isLocked = id => !unlockSystem && isSys(id);
+function rungNumber(id){ let n = 0; for (const it of S.items){ if (it.type === 'rung'){ n++; if (it.id === id) return n; } } return null; }
+const pad = (n, k = 3) => String(n).padStart(k, '0');
+
+function sigName(addr){
+  const m = /^#(\d)(\d{4})$/.exec(addr || ''); if (!m) return '';
+  const d = +m[1], rest = +m[2], bit = rest % 10;
+  if (bit > 7) return 'bit > 7 ?';
+  const idx = (r) => (Math.floor(r / 10) - 1) * 8 + bit + 1;
+  switch (d){
+    case 0: return 'IN' + pad(idx(rest), 4);
+    case 1: return 'OUT' + pad(idx(rest), 4);
+    case 2: return rest >= 5010 ? 'Entrée réseau ' + idx(rest - 5000) : 'Entrée ext. ' + idx(rest);
+    case 3: return rest >= 5010 ? 'Sortie réseau ' + idx(rest - 5000) : 'Sortie ext. ' + idx(rest);
+    case 4: return 'Entrée spécifique';
+    case 5: return 'Sortie spécifique';
+    case 6: return 'Panneau interface';
+    case 7: return 'Relais auxiliaire';
+    case 8: return rest >= 2010 ? 'Pseudo-entrée' : 'État de contrôle';
+    default: return 'Autre';
+  }
+}
+/* ================= Noms de signaux (IONAME.DAT, EXIONAME.DAT, IOMNAME.DAT, CSV) ================= */
+const LS_NAMES = 'yaskawaLadder.customNames';
+const NAMES = {files:{}, map:{}, custom:{}};
+try { NAMES.custom = JSON.parse(localStorage.getItem(LS_NAMES) || '{}'); } catch (e){}
+const NAME_FILE_RE = /^(IONAME|EXIONAME|IOMNAME)\.DAT$|\.CSV$/i;
+const nameOf = a => a ? (NAMES.custom[a] || (NAMES.map[a] && NAMES.map[a].name) || builtinName(a)) : '';
+const nameSrc = a => NAMES.custom[a] ? 'nom personnalisé (navigateur)' : (NAMES.map[a] ? NAMES.map[a].src : (builtinName(a) ? 'plage Yaskawa des alarmes / messages utilisateur' : ''));
+function decodeText(buf){ try { return new TextDecoder('utf-8', {fatal:true}).decode(buf); } catch (e){ return new TextDecoder('windows-1252').decode(buf); } }
+/* n-ième signal (k = 0, 1, …) -> adresse : IN0001 = #00010, IN0009 = #00020 */
+const ioAddr = (digit, k) => '#' + digit + pad((Math.floor(k / 8) + 1) * 10 + k % 8, 4);
+function resetNames(){ NAMES.files = {}; NAMES.map = {}; }
+function addNames(name, text){
+  const up = name.toUpperCase(), lines = text.split(/\r\n|\r|\n/); let count = 0;
+  const put = (a, nm, src) => { nm = nm.replace(/^"(.*)"$/, '$1').trim(); if (a && nm){ NAMES.map[a] = {name:nm, src}; count++; } };
+  if (up.endsWith('.CSV') || up.endsWith('.TXT')){
+    for (const l of lines){ const m = /^\s*"?(#?\d{5}|M\d{3,4})"?\s*[;,\t]\s*(.+?)\s*$/i.exec(l); if (!m) continue; let a = m[1].toUpperCase(); if (/^\d/.test(a)) a = '#' + a; put(a, m[2], name); }
+  } else {
+    const isEx = up.startsWith('EXIONAME'), isM = up.startsWith('IOMNAME');
+    let sec = null, k = 0;
+    for (const l of lines){
+      const t = l.trim();
+      if (t.startsWith('//')){ sec = t.slice(2).trim().toUpperCase(); k = 0; continue; }
+      if (t.startsWith('/')) continue;
+      if (!sec && !isM) continue;
+      for (const f of l.split(',')){
+        let a = null;
+        if (isM) a = 'M' + pad(k, 3);
+        else if (/^(EX)?IN/.test(sec)) a = ioAddr(isEx || sec.startsWith('EX') ? 2 : 0, k);
+        else if (/^(EX)?(OUT|OT)/.test(sec)) a = ioAddr(isEx || sec.startsWith('EX') ? 3 : 1, k);
+        put(a, f, name + (sec ? ' //' + sec : '') + ' n°' + (k + 1));
+        k++;
+      }
+    }
+  }
+  NAMES.files[name] = count;
+  return count;
+}
+function setCustomName(a, nm){
+  if (nm) NAMES.custom[a] = nm; else delete NAMES.custom[a];
+  try { localStorage.setItem(LS_NAMES, JSON.stringify(NAMES.custom)); } catch (e){}
+}
+const trunc = (s, n) => s.length > n ? s.slice(0, n - 1) + '…' : s;
+const subLabel = a => { const n = nameOf(a); return n ? trunc(n, 13) : sigShort(a); };
+const sigShort = a => sigName(a).replace('Relais auxiliaire','Relais aux.').replace('spécifique','spéc.').replace('Panneau interface','Panneau IF').replace('État de contrôle','État ctrl').replace('Entrée réseau','Entr. rés.').replace('Sortie réseau','Sort. rés.');
+function validAddr(a){ return /^#\d{5}$/.test(a) && (+a.slice(-1)) <= 7; }
+
+/* Clé de tri : numéro du premier relais de sortie (destination pour BMOV, ADD…) */
+function outKey(r){
+  let op = null, args = null;
+  if (r.ok && r.outputs.length){ op = r.outputs[0].op; args = r.outputs[0].args; }
+  else for (const l of r.raw){ const s = splitInstr(l); if (isOutOp(s.op)){ op = s.op; args = s.args; break; } }
+  if (!args) return Infinity;
+  const nums = args.match(/\d+/g); if (!nums) return Infinity;
+  return parseInt(FUNC_OPS.has(op) ? nums[nums.length - 1] : nums[0], 10);
+}
+function firstOutText(r){
+  if (r.ok) return r.outputs.map(o => o.op === 'OUT' ? o.args : fmt(o.op, o.args)).join('  ');
+  for (const l of r.raw){ const {op, args} = splitInstr(l); if (isOutOp(op)) return fmt(op, args); }
+  return '';
+}
+
+function findNode(root, id, parent = null){
+  if (!root) return null;
+  if (root.id === id) return {node:root, parent};
+  const kids = root.children || root.inputs || [];
+  for (const k of kids){ const f = findNode(k, id, root); if (f) return f; }
+  return null;
+}
+function findAny(r, id){
+  if (!r.ok) return null;
+  const f = findNode(r.logic, id);
+  if (f) return {kind:'logic', ...f};
+  const i = r.outputs.findIndex(o => o.id === id);
+  if (i >= 0) return {kind:'out', out:r.outputs[i], index:i};
+  return null;
+}
+function removeNode(f){
+  if (!f.parent) throw new Error('Impossible de supprimer le seul élément de la logique');
+  if (f.parent.type === 'cnt') throw new Error("Une entrée du compteur ne peut pas être vide");
+  const arr = f.parent.children; arr.splice(arr.indexOf(f.node), 1);
+}
+/* Insère nn avant / après (série) ou en parallèle de l'élément f */
+function insertRel(r, f, nn, zone){
+  if (zone === 'par'){
+    if (f.node.type === 'box') throw new Error('Un bloc ne peut pas être seul dans une branche parallèle');
+    if (f.parent && f.parent.type === 'parallel'){ const i = f.parent.children.indexOf(f.node); f.parent.children.splice(i + 1, 0, nn); }
+    else replaceNode(r, f, {type:'parallel', id:nid(), children:[f.node, nn]});
+    return;
+  }
+  const after = zone === 'after';
+  if (f.parent && f.parent.type === 'series'){ const i = f.parent.children.indexOf(f.node); f.parent.children.splice(after ? i + 1 : i, 0, nn); }
+  else replaceNode(r, f, {type:'series', id:nid(), children: after ? [f.node, nn] : [nn, f.node]});
+}
+function replaceNode(r, f, nn){
+  if (!f.parent){ r.logic = nn; return; }
+  const arr = f.parent.children || f.parent.inputs;
+  arr[arr.indexOf(f.node)] = nn;
+}
+
+/* ================= Undo / mutations ================= */
+const snapshot = () => JSON.stringify({items:S.items, trailer:S.trailer});
+function restore(snap){ const o = JSON.parse(snap); S.items = o.items; S.trailer = o.trailer; }
+function mutate(fn, opts = {}){
+  const snap = snapshot();
+  try { fn(); }
+  catch (e){ restore(snap); cleanSel(); toast('⚠ ' + e.message); render(); return false; }
+  undoStack.push(snap); if (undoStack.length > 200) undoStack.shift();
+  redoStack.length = 0;
+  saveSession();
+  render(opts.scrollTo);
+  return true;
+}
+function undo(){ if (!undoStack.length) return; redoStack.push(snapshot()); restore(undoStack.pop()); cleanSel(); saveSession(); render(); }
+function redo(){ if (!redoStack.length) return; undoStack.push(snapshot()); restore(redoStack.pop()); cleanSel(); saveSession(); render(); }
+function cleanSel(){
+  const ids = new Set(S.items.map(i => i.id));
+  selRungs = new Set([...selRungs].filter(id => ids.has(id)));
+  if (focusRung && !ids.has(focusRung)) focusRung = null;
+  if (selElRung && !ids.has(selElRung)){ selElRung = null; selEls = []; }
+  const r = selElRung && getItem(selElRung);
+  if (r) selEls = selEls.filter(id => findAny(r, id));
+}
+
+/* Après modification graphique : normalise, recompile, revalide */
+function commitRung(r){
+  r.logic = norm(r.logic);
+  if (!r.logic) throw new Error('Le rung doit garder au moins un contact');
+  if (!r.outputs.length) throw new Error('Le rung doit garder au moins une sortie');
+  const lines = compileRung(r);
+  buildTree(lines); // vérification
+  setRaw(r, lines);
+}
+function setRaw(r, lines){
+  if (!r.orig && r.no) r.orig = S.origRungs[r.no] ? S.origRungs[r.no].slice() : r.raw.slice();
+  r.raw = lines;
+  r.dirty = !r.no || !S.origRungs[r.no] || S.origRungs[r.no].join('\n') !== lines.join('\n');
+}
+function guard(id){ if (isLocked(id)) throw new Error(LOCK_MSG); }
+
+/* ================= Dessin SVG ================= */
+const UW = 84, UH = 60, PX = 14, PY = 6;
+const px = u => PX + u * UW;
+const py = row => PY + row * UH + UH / 2 + 4;
+
+function measure(n){
+  switch (n.type){
+    case 'contact': n._w = 1; n._h = 1; break;
+    case 'box': n._w = Math.max(1.5, (fmt(n.op, n.args).length * 7.4 + 22) / UW); n._h = 1; break;
+    case 'series': { let w = 0, h = 1; for (const c of n.children){ measure(c); w += c._w; h = Math.max(h, c._h); } n._w = w; n._h = h; break; }
+    case 'parallel': { let w = 0, h = 0; for (const c of n.children){ measure(c); w = Math.max(w, c._w); h += c._h; } n._w = w; n._h = h; break; }
+    case 'cnt': { const [a, b] = n.inputs; measure(a); measure(b); n._iw = Math.max(a._w, b._w); n._bw = Math.max(1.6, (n.args.length * 7.4 + 24) / UW); n._w = n._iw + n._bw; n._h = a._h + b._h; break; }
+  }
+}
+const ln = (x1, y1, x2, y2, c = 'w') => `<line class="${c}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+function elClass(id, addr){ let c = 'el'; if (selEls.includes(id)) c += ' sel'; if (hlAddr && addr && addr === hlAddr) c += ' hl'; return c; }
+
+function drawContact(n, x0, cy){
+  const cx = x0 + UW / 2; let s = `<g class="${elClass(n.id, n.addr)}" data-id="${n.id}"><title>${esc((n.group ? 'GSTR ' : n.neg ? 'Contact NOT ' : 'Contact ') + n.addr + (nameOf(n.addr) ? ' « ' + nameOf(n.addr) + ' »' : '') + ' — ' + sigName(n.addr))}</title>`;
+  s += `<rect class="hit" x="${x0 + 3}" y="${cy - 30}" width="${UW - 6}" height="${UH - 4}" rx="5"/>`;
+  if (n.group){
+    s += ln(x0, cy, cx - 22, cy) + ln(cx + 22, cy, x0 + UW, cy);
+    s += `<rect class="boxr" x="${cx - 22}" y="${cy - 11}" width="44" height="22" rx="3"/><text class="coiltxt" x="${cx}" y="${cy + 4}" text-anchor="middle">GSTR</text>`;
+  } else {
+    s += ln(x0, cy, cx - 8, cy) + ln(cx + 8, cy, x0 + UW, cy);
+    s += `<path class="sym" d="M${cx - 8} ${cy - 12}v24M${cx + 8} ${cy - 12}v24"/>`;
+    if (n.neg) s += `<path class="neg" d="M${cx - 13} ${cy + 12}L${cx + 13} ${cy - 12}"/>`;
+  }
+  s += `<text class="lbl b" x="${cx}" y="${cy - 17}" text-anchor="middle">${esc(n.addr)}</text>`;
+  s += `<text class="sub" x="${cx}" y="${cy + 25}" text-anchor="middle">${esc(subLabel(n.addr))}</text></g>`;
+  return s;
+}
+function drawBox(n, x0, cy, wu){
+  const w = wu * UW; let s = `<g class="${elClass(n.id)}" data-id="${n.id}"><title>${esc(fmt(n.op, n.args))}</title>`;
+  s += `<rect class="hit" x="${x0 + 2}" y="${cy - 28}" width="${w - 4}" height="${UH - 6}" rx="5"/>`;
+  s += ln(x0, cy, x0 + 8, cy) + ln(x0 + w - 8, cy, x0 + w, cy);
+  s += `<rect class="boxr" x="${x0 + 8}" y="${cy - 16}" width="${w - 16}" height="32" rx="4"/>`;
+  s += `<text class="coiltxt" x="${x0 + w / 2}" y="${cy - 3}" text-anchor="middle">${esc(n.op)}</text>`;
+  s += `<text class="lbl" x="${x0 + w / 2}" y="${cy + 11}" text-anchor="middle">${esc(n.args)}</text></g>`;
+  return s;
+}
+function draw(n, x, y, w, o){
+  const cy = py(y);
+  switch (n.type){
+    case 'contact': o.push(drawContact(n, px(x), cy)); if (w > 1) o.push(ln(px(x + 1), cy, px(x + w), cy)); break;
+    case 'box': o.push(drawBox(n, px(x), cy, n._w)); if (w > n._w) o.push(ln(px(x + n._w), cy, px(x + w), cy)); break;
+    case 'series': { let cx = x; n.children.forEach((c, i) => { const cw = i === n.children.length - 1 ? (x + w - cx) : c._w; draw(c, cx, y, cw, o); cx += cw; }); break; }
+    case 'parallel': {
+      let yy = y, last = y;
+      for (const c of n.children){ draw(c, x, yy, w, o); last = yy; yy += c._h; }
+      o.push(ln(px(x), py(y), px(x), py(last)), ln(px(x + w), py(y), px(x + w), py(last)));
+      break;
+    }
+    case 'cnt': {
+      const [a, b] = n.inputs; draw(a, x, y, n._iw, o); draw(b, x, y + a._h, n._iw, o);
+      const bx = px(x + n._iw) + 8, bw = n._bw * UW - 16, y1 = py(y), y2 = py(y + a._h);
+      let s = `<g class="${elClass(n.id)}" data-id="${n.id}"><title>${esc(fmt(n.op, n.args))} — entrée haute : comptage, entrée basse : remise à zéro</title>`;
+      s += `<rect class="hit" x="${bx - 6}" y="${y1 - 26}" width="${bw + 12}" height="${y2 - y1 + 48}" rx="5"/>`;
+      s += ln(bx - 8, y1, bx, y1) + ln(bx - 8, y2, bx, y2);
+      s += `<rect class="boxr" x="${bx}" y="${y1 - 16}" width="${bw}" height="${y2 - y1 + 32}" rx="4"/>`;
+      s += `<text class="sub" x="${bx + 4}" y="${y1 + 4}">C</text><text class="sub" x="${bx + 4}" y="${y2 + 4}">R</text>`;
+      s += `<text class="coiltxt" x="${bx + bw / 2}" y="${(y1 + y2) / 2 - 3}" text-anchor="middle">${esc(n.op)}</text>`;
+      s += `<text class="lbl" x="${bx + bw / 2}" y="${(y1 + y2) / 2 + 12}" text-anchor="middle">${esc(n.args)}</text></g>`;
+      o.push(s, ln(bx + bw, y1, px(x + w), y1));
+      break;
+    }
+  }
+}
+function outWidth(o){ return (BIT_OUT_OPS.has(o.op)) ? 1.3 : Math.max(1.7, (fmt(o.op, o.args).length * 7.4 + 26) / UW); }
+function drawOutput(o, x0, cy, wu){
+  const w = wu * UW; let s = `<g class="${elClass(o.id, o.args)}" data-id="${o.id}"><title>${esc(fmt(o.op, o.args) + (BIT_OUT_OPS.has(o.op) ? (nameOf(o.args) ? ' « ' + nameOf(o.args) + ' »' : '') + ' — ' + sigName(o.args) : ''))}</title>`;
+  s += `<rect class="hit" x="${x0 + 2}" y="${cy - 30}" width="${w - 4}" height="${UH - 4}" rx="5"/>`;
+  if (BIT_OUT_OPS.has(o.op)){
+    const cx = x0 + w / 2;
+    s += ln(x0, cy, cx - 11, cy) + ln(cx + 11, cy, x0 + w, cy);
+    s += `<path class="sym" d="M${cx - 6} ${cy - 13}A16 16 0 0 0 ${cx - 6} ${cy + 13}M${cx + 6} ${cy - 13}A16 16 0 0 1 ${cx + 6} ${cy + 13}"/>`;
+    const letter = {PLS:'P', PLF:'F', SET:'S', RST:'R'}[o.op];
+    if (letter) s += `<text class="coiltxt" x="${cx}" y="${cy + 4}" text-anchor="middle">${letter}</text>`;
+    s += `<text class="lbl b" x="${cx}" y="${cy - 17}" text-anchor="middle">${esc(o.args)}</text>`;
+    s += `<text class="sub" x="${cx}" y="${cy + 25}" text-anchor="middle">${esc(subLabel(o.args))}</text>`;
+  } else {
+    s += ln(x0, cy, x0 + 8, cy) + ln(x0 + w - 8, cy, x0 + w, cy);
+    s += `<rect class="boxr" x="${x0 + 8}" y="${cy - 16}" width="${w - 16}" height="32" rx="4"/>`;
+    s += `<text class="coiltxt" x="${x0 + w / 2}" y="${cy - 3}" text-anchor="middle">${esc(o.op)}</text>`;
+    s += `<text class="lbl" x="${x0 + w / 2}" y="${cy + 11}" text-anchor="middle">${esc(o.args)}</text>`;
+  }
+  return s + '</g>';
+}
+function rungSVG(r, sc = zoom){
+  measure(r.logic);
+  const L = Math.max(r.logic._w, 5);
+  const ow = Math.max(...r.outputs.map(outWidth)) + 0.3;
+  const H = Math.max(r.logic._h, r.outputs.length);
+  const W = PX * 2 + (L + ow) * UW, Hp = PY * 2 + H * UH;
+  const o = [];
+  o.push(ln(PX, PY, PX, Hp - PY, 'rail'), ln(W - PX, PY, W - PX, Hp - PY, 'rail'));
+  draw(r.logic, 0, 0, L, o);
+  const xo = px(L);
+  if (r.outputs.length > 1) o.push(ln(xo, py(0), xo, py(r.outputs.length - 1)));
+  r.outputs.forEach((out, i) => {
+    const cy = py(i), wu = outWidth(out);
+    o.push(drawOutput(out, xo, cy, wu));
+    o.push(ln(xo + wu * UW, cy, W - PX, cy));
+  });
+  return `<svg class="lad" viewBox="0 0 ${W} ${Hp}" width="${W * sc}" height="${Hp * sc}" xmlns="http://www.w3.org/2000/svg">${o.join('')}</svg>`;
+}
+
+/* ================= Rendu de la liste ================= */
+function usesSignal(r, a){ return r.raw.some(l => { const {op, args} = splitInstr(l); if (!op) return false; const toks = (op === 'GSTR' || op === 'GOUT') ? expandByte(args) : args.split(/[\s,]+/); return args === a || toks.includes(a); }); }
+function matchFilter(r){
+  if (sigOnly && hlAddr && !usesSignal(r, hlAddr)) return false;
+  if (!filterText) return true;
+  const f = filterText.trim();
+  const rg = /^#?(\d{4,5})\s*[-–à]\s*#?(\d{4,5})$/.exec(f);
+  if (rg){ const k = outKey(r); return k >= +rg[1] && k <= +rg[2]; }
+  return r.raw.join('\n').toUpperCase().includes(f.toUpperCase());
+}
+function render(scrollTo){
+  if (!S.loaded){ return; }
+  if (CMP) computeCompare();
+  const cont = $('#rungs'); const html = []; let n = 0, part = null;
+  if (CMP){ const c = t => CMP.ops.filter(o => o.t === t).length;
+    html.push(`<div class="cmpbar">⇄ Comparaison avec <b>${esc(CMP.name)}</b> : ${c('mod')} modifié(s), ${c('del')} absent(s) de B, ${c('ins')} seulement dans B <button data-cmpbar="show">Rapport</button><button data-cmpbar="close">Fermer</button></div>`); }
+  for (const it of S.items){
+    if (it.type === 'part'){
+      part = it.num; const sys = part === '1';
+      html.push(`<div class="part ${sys ? 'sys' : ''}">${esc(it.raw.trim())} — ${sys ? 'ladder système' : 'ladder utilisateur'}${sys ? `<span class="lock">${unlockSystem ? '🔓 modifiable' : '🔒 verrouillé'}</span>` : ''}</div>`);
+      continue;
+    }
+    if (it.type === 'end'){ html.push(`<div class="endmark">${esc(it.raw.trim())}</div>`); continue; }
+    if (it.type !== 'rung') continue;
+    n++;
+    const r = it, vis = matchFilter(r), locked = !unlockSystem && part === '1';
+    const cls = ['rung']; if (selRungs.has(r.id)) cls.push('sel'); if (r.dirty) cls.push('dirty'); if (locked) cls.push('locked'); if (!vis) cls.push('hide'); if (focusRung === r.id) cls.push('focus');
+    const badges = [];
+    if (!r.no) badges.push('<span class="badge new">nouveau</span>');
+    else { if (r.dirty) badges.push('<span class="badge mod">modifié</span>'); if (r.no !== n) badges.push(`<span class="badge mv" title="Position d'origine">orig. n°${r.no}</span>`); }
+    if (!r.ok) badges.push('<span class="badge txt" title="' + esc(r.err) + '">texte</span>');
+    if (CMP && CMP.status[r.id] === 'mod') badges.push('<span class="badge cmod" title="Différent dans le fichier comparé">≠ B</span>');
+    if (CMP && CMP.status[r.id] === 'only') badges.push('<span class="badge conly">absent de B</span>');
+    let body;
+    if (r.ok){ try { body = rungSVG(r); } catch (e){ body = `<div class="rawmsg">${esc(e.message)}</div>`; } }
+    else body = `<div><div class="rawmsg">Affichage texte : ${esc(r.err)}</div><pre class="raw">${esc(r.raw.join('\n'))}</pre></div>`;
+    if (showIL && r.ok) body += `<pre class="il">${esc(r.raw.filter(l => l.trim()).join('\n'))}</pre>`;
+    html.push(`<div class="${cls.join(' ')}" data-id="${r.id}">
+      <div class="rh"><span class="grip" draggable="true" title="Glisser pour déplacer">⋮⋮</span>
+        <input type="checkbox" class="rsel" ${selRungs.has(r.id) ? 'checked' : ''}>
+        <span class="rno">N° ${n}</span>${badges.join('')}
+        <span class="rout">→ ${esc(firstOutText(r))}</span>
+        <span class="rbtns"><button data-act="up" title="Monter">▲</button><button data-act="down" title="Descendre">▼</button><button data-act="text" title="Éditer en texte (liste d'instructions)">IL</button><button data-act="dup" title="Dupliquer">⧉</button><button data-act="del" class="danger" title="Supprimer">✕</button></span>
+      </div><div class="rb">${body}</div></div>`);
+  }
+  cont.innerHTML = html.join('');
+  updateBars();
+  renderPanel();
+  if (scrollTo){ const el = cont.querySelector(`.rung[data-id="${scrollTo}"]`); if (el) el.scrollIntoView({block:'center', behavior:'smooth'}); }
+}
+let sigListKey = '';
+function updateSigList(){
+  const used = new Set();
+  for (const r of rungs()) for (const l of r.raw){ const {op, args} = splitInstr(l); if (!op) continue; for (const t of args.split(/[\s,]+/)) if (/^#\d{5}$|^M\d{3,4}$/.test(t)) used.add(t); }
+  const all = [...new Set([...used, ...Object.keys(NAMES.map), ...Object.keys(NAMES.custom)])].sort();
+  const key = all.length + ':' + Object.keys(NAMES.custom).length + ':' + Object.keys(NAMES.map).length + ':' + used.size;
+  if (key === sigListKey) return; sigListKey = key;
+  $('#sigList').innerHTML = all.slice(0, 5000).map(a => `<option value="${esc(a)}">${esc(nameOf(a))}</option>`).join('');
+}
+function updateBars(){
+  const rs = rungs(); const mod = changeSummary();
+  const nmod = mod.added.length + mod.modified.length + mod.deleted.length + (mod.moved ? 1 : 0) + (mod.trailer ? 1 : 0);
+  $('#fileInfo').innerHTML = `<b>${esc(S.fileName || '')}</b> · ${rs.length} rungs · ` +
+    (S.fidelity ? '<span class="ok" title="Réécrit sans modification, le fichier est identique octet par octet">relecture fidèle ✓</span>' : '<span class="bad" title="La réécriture sans modification diffère du fichier d\'origine">relecture non fidèle ⚠</span>') +
+    (nmod ? ` · <span class="bad">${mod.added.length + mod.modified.length + mod.deleted.length} rung(s) changé(s)${mod.moved ? ', ordre modifié' : ''}${mod.trailer ? ', textes d\'alarmes modifiés' : ''}</span>` : '') +
+    (bkCount() ? ` · <span title="Fichiers de sauvegarde analysés">🗂 ${bkCount()} fichier(s) annexes</span>` : '');
+  $('#selCount').textContent = selRungs.size + ' sélectionné' + (selRungs.size > 1 ? 's' : '');
+  $('#btnUndo').disabled = !undoStack.length; $('#btnRedo').disabled = !redoStack.length;
+  $('#btnExport').disabled = !S.loaded; $('#btnDiff').disabled = !S.loaded; $('#btnCompare').disabled = !S.loaded; $('#btnBackup').disabled = !S.loaded && !bkCount();
+  updateSigList();
+}
+
+/* ================= Panneau latéral ================= */
+function renderPanel(){
+  const p = $('#panel'); if (!S.loaded){ p.innerHTML = '<p class="hint">Chargez un fichier pour commencer.</p>'; return; }
+  let h = '';
+  const r = focusRung && getItem(focusRung);
+  if (r && r.type === 'rung'){
+    const nodes = (selElRung === r.id ? selEls : []).map(id => findAny(r, id)).filter(Boolean);
+    if (nodes.length === 1) h += panelElement(r, nodes[0]);
+    else if (nodes.length > 1) h += panelMulti(r, nodes);
+    else h += panelRung(r);
+  } else {
+    h += `<h3>Ladder</h3><p class="hint">Cliquez sur un contact, une bobine ou un bloc pour le modifier. Cliquez sur l'en-tête d'un rung pour le sélectionner (Maj+clic : plage).</p>`;
+  }
+  h += panelXref() + panelChecks();
+  p.innerHTML = h;
+}
+function lockNote(r){ return isLocked(r.id) ? `<p class="hint">🔒 Rung du ladder système : cochez « Déverrouiller PART 1 » pour le modifier.</p>` : ''; }
+function insertBlock(){
+  return `<h4>Insérer un nouveau contact</h4>
+  <div class="row"><input type="text" id="pNewAddr" class="mono" value="${esc(newAddr)}"><label><input type="checkbox" id="pNewNeg"> NOT</label></div>
+  <div class="row"><button data-p="serL">◀ En série avant</button><button data-p="serR">En série après ▶</button></div>
+  <div class="row"><button data-p="par">⤓ En parallèle (OU)</button></div>`;
+}
+function panelElement(r, f){
+  const num = rungNumber(r.id);
+  let h = `<h3>Rung n°${num}</h3>` + lockNote(r);
+  if (f.kind === 'out'){
+    const o = f.out;
+    const ops = ['OUT','PLS','PLF','GOUT', ...FUNC_OPS];
+    h += `<h4>Sortie ${f.index + 1}/${r.outputs.length}</h4>
+    <div class="row"><select id="pOutOp">${ops.map(x => `<option ${x === o.op ? 'selected' : ''}>${x}</option>`).join('')}${ops.includes(o.op) ? '' : `<option selected>${esc(o.op)}</option>`}</select>
+    <input type="text" id="pArgs" class="mono" value="${esc(o.args)}"></div>
+    <div class="hint">${nameOf(o.args) ? '<b>' + esc(nameOf(o.args)) + '</b> · ' : ''}${esc(sigName(o.args))}</div>
+    <div class="row"><button data-p="applyOut" class="primary">Appliquer</button><button data-p="delOut" class="danger">Supprimer la sortie</button></div>
+    <h4>Ajouter une sortie (même condition)</h4>
+    <div class="row"><input type="text" id="pNewOut" class="mono" value="${esc(newOutAddr)}"><button data-p="addOut">+ Bobine OUT</button></div>`;
+    return h;
+  }
+  const n = f.node;
+  if (n.type === 'contact'){
+    h += `<h4>${n.group ? 'Groupe GSTR' : 'Contact'}</h4>
+    <div class="row"><label>Adresse <input type="text" id="pAddr" class="mono" value="${esc(n.addr)}"></label></div>
+    <div class="hint">${nameOf(n.addr) ? '<b>' + esc(nameOf(n.addr)) + '</b> · ' : ''}${esc(sigName(n.addr))}</div>
+    ${n.group ? '' : `<div class="row"><label><input type="checkbox" id="pNeg" ${n.neg ? 'checked' : ''}> Contact inversé (NOT, repos)</label></div>`}
+    <div class="row"><button data-p="apply" class="primary">Appliquer</button><button data-p="del" class="danger">Supprimer</button></div>` + insertBlock();
+  } else {
+    h += `<h4>Bloc ${esc(n.op)}</h4>
+    <div class="row"><input type="text" id="pArgs" class="mono wide" value="${esc(n.args)}"></div>
+    <div class="hint">${n.type === 'cnt' ? 'Entrée haute : comptage — entrée basse : remise à zéro.' : 'Paramètres du bloc (registre, valeur de consigne…).'}</div>
+    <div class="row"><button data-p="applyArgs" class="primary">Appliquer</button>${n.type === 'box' ? '<button data-p="del" class="danger">Supprimer</button>' : ''}</div>
+    <h4>Insérer un nouveau contact</h4>
+    <div class="row"><input type="text" id="pNewAddr" class="mono" value="${esc(newAddr)}"><label><input type="checkbox" id="pNewNeg"> NOT</label></div>
+    <div class="row">${n.type === 'cnt' ? '<button data-p="serL">◀ En série avant</button>' : ''}<button data-p="serR">En série après ▶</button></div>`;
+  }
+  return h;
+}
+function contiguousSiblings(r, ids){
+  const fs = ids.map(id => findNode(r.logic, id)).filter(Boolean);
+  if (fs.length !== ids.length || !fs.length) return null;
+  const p = fs[0].parent; if (!p || p.type !== 'series' || fs.some(f => f.parent !== p)) return null;
+  const idx = fs.map(f => p.children.indexOf(f.node)).sort((a, b) => a - b);
+  for (let i = 1; i < idx.length; i++) if (idx[i] !== idx[i - 1] + 1) return null;
+  return {parent:p, from:idx[0], to:idx[idx.length - 1]};
+}
+function panelMulti(r, nodes){
+  const num = rungNumber(r.id);
+  const ok = nodes.every(n => n.kind === 'logic') && contiguousSiblings(r, nodes.map(n => n.node.id));
+  return `<h3>Rung n°${num}</h3>` + lockNote(r) + `<p>${nodes.length} éléments sélectionnés.</p>` +
+    (ok ? `<h4>Branche parallèle autour de la sélection</h4>
+    <div class="row"><input type="text" id="pNewAddr" class="mono" value="${esc(newAddr)}"><label><input type="checkbox" id="pNewNeg"> NOT</label></div>
+    <div class="row"><button data-p="wrapPar" class="primary">⤓ Ajouter en parallèle</button></div>`
+      : `<p class="hint">Pour créer une branche parallèle autour de plusieurs éléments, sélectionnez (Ctrl+clic) des éléments consécutifs d'une même ligne série.</p>`) +
+    `<div class="row"><button data-p="delMulti" class="danger">Supprimer la sélection</button></div>`;
+}
+function panelRung(r){
+  const num = rungNumber(r.id);
+  let h = `<h3>Rung n°${num}</h3>` + lockNote(r);
+  if (!r.ok) h += `<p class="bad">Affiché en texte : ${esc(r.err)}</p>`;
+  h += `<pre>${esc(r.raw.filter(l => l.trim()).join('\n'))}</pre>`;
+  if (r.orig && r.dirty) h += `<h4>Version d'origine</h4><pre>${esc(r.orig.join('\n'))}</pre><div class="row"><button data-p="revert">Rétablir l'origine</button></div>`;
+  h += `<div class="row"><button data-p="text">Éditer en texte</button></div>`;
+  if (r.ok){
+    h += `<h4>Ajouter à la logique</h4>
+    <div class="row"><input type="text" id="pNewAddr" class="mono" value="${esc(newAddr)}"><label><input type="checkbox" id="pNewNeg"> NOT</label></div>
+    <div class="row"><button data-p="rSerL">◀ Contact en tête</button><button data-p="rSerR">Contact en fin ▶</button></div>
+    <div class="row"><button data-p="rPar">⤓ Branche parallèle sur toute la logique</button></div>
+    <h4>Ajouter une sortie</h4>
+    <div class="row"><input type="text" id="pNewOut" class="mono" value="${esc(newOutAddr)}"><button data-p="addOut">+ Bobine OUT</button></div>`;
+  }
+  return h;
+}
+const expandByte = a => /^#\d{4}0$/.test(a) ? [...Array(8)].map((_, k) => a.slice(0, -1) + k) : [a];
+/* Toutes les utilisations d'un signal : rôle écrit / lu, instruction, n° de rung */
+function usages(addr){
+  const list = []; let n = 0;
+  for (const it of S.items){ if (it.type !== 'rung') continue; n++;
+    for (const l of it.raw){ const {op, args} = splitInstr(l); if (!op) continue;
+      const toks = (op === 'GSTR' || op === 'GOUT') ? expandByte(args) : args.split(/[\s,]+/);
+      if (!(args === addr || toks.includes(addr))) continue;
+      const role = isOutOp(op) ? 'w' : 'r';
+      if (!list.some(u => u.id === it.id && u.role === role)) list.push({id:it.id, n, role, instr:fmt(op, args)});
+    }
+  }
+  return list;
+}
+function signalLabel(a){ const nm = nameOf(a); return nm ? `${a} « ${nm} »` : a; }
+function panelXref(){
+  let h = '';
+  if (sigMatches && sigMatches.length > 1){
+    h += `<h4>Signaux correspondants (${sigMatches.length})</h4><ul class="xref">${sigMatches.slice(0, 60).map(a => `<li><span class="chip" data-hl="${esc(a)}">${esc(a)}</span> ${esc(nameOf(a))}</li>`).join('')}</ul>`;
+  }
+  if (!hlAddr) return h;
+  const u = usages(hlAddr), w = u.filter(x => x.role === 'w'), r = u.filter(x => x.role === 'r');
+  h += `<h4>Recherche globale ${esc(hlAddr)}</h4>
+  <div>${nameOf(hlAddr) ? `<b>${esc(nameOf(hlAddr))}</b> <span class="hint">(${esc(nameSrc(hlAddr))})</span><br>` : ''}<span class="hint">${esc(sigName(hlAddr))}</span></div>
+  <div class="row"><span class="role w">écrit ${w.length}</span><span class="role r">lu ${r.length}</span>
+  <button data-sig="prev">◀</button><button data-sig="next">▶</button></div>
+  ${w.length > 1 ? '<div class="bad">⚠ Sortie écrite plusieurs fois</div>' : ''}
+  ${!w.length && /^#[79]/.test(hlAddr) && r.length ? '<div class="bad">⚠ Relais lu mais jamais écrit dans le ladder</div>' : ''}
+  <ul class="xref">${u.map((x, i) => `<li class="${sigUses[sigIdx] && sigUses[sigIdx].id === x.id && sigUses[sigIdx].role === x.role ? 'cur' : ''}"><span class="chip" data-goto="${x.id}" data-sigi="${i}">n°${x.n}</span> <span class="role ${x.role}">${x.role === 'w' ? 'écrit' : 'lu'}</span> <code>${esc(x.instr)}</code></li>`).join('') || '<li class="hint">Aucune utilisation</li>'}</ul>
+  ${bkUsesHtml(hlAddr)}
+  <div class="row"><label>Nom <input type="text" id="pName" value="${esc(NAMES.custom[hlAddr] || '')}" placeholder="${esc(nameOf(hlAddr) || 'nom personnalisé')}"></label><button data-p="setName">OK</button></div>`;
+  return h;
+}
+function bkUsesHtml(a){
+  const ext = BK.sigIndex[a] || []; if (!ext.length) return '';
+  const lbl = {job:'job', ifp:'IF panel', alm:'historique'};
+  return `<h4>Hors ladder (${ext.length})</h4><ul class="xref">${ext.slice(0, 80).map(x => `<li><span class="role ${x.role}">${lbl[x.kind]}</span> ${esc(x.where)} <code>${esc(x.text)}</code></li>`).join('')}${ext.length > 80 ? '<li class="hint">…</li>' : ''}</ul>`;
+}
+/* Résout le texte de recherche en adresse(s) */
+function resolveSignal(t){
+  t = t.trim(); if (!t) return [];
+  const T = t.toUpperCase();
+  let m = /^#?(\d{5})$/.exec(T); if (m) return ['#' + m[1]];
+  if (/^M\d{3,4}$/.test(T)) return [T];
+  m = /^(IN|OUT|OT)#?\(?(\d{1,4})\)?$/.exec(T); if (m) return [ioAddr(m[1] === 'IN' ? 0 : 1, +m[2] - 1)];
+  const all = new Set([...Object.keys(NAMES.map), ...Object.keys(NAMES.custom)]);
+  const hits = [...all].filter(a => nameOf(a).toUpperCase().includes(T) || a.includes(T));
+  const used = new Set(); for (const r of rungs()) for (const l of r.raw){ const {args} = splitInstr(l); args.split(/[\s,]+/).forEach(x => used.add(x)); }
+  for (const a of used) if (/^#\d{5}$/.test(a) && a.includes(T) && !hits.includes(a)) hits.push(a);
+  return hits.sort((a, b) => (used.has(b) - used.has(a)) || a.localeCompare(b));
+}
+function setSignal(a, jump){
+  hlAddr = a; sigUses = usages(a); sigIdx = -1;
+  if (jump && sigUses.length) return gotoUse(0);
+  render();
+}
+function gotoUse(i){
+  if (!hlAddr) return;
+  sigUses = usages(hlAddr); if (!sigUses.length){ toast('Aucune utilisation de ' + hlAddr); return; }
+  sigIdx = (i + sigUses.length) % sigUses.length;
+  const u = sigUses[sigIdx]; focusRung = u.id; selEls = []; selElRung = null;
+  if (filterText && !matchFilter(getItem(u.id))){ filterText = ''; $('#search').value = ''; }
+  render(u.id);
+}
+function searchSignal(){
+  const t = $('#sigSearch').value; const hits = resolveSignal(t);
+  sigMatches = hits.length > 1 ? hits : null;
+  if (!hits.length){ toast('Aucun signal ne correspond à « ' + t + ' »'); return; }
+  if (hits.length === 1) setSignal(hits[0], true);
+  else { setSignal(hits[0], true); toast(hits.length + ' signaux correspondent — voir la liste dans le panneau'); }
+}
+function checks(){
+  const outs = {}, bad = []; let n = 0, txt = 0;
+  for (const it of S.items){ if (it.type !== 'rung') continue; n++; if (!it.ok) txt++;
+    for (const l of it.raw){ const {op, args} = splitInstr(l); if (!op) continue;
+      if (BIT_OUT_OPS.has(op)) (outs[args] = outs[args] || []).push({id:it.id, n});
+      else if (op === 'GOUT' && /^#\d{4}0$/.test(args)) for (const a of expandByte(args)) (outs[a] = outs[a] || []).push({id:it.id, n});
+      if (['STR','STR-NOT','AND','AND-NOT','OR','OR-NOT', ...BIT_OUT_OPS].includes(op) && !validAddr(args)) bad.push({id:it.id, n, txt:fmt(op, args)});
+      if ((op === 'GSTR' || op === 'GOUT') && !/^#\d{4}0$/.test(args)) bad.push({id:it.id, n, txt:fmt(op, args)});
+    }
+  }
+  const dup = Object.entries(outs).map(([a, l]) => [a, l.filter((x, i) => l.findIndex(y => y.id === x.id) === i)]).filter(([, l]) => l.length > 1);
+  return {dup, bad, txt};
+}
+function panelChecks(){
+  const c = checks();
+  let h = `<h4>Contrôles</h4>`;
+  if (!c.dup.length && !c.bad.length) h += `<div class="ok">✓ Aucune sortie en double, adresses valides</div>`;
+  if (c.dup.length) h += `<div class="bad">⚠ ${c.dup.length} sortie(s) écrite(s) plusieurs fois :</div><ul>${c.dup.slice(0, 30).map(([a, l]) => `<li><span class="chip" data-hl="${esc(a)}">${esc(a)}</span> rungs ${l.map(x => `<span class="chip" data-goto="${x.id}">n°${x.n}</span>`).join('')}</li>`).join('')}</ul>`;
+  if (c.bad.length) h += `<div class="bad">⚠ ${c.bad.length} adresse(s) au format douteux :</div><ul>${c.bad.slice(0, 30).map(b => `<li><span class="chip" data-goto="${b.id}">n°${b.n}</span> <code>${esc(b.txt)}</code></li>`).join('')}</ul>`;
+  if (c.txt) h += `<div class="hint">${c.txt} rung(s) affiché(s) en texte (instructions non dessinées).</div>`;
+  const nf = Object.entries(NAMES.files), nc = Object.keys(NAMES.custom).length;
+  h += `<h4>Noms de signaux</h4>`;
+  if (nf.length) h += `<ul>${nf.map(([f, k]) => `<li>${esc(f)} : ${k} nom(s)</li>`).join('')}</ul><div class="hint">Contrôle : ${['#00010', '#10010', '#20010', '#30010'].map(a => `${a} = ${esc(nameOf(a) || '—')}`).join(' · ')}. Vérifiez la correspondance sur le pupitre.</div>`;
+  else h += `<div class="hint">Aucun fichier de noms. Ouvrez le dossier de sauvegarde (📁 Dossier…) contenant IONAME.DAT / EXIONAME.DAT, ou sélectionnez ces fichiers avec « Parcourir… ».</div>`;
+  if (nc) h += `<div class="hint">${nc} nom(s) personnalisé(s) enregistré(s) dans ce navigateur.</div>`;
+  return h;
+}
+
+/* ================= Actions du panneau ================= */
+function readNew(){ const a = ($('#pNewAddr')?.value || newAddr).trim().toUpperCase(); newAddr = a; return mkContact(a, $('#pNewNeg')?.checked); }
+function checkAddrInput(a){ if (!a) throw new Error('Adresse vide'); if (!validAddr(a)) toast('Attention : « ' + a + ' » ne ressemble pas à une adresse #xxxxx (bit 0–7)'); }
+function panelAction(act){
+  if (act === 'setName'){ if (!hlAddr) return; setCustomName(hlAddr, $('#pName').value.trim()); render(); toast('Nom enregistré pour ' + hlAddr); return; }
+  const r = focusRung && getItem(focusRung); if (!r || r.type !== 'rung') return;
+  if (act === 'text') return editText(r.id);
+  const sel = selElRung === r.id ? selEls.slice() : [];
+  const f = sel.length === 1 ? findAny(r, sel[0]) : null;
+  mutate(() => {
+    guard(r.id);
+    switch (act){
+      case 'apply': { const a = $('#pAddr').value.trim().toUpperCase(); checkAddrInput(a); f.node.addr = a; if ($('#pNeg')) f.node.neg = $('#pNeg').checked; hlAddr = a; break; }
+      case 'applyArgs': f.node.args = $('#pArgs').value.trim(); break;
+      case 'del': removeNode(f); selEls = []; break;
+      case 'delMulti': { for (const id of sel){ const g = findAny(r, id); if (!g) continue; if (g.kind === 'out'){ r.outputs.splice(r.outputs.indexOf(g.out), 1); } else removeNode(g); } selEls = []; break; }
+      case 'serL': case 'serR': case 'par': {
+        const nn = readNew(); checkAddrInput(nn.addr);
+        insertRel(r, f, nn, act === 'serL' ? 'before' : act === 'serR' ? 'after' : 'par');
+        selEls = [nn.id]; break;
+      }
+      case 'wrapPar': {
+        const cs = contiguousSiblings(r, sel); if (!cs) throw new Error('Sélection non consécutive');
+        const nn = readNew(); checkAddrInput(nn.addr);
+        const seg = cs.parent.children.slice(cs.from, cs.to + 1);
+        const segNode = seg.length === 1 ? seg[0] : {type:'series', id:nid(), children:seg};
+        cs.parent.children.splice(cs.from, seg.length, {type:'parallel', id:nid(), children:[segNode, nn]});
+        selEls = [nn.id]; break;
+      }
+      case 'rSerL': case 'rSerR': { const nn = readNew(); checkAddrInput(nn.addr); r.logic = act === 'rSerL' ? ser(nn, r.logic) : ser(r.logic, nn); selElRung = r.id; selEls = [nn.id]; break; }
+      case 'rPar': { const nn = readNew(); checkAddrInput(nn.addr); r.logic = {type:'parallel', id:nid(), children:[r.logic, nn]}; selElRung = r.id; selEls = [nn.id]; break; }
+      case 'applyOut': { const o = f.out; o.op = $('#pOutOp').value; o.args = $('#pArgs').value.trim().toUpperCase(); if (BIT_OUT_OPS.has(o.op)) { checkAddrInput(o.args); hlAddr = o.args; } break; }
+      case 'delOut': { if (r.outputs.length < 2) throw new Error('Le rung doit garder au moins une sortie'); r.outputs.splice(f.index, 1); selEls = []; break; }
+      case 'addOut': { const a = ($('#pNewOut').value || '').trim().toUpperCase(); checkAddrInput(a); newOutAddr = a; const o = {id:nid(), op:'OUT', args:a}; const i = f && f.kind === 'out' ? f.index + 1 : r.outputs.length; r.outputs.splice(i, 0, o); selElRung = r.id; selEls = [o.id]; hlAddr = a; break; }
+      case 'revert': { const lines = S.origRungs[r.no].slice(); const nr = makeRung(lines); Object.assign(r, {raw:lines, ok:nr.ok, err:nr.err, logic:nr.logic, outputs:nr.outputs, dirty:false}); selEls = []; return; }
+      default: return;
+    }
+    if (!r.ok) throw new Error('Rung en mode texte : utilisez « Éditer en texte »');
+    commitRung(r);
+  });
+}
+
+/* ================= Actions sur les rungs ================= */
+function orderedSelection(){ return S.items.filter(i => i.type === 'rung' && selRungs.has(i.id)); }
+function moveStep(ids, dir){
+  const set = new Set(ids);
+  mutate(() => {
+    for (const id of ids) guard(id);
+    const it = S.items;
+    const order = dir < 0 ? [...it.keys()] : [...it.keys()].reverse();
+    for (const i of order){
+      if (it[i].type !== 'rung' || !set.has(it[i].id)) continue;
+      let j = i + dir;
+      while (j >= 0 && j < it.length && it[j].type === 'blank') j += dir;
+      if (j < 0 || j >= it.length || it[j].type !== 'rung' || set.has(it[j].id)) continue;
+      if (isLocked(it[j].id)) continue;
+      [it[i], it[j]] = [it[j], it[i]];
+    }
+  });
+}
+/* ---- Critères de tri ---- */
+const OUT_RANK = {OUT:0, PLS:1, PLF:2, SET:3, RST:4, GOUT:5};
+function firstOut(r){
+  if (r.ok && r.outputs.length) return r.outputs[0];
+  for (const l of r.raw){ const s = splitInstr(l); if (isOutOp(s.op)) return {op:s.op, args:s.args}; }
+  return null;
+}
+function firstInKey(r){
+  for (const l of r.raw){ const {op, args} = splitInstr(l); if (START_OPS.has(op) || /^(AND|OR)(-NOT)?$/.test(op)){ const m = /\d+/.exec(args); if (m) return +m[0]; } }
+  return Infinity;
+}
+const SORT_KEYS = {
+  out: r => outKey(r),
+  outType: r => { const o = firstOut(r); return [o ? (OUT_RANK[o.op] ?? (FUNC_OPS.has(o.op) ? 10 : 20)) : 99, o && FUNC_OPS.has(o.op) ? o.op : '', outKey(r)]; },
+  in: r => [firstInKey(r), outKey(r)],
+  name: r => { const o = firstOut(r); const a = o ? (o.args.match(/#\d{5}/) || [''])[0] : ''; const nm = nameOf(a); return [nm ? 0 : 1, nm || a || '~']; },
+  size: r => r.raw.filter(l => l.trim()).length,
+  orig: r => r.no || Infinity,
+};
+const SORT_LABELS = {out:'n° de sortie', outType:'type de sortie', in:'n° de 1re entrée', name:'nom de sortie', size:'taille', orig:"ordre d'origine", dep:'dépendances'};
+function cmpKey(a, b){
+  if (Array.isArray(a)){ for (let i = 0; i < a.length; i++){ const c = cmpKey(a[i], b[i]); if (c) return c; } return 0; }
+  if (typeof a === 'string' || typeof b === 'string') return String(a).localeCompare(String(b), 'fr', {numeric:true, sensitivity:'base'});
+  return a === b ? 0 : (a < b ? -1 : 1);
+}
+/* Signaux écrits / lus par un rung (bits ; GOUT/GSTR développés sur l'octet) */
+function rwSets(r){
+  const w = new Set(), rd = new Set();
+  for (const l of r.raw){ const {op, args} = splitInstr(l); if (!op) continue;
+    if (BIT_OUT_OPS.has(op)) w.add(args);
+    else if (op === 'GOUT') expandByte(args).forEach(a => w.add(a));
+    else if (/^(STR|AND|OR)(-NOT)?$/.test(op)) rd.add(args);
+    else if (op === 'GSTR') expandByte(args).forEach(a => rd.add(a));
+  }
+  return {w, rd};
+}
+/* Nombre de cas « lu avant d'être écrit » dans une suite de rungs */
+function depViolations(rs){
+  const sets = rs.map(rwSets), writer = {}; let v = 0;
+  sets.forEach((s, i) => s.w.forEach(a => (writer[a] = writer[a] || []).push(i)));
+  sets.forEach((s, j) => s.rd.forEach(a => (writer[a] || []).forEach(i => { if (i > j) v++; })));
+  return v;
+}
+/* Tri topologique stable : un rung qui écrit un signal passe avant ceux qui le lisent */
+function depSort(rs){
+  const n = rs.length, sets = rs.map(rwSets), writer = {}, adj = rs.map(() => new Set()), indeg = new Array(n).fill(0);
+  sets.forEach((s, i) => s.w.forEach(a => (writer[a] = writer[a] || []).push(i)));
+  sets.forEach((s, j) => s.rd.forEach(a => (writer[a] || []).forEach(i => { if (i !== j && !adj[i].has(j)){ adj[i].add(j); indeg[j]++; } })));
+  const done = new Array(n).fill(false), order = []; let cycles = 0;
+  while (order.length < n){
+    let k = -1;
+    for (let i = 0; i < n; i++) if (!done[i] && indeg[i] === 0){ k = i; break; }
+    if (k < 0){ cycles++; for (let i = 0; i < n; i++) if (!done[i]){ k = i; break; } }
+    done[k] = true; order.push(k);
+    adj[k].forEach(j => indeg[j]--);
+  }
+  return {order, cycles};
+}
+function sortSelection(dir){
+  const sel = orderedSelection(), by = $('#sortBy').value;
+  if (sel.length < 2){ toast('Sélectionnez au moins deux rungs (case, Maj+clic pour une plage, ou filtre + « Sélect. visibles »)'); return; }
+  let msg = `${sel.length} rungs triés : ${SORT_LABELS[by]}${by === 'dep' ? '' : (dir > 0 ? ' ↑' : ' ↓')}`;
+  const ok = mutate(() => {
+    for (const r of sel) guard(r.id);
+    const pm = partIndexMap(), groups = {};
+    S.items.forEach((it, i) => { if (it.type === 'rung' && selRungs.has(it.id)) (groups[pm[it.id]] = groups[pm[it.id]] || []).push(i); });
+    let before = 0, after = 0, cyc = 0;
+    for (const idx of Object.values(groups)){
+      const rs = idx.map(i => S.items[i]);
+      let sorted;
+      if (by === 'dep'){
+        before += depViolations(rs);
+        const {order, cycles} = depSort(rs); cyc += cycles;
+        sorted = order.map(k => rs[k]); after += depViolations(sorted);
+      } else {
+        const kf = SORT_KEYS[by];
+        sorted = rs.map((r, k) => ({r, k, key:kf(r)})).sort((a, b) => cmpKey(a.key, b.key) * dir || a.k - b.k).map(x => x.r);
+      }
+      idx.forEach((i, k) => S.items[i] = sorted[k]);
+    }
+    if (by === 'dep') msg += ` — lectures avant écriture : ${before} → ${after}` + (cyc ? ` (${cyc} boucle(s) de rétroaction conservée(s))` : '');
+  });
+  if (ok) toast(msg);
+}
+function insertionIndexAfter(id){
+  if (id){ const i = S.items.findIndex(x => x.id === id); if (i >= 0) return i + 1; }
+  const e = S.items.findIndex(x => x.type === 'end'); return e >= 0 ? e : S.items.length;
+}
+const LOCK_MSG = "Ladder système (PART 1) verrouillé — cochez « Déverrouiller PART 1 »";
+function guardInsert(after){
+  const at = insertionIndexAfter(after), prev = S.items[at - 1];
+  if (unlockSystem || !prev) return;
+  if (prev.type === 'part' ? prev.num === '1' : partOf(prev.id) === '1') throw new Error(LOCK_MSG);
+}
+/* ---- Couper / copier / coller ---- */
+function clipSelection(){ const s = orderedSelection(); if (s.length) return s; const f = focusRung && getItem(focusRung); return f && f.type === 'rung' ? [f] : []; }
+const cleanLines = r => r.raw.filter(l => l.trim()).map(l => l.trim());
+function doCopy(cut, evt){
+  if (!S.loaded) return false;
+  const rs = clipSelection(); if (!rs.length){ toast('Aucun rung sélectionné'); return false; }
+  if (cut && rs.some(r => isLocked(r.id))){ toast('⚠ ' + LOCK_MSG); return false; }
+  CLIP = rs.map(cleanLines);
+  const text = CLIP.map(ls => ls.join('\r\n')).join('\r\n') + '\r\n';
+  if (evt) evt.clipboardData.setData('text/plain', text);
+  else if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {});
+  if (cut) deleteRungs(rs.map(r => r.id), true);
+  toast(`${rs.length} rung(s) ${cut ? 'coupé(s)' : 'copié(s)'} — Ctrl+V pour coller après le rung actif (ici ou dans un autre onglet)`);
+  return true;
+}
+function pasteText(text){
+  if (!S.loaded){ toast('Ouvrez d\'abord un fichier'); return; }
+  let items;
+  if (text && text.trim()){
+    const lines = text.split(/\r\n|\r|\n/).map(l => l.trim()).filter(l => { const {op} = splitInstr(l); return op && !op.startsWith('/') && op !== 'PART' && op !== 'END' && !/^[\d,]+$/.test(op); }).map(l => { const {op, args} = splitInstr(l); return fmt(op, args); });
+    items = segment(lines).filter(i => i.type === 'rung');
+  } else items = CLIP.map(ls => makeRung(ls));
+  if (!items.length){ toast('Le presse-papiers ne contient pas de rung ladder'); return; }
+  const after = focusRung || [...selRungs].pop() || null;
+  const ok = mutate(() => {
+    guardInsert(after);
+    items.forEach(r => { r.no = null; r.dirty = true; });
+    S.items.splice(insertionIndexAfter(after), 0, ...items);
+    selRungs = new Set(items.map(r => r.id)); focusRung = items[items.length - 1].id;
+  }, {scrollTo:items[0].id});
+  if (ok) toast(`${items.length} rung(s) collé(s)` + (items.some(r => !r.ok) ? ' (certains en mode texte)' : ''));
+}
+function duplicateRungs(ids){
+  mutate(() => {
+    let last = null;
+    for (const id of ids){ guard(id); const r = getItem(id); const c = makeRung(r.raw.filter(l => l.trim())); c.dirty = true; const i = S.items.indexOf(r); S.items.splice(i + 1, 0, c); last = c.id; }
+    if (last){ selRungs = new Set([last]); focusRung = last; }
+  });
+}
+function deleteRungs(ids, silent){
+  if (!ids.length) return;
+  mutate(() => { for (const id of ids) guard(id); S.items = S.items.filter(i => !ids.includes(i.id)); ids.forEach(id => selRungs.delete(id)); if (ids.includes(focusRung)) focusRung = null; });
+  if (!silent) toast(`${ids.length} rung(s) supprimé(s) — Ctrl+Z pour annuler`);
+}
+function newRung(){
+  const after = focusRung || [...selRungs].pop() || null;
+  dialog('Nouveau rung', `<div class="row" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+    <label>Contact <input type="text" id="nrA" class="mono" value="${esc(newAddr)}"></label><label><input type="checkbox" id="nrN"> NOT</label>
+    <label>Sortie OUT <input type="text" id="nrO" class="mono" value="${esc(newOutAddr)}"></label></div>
+    <p class="hint">Le rung est inséré ${after ? 'après le rung n°' + rungNumber(after) : 'à la fin, avant END'}. Complétez-le ensuite graphiquement.</p>`,
+    [{label:'Annuler'}, {label:'Créer', primary:true, fn:() => {
+      const a = $('#nrA').value.trim().toUpperCase(), o = $('#nrO').value.trim().toUpperCase();
+      newAddr = a; newOutAddr = o;
+      return mutate(() => {
+        guardInsert(after);
+        const r = makeRung([($('#nrN').checked ? 'STR-NOT ' : 'STR ') + a, 'OUT ' + o]);
+        if (!r.ok) throw new Error(r.err);
+        r.dirty = true; S.items.splice(insertionIndexAfter(after), 0, r); selRungs = new Set([r.id]); focusRung = r.id; hlAddr = o;
+      }, {scrollTo:null}) || false;
+    }}]);
+  setTimeout(() => $('#nrA')?.focus(), 30);
+}
+function editText(id){
+  const r = getItem(id);
+  dialog('Rung n°' + rungNumber(id) + ' — liste d\'instructions', `<textarea id="ilText" spellcheck="false">${esc(r.raw.filter(l => l.trim()).join('\n'))}</textarea>
+    <p class="hint">Une instruction par ligne (ex. <code>STR #70010</code>, <code>AND-NOT #20011</code>, <code>OUT #10010</code>). Si le texte contient plusieurs rungs, ils seront créés à la suite. PART et END ne sont pas autorisés ici.</p>`,
+    [{label:'Annuler'}, {label:'Valider', primary:true, fn:() => {
+      const lines = $('#ilText').value.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => { const {op, args} = splitInstr(l); return fmt(op, args); });
+      if (!lines.length){ toast('Texte vide — utilisez ✕ pour supprimer le rung'); return false; }
+      return mutate(() => {
+        guard(id);
+        const items = segment(lines);
+        if (items.some(i => i.type !== 'rung')) throw new Error('PART / END interdits dans un rung');
+        const first = items[0]; first.no = r.no; first.id = r.id; first.orig = r.orig;
+        setRaw(first, first.raw);
+        items.slice(1).forEach(x => x.dirty = true);
+        const i = S.items.indexOf(r); S.items.splice(i, 1, ...items);
+        selEls = []; const bad = items.filter(x => !x.ok); if (bad.length) setTimeout(() => toast('Rung enregistré en mode texte : ' + bad[0].err), 50);
+      });
+    }}]);
+  setTimeout(() => $('#ilText')?.focus(), 30);
+}
+function rungAction(id, act){
+  switch (act){
+    case 'up': moveStep([id], -1); break;
+    case 'down': moveStep([id], 1); break;
+    case 'text': focusRung = id; editText(id); break;
+    case 'dup': duplicateRungs([id]); break;
+    case 'del': deleteRungs([id]); break;
+  }
+}
+
+/* ================= Modifications / export ================= */
+function changeSummary(){
+  const cur = rungs(); const present = new Set(cur.filter(r => r.no).map(r => r.no));
+  const added = cur.filter(r => !r.no), modified = cur.filter(r => r.no && r.dirty);
+  const deleted = S.origOrder.filter(no => !present.has(no));
+  const seq = cur.filter(r => r.no).map(r => r.no);
+  const kept = S.origOrder.filter(no => present.has(no));
+  const moved = seq.join(',') !== kept.join(',');
+  const trailer = !!S.origTrailer && S.trailer.join('\n') !== S.origTrailer.join('\n');
+  return {added, modified, deleted, moved, trailer};
+}
+const hasChanges = c => !!(c.added.length || c.modified.length || c.deleted.length || c.moved || c.trailer);
+function showDiff(){
+  const c = changeSummary(); let h = '';
+  if (!hasChanges(c)) h = '<p>Aucune modification : l\'export sera identique au fichier d\'origine.</p>';
+  if (c.trailer) h += `<p><b>Textes d'alarmes / messages modifiés</b> (sections après END).</p><div class="diff"><pre class="a">${esc(S.origTrailer.filter(l => l.trim()).join('\n'))}</pre><pre class="b">${esc(S.trailer.filter(l => l.trim()).join('\n'))}</pre></div>`;
+  if (c.moved) h += `<p><b>Ordre des rungs modifié</b> (tri ou déplacement).</p>`;
+  for (const r of c.modified) h += `<p><b>Rung n°${rungNumber(r.id)}</b> (origine n°${r.no}) modifié :</p><div class="diff"><pre class="a">${esc(S.origRungs[r.no].join('\n'))}</pre><pre class="b">${esc(r.raw.join('\n'))}</pre></div>`;
+  for (const r of c.added) h += `<p><b>Rung n°${rungNumber(r.id)}</b> ajouté :</p><div class="diff"><pre class="a">—</pre><pre class="b">${esc(r.raw.join('\n'))}</pre></div>`;
+  for (const no of c.deleted) h += `<p><b>Rung d'origine n°${no}</b> supprimé :</p><div class="diff"><pre class="a">${esc(S.origRungs[no].join('\n'))}</pre><pre class="b">—</pre></div>`;
+  dialog('Récapitulatif des modifications', h, [{label:'Fermer'}, {label:'Exporter', primary:true, fn:() => { setTimeout(doExport, 10); return true; }}]);
+}
+/* ================= Autres fichiers de sauvegarde ================= */
+const BK = {almhist:null, almName:'', ifpanel:[], ifName:'', jobs:[], system:null, files:{}, sigIndex:{}};
+function resetBackup(){ Object.assign(BK, {almhist:null, almName:'', ifpanel:[], ifName:'', jobs:[], system:null, files:{}, sigIndex:{}}); }
+const bkCount = () => Object.keys(BK.files).length;
+/* Plages Yaskawa (DX100/DX200/YRC1000) : alarmes utilisateur #79700-#79777 = n°1-64 (codes 9064-9127),
+   messages utilisateur #79810-#79887 = n°1-64 */
+function userAlarmOf(a){ const m = /^#797([0-7])([0-7])$/.exec(a || ''); if (!m) return null; const n = +m[1] * 8 + +m[2] + 1; return {n, code:9063 + n}; }
+function userMsgOf(a){ const m = /^#798([1-8])([0-7])$/.exec(a || ''); if (!m) return null; return {n:(+m[1] - 1) * 8 + +m[2] + 1}; }
+const userAlarmAddr = n => '#797' + Math.floor((n - 1) / 8) + ((n - 1) % 8);
+function builtinName(a){
+  const u = userAlarmOf(a); if (u) return `Alarme utilisateur ${u.n} (${u.code})`;
+  const m = userMsgOf(a); if (m) return `Message utilisateur ${m.n}`;
+  return '';
+}
+/* --- ALMHIST.DAT : format non publié -> lecture tolérante (sections //…, champs séparés par des virgules) */
+function parseAlmhist(text){
+  const rows = []; let sec = '';
+  for (const l of text.split(/\r\n|\r|\n/)){
+    const t = l.trim(); if (!t) continue;
+    if (t.startsWith('//')){ sec = t.replace(/^\/+/, '').trim(); continue; }
+    if (t.startsWith('/')) continue;
+    const f = t.split(',').map(x => x.trim());
+    const ints = [], other = []; let date = '';
+    for (const x of f){
+      if (/^\d{1,5}$/.test(x)) ints.push(+x);
+      else if (!date && /^\d{4}[\/.-]\d{1,2}[\/.-]\d{1,2}/.test(x)) date = x;
+      else if (date && !/\d:\d/.test(date) && /^\d{1,2}:\d{2}(:\d{2})?$/.test(x)) date += ' ' + x;
+      else if (x) other.push(x);
+    }
+    rows.push({sec, ints, date, other, raw:t});
+  }
+  /* si le 1er entier est un simple numéro d'ordre (1, 2, 3…), le code d'alarme est le suivant */
+  const seq = rows.filter((r, i) => r.ints.length > 1 && (r.ints[0] === i + 1 || r.ints[0] === i)).length;
+  const skip = rows.length >= 2 && seq / rows.length > 0.8 ? 1 : 0;
+  for (const r of rows){ r.code = r.ints.length > skip ? r.ints[skip] : null; r.extra = r.ints.filter((_, i) => i !== skip); }
+  return rows;
+}
+function almCat(c){
+  if (c == null) return '';
+  if (c >= 9064 && c <= 9127) return 'utilisateur';
+  if (c < 1000) return 'majeure (niv. 0)';
+  if (c < 4000) return 'majeure';
+  if (c < 10000) return 'mineure';
+  return '';
+}
+/* --- IF panel (format documenté : //IFPANEL n, ///NAME, 23 champs par élément) */
+const PTYPE = {0:'Voyant rond', 1:'Bouton rond', 2:'Bouton rond à accrochage', 3:'Voyant carré', 4:'Bouton carré', 5:'Bouton carré à accrochage', 6:'Voyant carré 2', 7:'Bouton carré 2', 8:'Bouton carré 2 à accrochage', 9:'Sélecteur (gauche ON)', 10:'Sélecteur (droite ON)', 11:'Sélecteur 2 sorties', 12:'Sélecteur (panneau)', 16:'Compteur 3 chiffres', 17:'Compteur 6 chiffres', 18:'Compteur présélection 3', 19:'Compteur présélection 6'};
+const PCOLOR = ['#1f2328', '#2563eb', '#16a34a', '#38bdf8', '#dc2626', '#9333ea', '#facc15', '#ffffff', '#d1d5db', '#1e3a8a', '#166534', '#0369a1', '#991b1b', '#581c87', '#a16207', '#4b5563', '#f97316'];
+const SECU = ['Opération', 'Édition', 'Gestion'];
+function ifSig(type, num, contact){
+  const ty = +type, n = String(num || '').trim(); if (!ty || !n) return null;
+  const ref = ty === 1 ? '#' + n.padStart(5, '0') : ty === 2 ? 'B' + pad(+n, 3) : ty === 3 ? 'I' + pad(+n, 3) : ty === 4 ? 'M' + pad(+n, 3) : n;
+  return {ty, ref, nc:String(contact).trim() === '1'};
+}
+function parseIfPanel(text){
+  const panels = []; let cur = null;
+  for (const l of text.split(/\r\n|\r|\n/)){
+    const t = l.trim(); if (!t) continue;
+    let m = /^\/\/IFPANEL\s*(\d+)/i.exec(t); if (m){ cur = {no:+m[1], name:'', items:[]}; panels.push(cur); continue; }
+    m = /^\/{2,3}NAME\s*(.*)$/i.exec(t); if (m && cur){ cur.name = m[1].split(',')[0].trim(); continue; }
+    if (t.startsWith('/') || !cur) continue;
+    const f = t.split(','), g = i => (f[i] || '').trim();
+    if (!/^[1-4][A-H]$/i.test(g(0))) continue;
+    cur.items.push({pos:g(0).toUpperCase(), valid:g(1) === '1', ptype:+g(2), color:+g(3), tcolor:+g(4),
+      name:[g(5), g(6), g(7)].filter(Boolean).join(' '), name2:[g(19), g(20), g(21)].filter(Boolean).join(' '),
+      security:+g(8), interlock:g(9) === '1', input:ifSig(g(10), g(11), g(12)), out1:ifSig(g(13), g(14), g(15)), out2:ifSig(g(16), g(17), g(18)), raw:t});
+  }
+  return panels;
+}
+/* --- Jobs INFORM (.JBI) : références IN#( ), OT#( ), SIN#( ), SOUT#( ), IG#( ), OG#( ) */
+const JOB_SIG_RE = /\b(IN|OT|SIN|SOUT|IGH|OGH|IG|OG)#\(\s*([^)]+?)\s*\)/g;
+function jobSigAddrs(kind, inner, alias){
+  if (!/^\d+$/.test(inner)){ const a = alias[inner.toUpperCase()]; return a ? [a] : []; }
+  const n = +inner; if (n < 1) return [];
+  switch (kind){
+    case 'IN': return [ioAddr(0, n - 1)];
+    case 'OT': return [ioAddr(1, n - 1)];
+    case 'SIN': return [ioAddr(4, n - 1)];
+    case 'SOUT': return [ioAddr(5, n - 1)];
+    case 'IG': case 'IGH': return expandByte('#0' + pad(n * 10, 4));
+    case 'OG': case 'OGH': return expandByte('#1' + pad(n * 10, 4));
+  }
+  return [];
+}
+function parseJob(fname, text, alias){
+  const lines = text.split(/\r\n|\r|\n/);
+  let name = fname.replace(/\.JBI$/i, ''), inInst = false, k = -1; const refs = [];
+  for (const l of lines){
+    const t = l.trim();
+    const m = /^\/\/NAME\s+(.+)$/i.exec(t); if (m){ name = m[1].trim(); continue; }
+    if (/^NOP\b/i.test(t)){ inInst = true; k = 0; continue; }
+    if (!inInst || !t || t.startsWith('/')) continue;
+    k++;
+    JOB_SIG_RE.lastIndex = 0; let mm; const sigs = [];
+    while ((mm = JOB_SIG_RE.exec(t))){
+      const kind = mm[1].toUpperCase(), w = /^(DOUT|PULSE)\b/i.test(t) && /^(OT|OG|OGH|SOUT)$/.test(kind);
+      for (const a of jobSigAddrs(kind, mm[2], alias)) sigs.push({a, role:w ? 'w' : 'r', tok:mm[0]});
+    }
+    if (sigs.length) refs.push({line:k, text:t, sigs});
+  }
+  return {file:fname, name, refs, lines:lines.length};
+}
+function buildBkIndex(){
+  const idx = {}, add = (a, x) => (idx[a] = idx[a] || []).push(x);
+  for (const j of BK.jobs) for (const r of j.refs) for (const sg of r.sigs) add(sg.a, {kind:'job', where:`${j.name} L${r.line}`, text:r.text, role:sg.role, job:j.name});
+  for (const p of BK.ifpanel) for (const it of p.items){
+    const where = `IF panel ${p.no} ${it.pos}` + (it.name ? ` « ${it.name} »` : '');
+    if (it.input) add(it.input.ref, {kind:'ifp', where, text:'affiche ' + (it.input.nc ? '(contact B) ' : '') + it.input.ref, role:'r'});
+    for (const o of [it.out1, it.out2]) if (o) add(o.ref, {kind:'ifp', where, text:'commande ' + o.ref, role:'w'});
+  }
+  if (BK.almhist) for (const r of BK.almhist){ const u = r.code >= 9064 && r.code <= 9127 ? userAlarmAddr(r.code - 9063) : null; if (u) add(u, {kind:'alm', where:'historique ' + (r.date || ''), text:'alarme ' + r.code, role:'r'}); }
+  BK.sigIndex = idx;
+}
+/* Lit les fichiers annexes d'une sauvegarde */
+async function loadBackup(files, reset){
+  if (reset) resetBackup();
+  const alias = {}; for (const [a, v] of Object.entries(NAMES.map)) alias[v.name.toUpperCase()] = a; for (const [a, v] of Object.entries(NAMES.custom)) alias[v.toUpperCase()] = a;
+  for (const f of files){
+    const up = f.name.toUpperCase();
+    if (/\.LST$/.test(up) || NAME_FILE_RE.test(up)) continue;
+    if (f.size > 4e6) continue;
+    const text = decodeText(await f.arrayBuffer());
+    if (up === 'ALMHIST.DAT'){ BK.almhist = parseAlmhist(text); BK.almName = f.name; BK.files[f.name] = BK.almhist.length + ' ligne(s) d\'historique'; }
+    else if (up === 'SYSTEM.SYS'){ BK.system = text; BK.files[f.name] = 'informations système'; }
+    else if (up.endsWith('.JBI')){ const j = parseJob(f.name, text, alias); BK.jobs = BK.jobs.filter(x => x.file !== f.name); BK.jobs.push(j); BK.files[f.name] = j.refs.length + ' ligne(s) avec E/S'; }
+    else if (/\/\/IFPANEL/i.test(text)){ const ps = parseIfPanel(text); BK.ifpanel = ps; BK.ifName = f.name; BK.files[f.name] = ps.length + ' panneau(x) IF'; }
+  }
+  BK.jobs.sort((a, b) => a.name.localeCompare(b.name));
+  /* noms des éléments du panneau IF comme noms de secours */
+  for (const p of BK.ifpanel) for (const it of p.items) if (it.name) for (const o of [it.input, it.out1, it.out2]) if (o && o.ty === 1 && !NAMES.map[o.ref]) NAMES.map[o.ref] = {name:it.name, src:`IF panel ${p.no} ${it.pos}`};
+  buildBkIndex();
+}
+/* Sections après END dans CIOPRG.LST : //ALARM1, //ALARM2, //MESSAGE1, //MESSAGE2… */
+function trailerSections(){
+  const secs = [];
+  S.trailer.forEach((l, i) => { if (/^\/\//.test(l.trim())) secs.push({name:l.trim().slice(2), start:i + 1}); });
+  secs.forEach((sc, k) => { sc.end = k + 1 < secs.length ? secs[k + 1].start - 1 : S.trailer.length; sc.lines = S.trailer.slice(sc.start, sc.end); });
+  return secs;
+}
+/* ---- Dialogue « Sauvegarde » ---- */
+let bkTab = 'sum', bkIfSel = null, bkJobFilter = '';
+function showBackup(tab){
+  if (tab) bkTab = tab;
+  dialog('Sauvegarde : alarmes, IF panel, jobs, système', '<div id="bkView"></div>', [{label:'Fermer', primary:true}], true);
+  renderBackup();
+}
+function sigChip(a){ return `<span class="chip" data-sigsearch="${esc(a)}" title="${esc(nameOf(a) || sigName(a))}">${esc(a)}</span>`; }
+function renderBackup(){
+  const v = $('#bkView'); if (!v) return;
+  const tabs = [['sum', 'Résumé'], ['alm', 'Alarmes'], ['ifp', 'IF panel'], ['job', 'Jobs'], ['sys', 'Système']];
+  let h = `<div class="bktabs">${tabs.map(([k, l]) => `<button data-bktab="${k}" class="${bkTab === k ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+  if (bkTab === 'sum') h += bkSummary();
+  else if (bkTab === 'alm') h += bkAlarms();
+  else if (bkTab === 'ifp') h += bkIf();
+  else if (bkTab === 'job') h += bkJobs();
+  else h += bkSys();
+  v.innerHTML = h;
+}
+function bkSummary(){
+  let h = `<p>Ouvrez le <b>dossier de sauvegarde</b> complet (📁 Dossier…) pour analyser, en plus de CIOPRG.LST : <code>ALMHIST.DAT</code> (historique des alarmes), le fichier du panneau d'interface (contenant <code>//IFPANEL</code>), les jobs <code>*.JBI</code>, <code>SYSTEM.SYS</code> et les fichiers de noms.</p>`;
+  const f = Object.entries(BK.files), nf = Object.entries(NAMES.files);
+  h += `<table class="bk"><tr><th>Fichier</th><th>Contenu analysé</th></tr>
+    ${S.loaded ? `<tr><td class="mono">${esc(S.fileName)}</td><td>${rungs().length} rungs, ${trailerSections().length} section(s) de textes d'alarmes / messages</td></tr>` : ''}
+    ${nf.map(([n, k]) => `<tr><td class="mono">${esc(n)}</td><td>${k} nom(s) de signaux</td></tr>`).join('')}
+    ${f.filter(([n]) => !/\.JBI$/i.test(n)).map(([n, d]) => `<tr><td class="mono">${esc(n)}</td><td>${esc(d)}</td></tr>`).join('')}
+    ${BK.jobs.length ? `<tr><td class="mono">*.JBI</td><td>${BK.jobs.length} job(s), ${BK.jobs.reduce((x, j) => x + j.refs.length, 0)} ligne(s) avec des E/S</td></tr>` : ''}</table>`;
+  if (!f.length) h += `<p class="hint">Aucun fichier annexe chargé pour l'instant.</p>`;
+  const app = S.header.filter(l => /^\/\/(NAME|ATTR)/.test(l));
+  if (app.length) h += `<h4>En-tête du ladder</h4><pre class="cmpil">${esc(app.join('\n'))}</pre>`;
+  return h;
+}
+function ladderUserSignals(){
+  const out = {};
+  for (const r of rungs()) for (const l of r.raw){ const {op, args} = splitInstr(l); if (!isOutOp(op)) continue;
+    for (const a of (op === 'GOUT' ? expandByte(args) : [args])) if (userAlarmOf(a) || userMsgOf(a)) (out[a] = out[a] || []).push(r); }
+  return out;
+}
+function bkAlarms(){
+  let h = '';
+  /* 1. historique */
+  h += `<h3>Historique des alarmes ${BK.almName ? '(' + esc(BK.almName) + ')' : ''}</h3>`;
+  if (!BK.almhist) h += `<p class="hint">Pas de fichier ALMHIST.DAT chargé (pupitre : EX. MEMORY → SAVE → SYSTEM DATA → ALARM HISTORY DATA, ou dossier de sauvegarde complet).</p>`;
+  else {
+    const rows = BK.almhist, cnt = {};
+    rows.forEach(r => { if (r.code != null) cnt[r.code] = (cnt[r.code] || 0) + 1; });
+    const top = Object.entries(cnt).sort((a, b) => b[1] - a[1]).slice(0, 12), mx = top.length ? top[0][1] : 1;
+    if (top.length) h += `<h4>Alarmes les plus fréquentes</h4><table class="bk"><tr><th>Code</th><th>Catégorie</th><th>Nombre</th><th></th></tr>${top.map(([c, n]) => { const ua = +c >= 9064 && +c <= 9127 ? userAlarmAddr(+c - 9063) : null; return `<tr><td class="mono">${c}</td><td>${almCat(+c)}${ua ? ' ' + sigChip(ua) : ''}</td><td>${n}</td><td><span class="bar1" style="width:${Math.round(n / mx * 160)}px"></span></td></tr>`; }).join('')}</table>`;
+    h += `<h4>Détail (${rows.length} ligne(s), ordre du fichier)</h4><table class="bk"><tr><th>Section</th><th>Code</th><th>Catégorie</th><th>Date</th><th>Autres champs</th></tr>${rows.map(r => { const ua = r.code >= 9064 && r.code <= 9127 ? userAlarmAddr(r.code - 9063) : null; return `<tr title="${esc(r.raw)}"><td>${esc(r.sec)}</td><td class="mono">${r.code ?? ''}</td><td>${almCat(r.code)}${ua ? ' ' + sigChip(ua) : ''}</td><td class="mono">${esc(r.date)}</td><td class="mono">${esc([...r.extra, ...r.other].join(' · '))}</td></tr>`; }).join('')}</table>
+    <p class="hint">Le format interne d'ALMHIST.DAT n'est pas documenté publiquement : les champs sont repérés automatiquement (code, date). Survolez une ligne pour voir la ligne brute.</p>`;
+  }
+  /* 2. alarmes / messages utilisateur pilotés par le ladder */
+  const us = ladderUserSignals(), keys = Object.keys(us).sort();
+  h += `<h3>Alarmes et messages utilisateur déclenchés par le ladder</h3>`;
+  if (!keys.length) h += `<p class="hint">Aucune sortie du ladder dans les plages #79700–#79777 (alarmes utilisateur 1–64, codes 9064–9127) ou #79810–#79887 (messages utilisateur 1–64).</p>`;
+  else h += `<table class="bk"><tr><th>Relais</th><th>Alarme / message</th><th>Rung(s)</th><th>Condition (1er rung)</th>${BK.almhist ? '<th>Dans l\'historique</th>' : ''}</tr>${keys.map(a => { const ua = userAlarmOf(a), n = BK.almhist && ua ? BK.almhist.filter(r => r.code === ua.code).length : null; return `<tr><td>${sigChip(a)}</td><td>${esc(builtinName(a))}${NAMES.custom[a] ? '<br><b>' + esc(NAMES.custom[a]) + '</b>' : ''}</td><td>${us[a].map(r => `<span class="chip" data-gotorung="${r.id}">n°${rungNumber(r.id)}</span>`).join('')}</td><td><code>${esc(cleanLines(us[a][0]).join('  '))}</code></td>${BK.almhist ? `<td>${ua ? n + ' fois' : '—'}</td>` : ''}</tr>`; }).join('')}</table>`;
+  /* 3. textes dans CIOPRG.LST */
+  const secs = trailerSections();
+  h += `<h3>Textes d'alarmes et de messages enregistrés dans CIOPRG.LST</h3>`;
+  if (!secs.length) h += `<p class="hint">Aucune section //ALARM ou //MESSAGE après END.</p>`;
+  else {
+    h += `<p class="hint">Une ligne par numéro (ligne 1 = n°1). //…1 correspond en principe à la section système, //…2 à la section utilisateur. Le nombre de lignes de chaque section est conservé à l'export. Ne modifiez que si vous savez à quel signal chaque texte est associé sur votre contrôleur.</p>`;
+    secs.forEach((sc, k) => {
+      const used = sc.lines.map((l, i) => [i + 1, l]).filter(([, l]) => l.trim());
+      h += `<div class="trsec"><h4>//${esc(sc.name)} — ${used.length} texte(s) sur ${sc.lines.length} ligne(s)</h4>
+        ${used.length ? `<table class="bk"><tr><th>N°</th><th>Texte</th></tr>${used.map(([i, l]) => `<tr><td>${i}</td><td>${esc(l)}</td></tr>`).join('')}</table>` : ''}
+        <details><summary>Modifier</summary><textarea id="trs${k}" spellcheck="false">${esc(sc.lines.join('\n').replace(/\n+$/, ''))}</textarea>
+        <div class="row"><button data-trsave="${k}" class="primary">Enregistrer cette section</button></div></details></div>`;
+    });
+  }
+  return h;
+}
+function bkIf(){
+  if (!BK.ifpanel.length) return `<p class="hint">Aucun fichier de panneau d'interface trouvé (fichier texte contenant <code>//IFPANEL</code>, pupitre : EX. MEMORY → SAVE → SYSTEM DATA → I/F PANEL DATA).</p>`;
+  let h = `<p class="hint">${esc(BK.ifName)} — 32 emplacements par panneau (1A à 4H). Cliquez sur un signal pour le rechercher dans le ladder et les jobs. La disposition à l'écran du pupitre peut différer.</p>`;
+  for (const p of BK.ifpanel){
+    h += `<h3>Panneau ${p.no}${p.name ? ' — ' + esc(p.name) : ''} <span class="hint">(${p.items.filter(i => i.valid).length} élément(s) actif(s))</span></h3><div class="ifgrid"><div></div>${'ABCDEFGH'.split('').map(c => `<div class="hd">${c}</div>`).join('')}`;
+    for (const row of '1234'){
+      h += `<div class="hd">${row}</div>`;
+      for (const col of 'ABCDEFGH'){
+        const it = p.items.find(x => x.pos === row + col);
+        if (!it || !it.valid){ h += `<div class="ifcell off">${it && it.name ? esc(it.name) : ''}</div>`; continue; }
+        const bg = PCOLOR[it.color] || '#ddd', fg = PCOLOR[it.tcolor] || '#000';
+        const sig = (o, lbl) => o ? `<div>${lbl} ${o.ty === 1 ? sigChip(o.ref) : `<code>${esc(o.ref)}</code>`}${o.nc ? ' (B)' : ''}</div>` : '';
+        h += `<div class="ifcell" style="background:${bg};color:${fg}" title="${esc(PTYPE[it.ptype] || 'type ' + it.ptype)} · sécurité ${esc(SECU[it.security] || it.security)} · interverrouillage ${it.interlock ? 'autorisé' : 'interdit'}${it.name2 ? ' · ' + it.name2 : ''}">
+          <div class="nm">${esc(it.name || '—')}</div><div class="ty">${esc(PTYPE[it.ptype] || 'type ' + it.ptype)}</div>${sig(it.input, '◉')}${sig(it.out1, '→')}${sig(it.out2, '→')}</div>`;
+      }
+    }
+    h += `</div>`;
+  }
+  h += `<p class="hint">◉ signal affiché (état du voyant) · → signal commandé par le bouton / sélecteur · (B) contact inversé.</p>`;
+  return h;
+}
+function bkJobs(){
+  if (!BK.jobs.length) return `<p class="hint">Aucun job (*.JBI) chargé. Ouvrez le dossier de sauvegarde complet.</p>`;
+  const f = bkJobFilter.trim().toUpperCase();
+  let h = `<div class="row"><input type="text" id="bkJobFilter" placeholder="Filtrer : nom de job, OT#(12), #10010…" value="${esc(bkJobFilter)}" class="mono" style="width:280px"></div>
+    <p class="hint">Lignes des jobs qui lisent (IN#, WAIT, IF…) ou écrivent (DOUT, PULSE) des E/S. Correspondance : IN#(n) → #0xxxx, OT#(n) → #1xxxx, IG#/OG#(n) → octet n, SIN#/SOUT#(n) → #4xxxx / #5xxxx (indicatif).</p>`;
+  for (const j of BK.jobs){
+    const refs = f ? j.refs.filter(r => j.name.toUpperCase().includes(f) || r.text.toUpperCase().includes(f) || r.sigs.some(s => s.a.includes(f))) : j.refs;
+    if (f && !refs.length) continue;
+    const ws = new Set(), rs = new Set(); j.refs.forEach(r => r.sigs.forEach(s => (s.role === 'w' ? ws : rs).add(s.a)));
+    h += `<details class="job" ${f ? 'open' : ''}><summary>${esc(j.name)} <span class="hint">— ${j.refs.length} ligne(s) E/S · écrit ${ws.size} · lit ${rs.size}</span></summary>
+      <table class="bk"><tr><th>Ligne</th><th>Instruction</th><th>Signaux</th></tr>${refs.slice(0, 400).map(r => `<tr><td>${r.line}</td><td><code>${esc(r.text)}</code></td><td>${[...new Set(r.sigs.map(s => s.a))].slice(0, 8).map(a => sigChip(a) + (nameOf(a) ? ' ' + esc(nameOf(a)) : '')).join('<br>')}</td></tr>`).join('')}</table></details>`;
+  }
+  return h;
+}
+function bkSys(){
+  if (!BK.system) return `<p class="hint">SYSTEM.SYS non chargé (informations système : versions, application, axes…).</p>`;
+  return `<p class="hint">Contenu de SYSTEM.SYS (lecture seule).</p><pre class="cmpil" style="white-space:pre-wrap;max-height:60vh;overflow:auto">${esc(BK.system.slice(0, 60000))}</pre>`;
+}
+function saveTrailerSection(k){
+  const sc = trailerSections()[k]; if (!sc) return;
+  let lines = $('#trs' + k).value.split(/\r?\n/);
+  if (lines.filter(l => l.trim()).length > sc.lines.length){ toast(`⚠ Trop de lignes : la section en compte ${sc.lines.length}`); return; }
+  lines = lines.slice(0, sc.lines.length); while (lines.length < sc.lines.length) lines.push('');
+  const long = lines.filter(l => l.length > 32).length;
+  mutate(() => { S.trailer.splice(sc.start, sc.lines.length, ...lines); });
+  renderBackup();
+  toast('Section //' + sc.name + ' mise à jour' + (long ? ` — ${long} texte(s) de plus de 32 caractères, risque de troncature sur le pupitre` : ''));
+}
+
+/* ================= Comparaison avec un autre fichier ================= */
+const normKey = lines => lines.map(l => l.trim()).filter(Boolean).map(l => { const {op, args} = splitInstr(l); return fmt(op, args.replace(/\s+/g, '')); }).join('\n');
+function diffRungs(A, B){
+  const a = A.map(r => normKey(r.raw)), b = B.map(r => normKey(r.raw)), n = a.length, m = b.length;
+  const dp = Array.from({length:n + 1}, () => new Uint16Array(m + 1));
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+  const ops = []; let i = 0, j = 0;
+  while (i < n && j < m){ if (a[i] === b[j]){ ops.push({t:'eq', a:A[i], b:B[j]}); i++; j++; } else if (dp[i + 1][j] >= dp[i][j + 1]) ops.push({t:'del', a:A[i++]}); else ops.push({t:'ins', b:B[j++]}); }
+  while (i < n) ops.push({t:'del', a:A[i++]}); while (j < m) ops.push({t:'ins', b:B[j++]});
+  /* dans chaque bloc de différences, associe les rungs de même sortie -> « modifié » */
+  const out = []; let k = 0, lastA = null;
+  while (k < ops.length){
+    if (ops[k].t === 'eq'){ out.push(ops[k]); lastA = ops[k].a.id; k++; continue; }
+    const dels = [], ins = [];
+    while (k < ops.length && ops[k].t !== 'eq'){ (ops[k].t === 'del' ? dels : ins).push(ops[k]); k++; }
+    const used = new Set();
+    for (const d of dels){
+      const bi = ins.findIndex((x, ix) => !used.has(ix) && outKey(x.b) === outKey(d.a));
+      if (bi >= 0){ used.add(bi); out.push({t:'mod', a:d.a, b:ins[bi].b}); } else out.push(d);
+      lastA = d.a.id;
+    }
+    ins.forEach((x, ix) => { if (!used.has(ix)) out.push({...x, anchor:lastA}); });
+  }
+  return out;
+}
+function computeCompare(){
+  if (!CMP) return;
+  CMP.ops = diffRungs(rungs(), CMP.items.filter(i => i.type === 'rung'));
+  CMP.status = {};
+  for (const o of CMP.ops){ if (o.t === 'mod') CMP.status[o.a.id] = 'mod'; else if (o.t === 'del') CMP.status[o.a.id] = 'only'; }
+}
+async function startCompare(){
+  if (!S.loaded) return;
+  const inFrame = window.self !== window.top;
+  if (window.showOpenFilePicker && !inFrame){
+    let startIn = 'documents'; try { startIn = (await idbGet('lastDir')) || (await idbGet('lastHandle')) || startIn; } catch (e){}
+    try { const [h] = await window.showOpenFilePicker({startIn, types:[{description:'Ladder Yaskawa (CIOPRG.LST)', accept:{'text/plain':['.LST', '.lst']}}]}); return loadCompare(await h.getFile()); }
+    catch (e){ if (e.name === 'AbortError') return; }
+  }
+  $('#cmpInput').click();
+}
+async function loadCompare(file){
+  try {
+    const P = parseLST(bytesToStr(await file.arrayBuffer()));
+    CMP = {name:file.name, ...P}; computeCompare(); render(); showCompare();
+  } catch (e){ toast('⚠ ' + e.message); }
+}
+function ilDiffHtml(A, B, side){
+  const a = A.map(l => l.trim()).filter(Boolean), b = B.map(l => l.trim()).filter(Boolean);
+  const mine = side === 'a' ? a : b, other = new Set(side === 'a' ? b : a);
+  return mine.map(l => other.has(l) ? esc(l) : `<span class="${side}">${esc(l)}</span>`).join('\n');
+}
+function cmpView(r, sc){ return r.ok ? rungSVG(r, sc) : `<pre class="cmpil">${esc(cleanLines(r).join('\n'))}</pre>`; }
+function showCompare(){
+  if (!CMP) return;
+  computeCompare();
+  const ops = CMP.ops, cnt = t => ops.filter(o => o.t === t).length;
+  const bNo = new Map(); CMP.items.filter(i => i.type === 'rung').forEach((r, i) => bNo.set(r.id, i + 1));
+  const headDiff = CMP.header.join('\n') !== S.header.join('\n'), tailDiff = CMP.trailer.join('\n').trimEnd() !== S.trailer.join('\n').trimEnd();
+  let h = `<p><b>A</b> = ladder courant (${esc(S.fileName)}) · <b>B</b> = ${esc(CMP.name)}<br>
+    ${cnt('eq')} rung(s) identique(s) · <b>${cnt('mod')}</b> modifié(s) · <b>${cnt('del')}</b> seulement dans A · <b>${cnt('ins')}</b> seulement dans B
+    · en-tête ${headDiff ? '<span class="bad">différent</span>' : 'identique'} · alarmes/messages ${tailDiff ? '<span class="bad">différents</span>' : 'identiques'}</p>`;
+  if (headDiff) h += `<div class="cmpitem"><div class="t"><b>En-tête</b></div><div class="cmpcols"><div><pre class="cmpil">${ilDiffHtml(S.header, CMP.header, 'a')}</pre></div><div><pre class="cmpil">${ilDiffHtml(S.header, CMP.header, 'b')}</pre></div></div></div>`;
+  const sc = 0.72; let shown = 0;
+  for (const [i, o] of ops.entries()){
+    if (o.t === 'eq') continue;
+    if (++shown > 150){ h += '<p class="hint">… liste tronquée à 150 différences.</p>'; break; }
+    const na = o.a ? rungNumber(o.a.id) : null, nb = o.b ? bNo.get(o.b.id) : null;
+    const title = o.t === 'mod' ? `Rung A n°${na} ↔ B n°${nb} : <span class="badge cmod">modifié</span>` : o.t === 'del' ? `Rung A n°${na} : <span class="badge conly">absent de B</span>` : `Rung B n°${nb} : <span class="badge new">seulement dans B</span>`;
+    const btns = (o.a ? `<button data-cmp="go" data-i="${i}">Aller au rung</button>` : '') +
+      (o.t === 'mod' ? `<button data-cmp="take" data-i="${i}">Remplacer A par B</button>` : '') +
+      (o.t === 'ins' ? `<button data-cmp="insert" data-i="${i}">Insérer dans A</button>` : '') +
+      (o.t === 'del' ? `<button data-cmp="remove" data-i="${i}" class="danger">Supprimer de A</button>` : '');
+    h += `<div class="cmpitem"><div class="t">${title}<span class="spacer"></span>${btns}</div><div class="cmpcols">
+      <div><div class="cap">A — courant</div>${o.a ? cmpView(o.a, sc) + `<pre class="cmpil">${ilDiffHtml(o.a.raw, o.b ? o.b.raw : [], 'a')}</pre>` : '<div class="hint" style="padding:8px">—</div>'}</div>
+      <div><div class="cap">B — ${esc(CMP.name)}</div>${o.b ? cmpView(o.b, sc) + `<pre class="cmpil">${ilDiffHtml(o.a ? o.a.raw : [], o.b.raw, 'b')}</pre>` : '<div class="hint" style="padding:8px">—</div>'}</div></div></div>`;
+  }
+  if (!shown && !headDiff) h += '<p class="ok">✓ Les deux ladders sont identiques.</p>';
+  dialog('Comparaison A ↔ B', h, [{label:'Fermer la comparaison', fn:() => { CMP = null; render(); return true; }}, {label:'Fermer', primary:true}], true);
+}
+function compareAction(act, i){
+  const o = CMP && CMP.ops[i]; if (!o) return;
+  if (act === 'go'){ $('#dlg').close(); focusRung = o.a.id; selEls = []; render(o.a.id); return; }
+  const ok = mutate(() => {
+    if (act === 'take'){
+      guard(o.a.id);
+      const nr = makeRung(cleanLines(o.b));
+      Object.assign(o.a, {ok:nr.ok, err:nr.err, logic:nr.logic, outputs:nr.outputs});
+      setRaw(o.a, nr.raw);
+    } else if (act === 'insert'){
+      guardInsert(o.anchor);
+      const nr = makeRung(cleanLines(o.b)); nr.dirty = true;
+      const first = S.items.findIndex(x => x.type === 'rung');
+      S.items.splice(o.anchor ? insertionIndexAfter(o.anchor) : (first < 0 ? insertionIndexAfter(null) : first), 0, nr);
+    } else if (act === 'remove'){
+      guard(o.a.id); S.items = S.items.filter(x => x.id !== o.a.id);
+    }
+  });
+  if (ok) showCompare();
+}
+function doExport(){
+  const c = checks();
+  if (c.dup.length || c.bad.length){
+    dialog('Contrôles avant export', `<p>${c.dup.length ? `<b>${c.dup.length}</b> sortie(s) écrite(s) plusieurs fois (${c.dup.slice(0, 8).map(d => esc(d[0])).join(', ')}${c.dup.length > 8 ? '…' : ''}).<br>` : ''}${c.bad.length ? `<b>${c.bad.length}</b> adresse(s) au format douteux.` : ''}</p><p>Le contrôleur risque de refuser le fichier ou de fonctionner de façon inattendue. Exporter quand même ?</p>`,
+      [{label:'Annuler'}, {label:'Exporter quand même', primary:true, fn:() => { setTimeout(saveFile, 10); return true; }}]);
+    return;
+  }
+  saveFile();
+}
+async function saveFile(){
+  const name = ($('#exportName').value || 'CIOPRG.LST').trim();
+  const bytes = strToBytes(buildText());
+  const inFrame = window.self !== window.top;
+  if (window.showSaveFilePicker && !inFrame){
+    try {
+      const h = await window.showSaveFilePicker({suggestedName:name, types:[{description:'Ladder Yaskawa (.LST)', accept:{'text/plain':['.LST', '.lst']}}]});
+      const w = await h.createWritable(); await w.write(bytes); await w.close();
+      toast('Fichier enregistré : ' + h.name); clearSession(); return;
+    } catch (e){ if (e.name === 'AbortError') return; }
+  }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([bytes], {type:'application/octet-stream'})); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  toast('Fichier téléchargé : ' + name); clearSession();
+}
+
+/* ================= Ouverture des fichiers ================= */
+const LS_PATH = 'yaskawaLadder.defPath', LS_SESSION = 'yaskawaLadder.session';
+function idb(){ return new Promise((res, rej) => { const r = indexedDB.open('yaskawa-ladder', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+async function idbGet(k){ const db = await idb(); return new Promise((res, rej) => { const t = db.transaction('kv').objectStore('kv').get(k); t.onsuccess = () => res(t.result); t.onerror = () => rej(t.error); }); }
+async function idbSet(k, v){ const db = await idb(); return new Promise((res, rej) => { const t = db.transaction('kv', 'readwrite'); t.objectStore('kv').put(v, k); t.oncomplete = () => res(); t.onerror = () => rej(t.error); }); }
+
+function loadBuffer(buf, name){
+  try {
+    const text = bytesToStr(buf);
+    parseText(text, name);
+    const base = name.split(/[\\/]/).pop();
+    $('#exportName').value = /\.lst$/i.test(base) ? base : 'CIOPRG.LST';
+    sigUses = []; sigIdx = -1; sigMatches = null;
+    render();
+    const nn = Object.values(NAMES.files).reduce((x, y) => x + y, 0);
+    toast(`${name} chargé : ${rungs().length} rungs` + (nn ? `, ${nn} noms de signaux` : '') + (S.fidelity ? '' : ' — attention, relecture non fidèle'));
+  } catch (e){ toast('⚠ ' + e.message); }
+}
+/* Fichiers d'un dossier de sauvegarde : CIOPRG.LST + fichiers de noms */
+const BK_FILE_RE = /\.(DAT|SYS|JBI)$/i;
+async function handleFiles(fileList, folder, confirmed){
+  const files = [...fileList].filter(f => /\.lst$/i.test(f.name) || NAME_FILE_RE.test(f.name) || BK_FILE_RE.test(f.name));
+  const depth = f => (f.webkitRelativePath || f.name).split('/').length;
+  files.sort((x, y) => depth(x) - depth(y));
+  const lst = files.find(f => /^CIOPRG\.LST$/i.test(f.name)) || files.find(f => /\.lst$/i.test(f.name));
+  const top = lst ? depth(lst) : 99;
+  const nameFiles = files.filter(f => NAME_FILE_RE.test(f.name) && depth(f) <= top);
+  const bkFiles = files.filter(f => BK_FILE_RE.test(f.name) && !NAME_FILE_RE.test(f.name) && depth(f) <= top);
+  const texts = await Promise.all(nameFiles.map(async f => ({name:f.name, text:decodeText(await f.arrayBuffer())})));
+  if (lst){
+    if (!confirmed && !confirmDiscard()) return;
+    resetNames(); texts.forEach(t => addNames(t.name, t.text));
+    await loadBackup(bkFiles, true);
+    loadBuffer(await lst.arrayBuffer(), (folder ? folder + '/' : '') + lst.name);
+  } else if (texts.length || bkFiles.length){
+    texts.forEach(t => addNames(t.name, t.text));
+    const before = bkCount(); await loadBackup(bkFiles, false); sigListKey = ''; render();
+    toast(`Chargé : ${[...texts.map(t => t.name + ' (' + NAMES.files[t.name] + ' noms)'), ...(bkCount() > before || bkFiles.length ? [bkFiles.length + ' fichier(s) de sauvegarde'] : [])].join(', ')}`);
+    if (bkFiles.length && !S.loaded) showBackup();
+  } else toast('Aucun fichier reconnu (CIOPRG.LST, IONAME.DAT, EXIONAME.DAT, ALMHIST.DAT, *.JBI…)');
+}
+async function readDir(dir){
+  const files = [];
+  for await (const [name, h] of dir.entries()) if (h.kind === 'file' && (/\.lst$/i.test(name) || NAME_FILE_RE.test(name) || BK_FILE_RE.test(name))) files.push(await h.getFile());
+  return files;
+}
+async function openFolder(){
+  const inFrame = window.self !== window.top;
+  if (window.showDirectoryPicker && !inFrame){
+    let startIn = 'documents'; try { startIn = (await idbGet('lastDir')) || startIn; } catch (e){}
+    try {
+      const dir = await window.showDirectoryPicker({id:'yaskawa-backup', startIn, mode:'read'});
+      try { await idbSet('lastDir', dir); await idbSet('lastKind', 'dir'); } catch (e){}
+      return handleFiles(await readDir(dir), dir.name);
+    } catch (e){ if (e.name === 'AbortError') return; }
+  }
+  $('#dirInput').click();
+}
+function toUrl(p){
+  if (/^[a-zA-Z]:[\\/]/.test(p)) return 'file:///' + p.replace(/\\/g, '/');
+  if (/^\\\\/.test(p)) return 'file:' + p.replace(/\\/g, '/');
+  return p;
+}
+async function ensurePerm(h){
+  let perm = await h.queryPermission({mode:'read'});
+  if (perm !== 'granted') perm = await h.requestPermission({mode:'read'});
+  return perm === 'granted';
+}
+async function openDefault(){
+  if (!confirmDiscard()) return;
+  let p = $('#defPath').value.trim();
+  if (p){
+    if (!/\.lst$/i.test(p)) p = p.replace(/[\\/]+$/, '') + (p.includes('\\') ? '\\' : '/') + 'CIOPRG.LST';
+    try {
+      const url = toUrl(p), res = await fetch(url, {cache:'no-store'}); if (!res.ok) throw 0;
+      const buf = await res.arrayBuffer(), dirUrl = url.replace(/[^/]*$/, '');
+      resetNames(); const extra = [];
+      for (const n of ['IONAME.DAT', 'EXIONAME.DAT', 'IOMNAME.DAT', 'ALMHIST.DAT', 'SYSTEM.SYS']){
+        try { const r = await fetch(dirUrl + n, {cache:'no-store'}); if (!r.ok) continue; const b = await r.arrayBuffer();
+          if (NAME_FILE_RE.test(n)) addNames(n, decodeText(b)); else extra.push(new File([b], n)); } catch (e){}
+      }
+      await loadBackup(extra, true);
+      return loadBuffer(buf, p.split(/[\\/]/).pop() || 'CIOPRG.LST');
+    } catch (e){}
+  }
+  try {
+    const kind = await idbGet('lastKind');
+    if (kind === 'dir'){ const d = await idbGet('lastDir'); if (d && await ensurePerm(d)) return handleFiles(await readDir(d), d.name, true); }
+    const h = await idbGet('lastHandle');
+    if (h && h.getFile && await ensurePerm(h)) return handleFiles([await h.getFile()], null, true);
+  } catch (e){}
+  toast('Le navigateur ne peut pas lire « ' + (p || 'chemin vide') + ' » directement : choisissez le dossier de sauvegarde, il sera mémorisé pour la prochaine fois.');
+  openFolder();
+}
+async function browse(){
+  const inFrame = window.self !== window.top;
+  if (window.showOpenFilePicker && !inFrame){
+    let startIn = 'documents';
+    try { const h = (await idbGet('lastHandle')) || (await idbGet('lastDir')); if (h) startIn = h; } catch (e){}
+    try {
+      const hs = await window.showOpenFilePicker({startIn, multiple:true, types:[{description:'Ladder Yaskawa (CIOPRG.LST, IONAME.DAT…)', accept:{'text/plain':['.LST', '.lst', '.DAT', '.dat', '.CSV', '.csv']}}], excludeAcceptAllOption:false});
+      const lh = hs.find(h => /\.lst$/i.test(h.name));
+      if (lh){ try { await idbSet('lastHandle', lh); await idbSet('lastKind', 'file'); } catch (e){} }
+      return handleFiles(await Promise.all(hs.map(h => h.getFile())));
+    } catch (e){ if (e.name === 'AbortError') return; }
+  }
+  $('#fileInput').click();
+}
+function confirmDiscard(){
+  if (!S.loaded) return true;
+  const c = changeSummary();
+  if (!hasChanges(c)) return true;
+  return window.confirm('Des modifications non exportées seront perdues. Continuer ?');
+}
+
+/* ================= Session (reprise après fermeture) ================= */
+function saveSession(){
+  try { localStorage.setItem(LS_SESSION, JSON.stringify({t:Date.now(), fileName:S.fileName, eol:S.eol, header:S.header, trailer:S.trailer, items:S.items, origRungs:S.origRungs, origOrder:S.origOrder, fidelity:S.fidelity, uid, names:NAMES.map, nameFiles:NAMES.files})); } catch (e){}
+}
+function clearSession(){ try { localStorage.removeItem(LS_SESSION); } catch (e){} }
+function checkResume(){
+  let s = null; try { s = JSON.parse(localStorage.getItem(LS_SESSION) || 'null'); } catch (e){}
+  if (!s) return;
+  $('#resumeInfo').textContent = `${s.fileName} (${new Date(s.t).toLocaleString('fr-FR')})`;
+  $('#resume').style.display = 'block';
+  $('#btnResume').onclick = () => { Object.assign(S, {fileName:s.fileName, eol:s.eol, header:s.header, trailer:s.trailer, items:s.items, origRungs:s.origRungs, origOrder:s.origOrder, fidelity:s.fidelity, loaded:true}); uid = Math.max(uid, s.uid || 1e6); NAMES.map = s.names || {}; NAMES.files = s.nameFiles || {}; $('#resume').style.display = 'none'; render(); };
+  $('#btnDropResume').onclick = () => { clearSession(); $('#resume').style.display = 'none'; };
+}
+
+/* ================= Boîte de dialogue / toast ================= */
+function dialog(title, body, buttons, wide){
+  const d = $('#dlg'); if (d.open) d.close(); d.classList.toggle('wide', !!wide); $('#dlgTitle').textContent = title; $('#dlgBody').innerHTML = body;
+  const f = $('#dlgFoot'); f.innerHTML = '';
+  for (const b of buttons){
+    const el = document.createElement('button'); el.textContent = b.label; if (b.primary) el.className = 'primary';
+    el.onclick = () => { if (b.fn){ const ok = b.fn(); if (ok === false) return; } d.close(); };
+    f.appendChild(el);
+  }
+  d.showModal();
+}
+let toastT;
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 3800); }
+
+/* ================= Exemple ================= */
+const SAMPLE = ['/CIOPRG DX','//NAME HANDLING','//ATTR SC','//$M',
+  ...Array(8).fill('0,0,0,0,0,0,0,0,0,0'),'//KEY 0',
+  'PART 1','STR #70017','BMOV 20030, 510, 00010','STR #70054','AND-NOT #50053','OUT #40010','STR #70053','OR #70022','OUT #40067',
+  'STR #51536','AND-NOT #51537','AND #50053','STR #70054','AND #50053','OR-STR','OR #70053','OUT #40011',
+  'STR #70016','STR #70015','CNT M479,250','OUT #70015','STR #50010','OUT #70020','OUT #40051','GSTR #11200','GOUT #31230',
+  'PART 2','STR #20010','AND #50073','OUT #40044','STR #00012','OR #70101','AND-NOT #20013','OUT #70101','STR #70101','TMR M400,50','OUT #10012',
+  'STR #20011','OR #20012','STR #70030','OR-NOT #70031','AND-STR','OUT #30015','STR #00010','OUT #10011','STR-NOT #40057','OR #50056','OUT #30014','STR #20027','AND #50054','OUT #79753',
+  'END','//ALARM1','AIR PRESSURE LOWERED','//ALARM2','','//MESSAGE1','','//MESSAGE2','',''].join('\r\n');
+
+const SAMPLE_IONAME = ['/IONAME','//IN','DEPART CYCLE,ARRET CYCLE,PIECE PRESENTE,PINCE OUVERTE','PINCE FERMEE,,,','//OUT','PINCE OUVRIR,PINCE FERMER,VOYANT DEFAUT,'].join('\r\n');
+/* ================= Événements ================= */
+$('#defPath').value = (() => { try { return localStorage.getItem(LS_PATH) || 'D:\\CIOPRG.LST'; } catch (e){ return 'D:\\CIOPRG.LST'; } })();
+$('#defPath').addEventListener('change', e => { try { localStorage.setItem(LS_PATH, e.target.value.trim()); } catch (er){} });
+$('#btnOpenDefault').onclick = openDefault;
+$('#btnBrowse').onclick = () => browse();
+$('#fileInput').onchange = e => { const fs = [...e.target.files]; if (fs.length) handleFiles(fs); e.target.value = ''; };
+$('#dirInput').onchange = e => { const fs = [...e.target.files]; if (fs.length) handleFiles(fs, (fs[0].webkitRelativePath || '').split('/')[0]); e.target.value = ''; };
+$('#cmpInput').onchange = e => { const f = e.target.files[0]; if (f) loadCompare(f); e.target.value = ''; };
+$('#btnFolder').onclick = () => openFolder();
+$('#btnCompare').onclick = startCompare;
+$('#btnBackup').onclick = () => showBackup();
+const loadSample = async () => { if (!confirmDiscard()) return; resetNames(); await loadSampleNames(); loadBuffer(strToBytes(SAMPLE).buffer, 'CIOPRG.LST (exemple)'); };
+async function loadSampleNames(){
+  addNames('IONAME.DAT (exemple)', SAMPLE_IONAME);
+  resetBackup();
+  const mk = (n, t) => new File([t], n);
+  await loadBackup([mk('ALMHIST.DAT', SAMPLE_ALMHIST), mk('PANEL.DAT', SAMPLE_IFP), mk('MAIN.JBI', SAMPLE_JOB)], true);
+}
+const SAMPLE_ALMHIST = ['/ALMHIST','//MAJOR','1,1325,2026/11/02 08:14,0,COMMUNICATION ERROR','//MINOR','1,9107,2026/11/18 10:02,0,PRESSION AIR BASSE','2,4107,2026/11/18 10:05,1,OUT OF RANGE','3,9107,2026/11/20 14:41,0,PRESSION AIR BASSE','4,9107,2026/11/22 06:30,0,PRESSION AIR BASSE','//USER',''].join('\r\n');
+const SAMPLE_IFP = ['//IFPANEL 1','///NAME Cellule,Cell','1A,1,1,2,7,DEPART,CYCLE,,1,1,1,10011,0,1,00010,0,0,0,0,START,CYCLE,,0','1B,1,4,4,7,ARRET,,,1,1,1,40057,0,1,00011,0,0,0,0,STOP,,,0','2A,1,0,6,0,PINCE,OUVERTE,,0,1,1,10012,0,0,0,0,0,0,0,GRIP,OPEN,,0','2B,0,0,0,1,,,,0,1,0,0,0,0,0,0,0,0,0,,,,0'].join('\r\n');
+const SAMPLE_JOB = ['/JOB','//NAME MAIN','//POS','///NPOS 0,0,0,0,0,0','//INST','///DATE 2026/11/20 10:00','///ATTR SC,RW','NOP','WAIT IN#(1)=ON','DOUT OT#(2) ON','*L1','JUMP *L1 IF IN#(3)=OFF','PULSE OT#(3) T=0.50','DOUT OG#(2) 15','END'].join('\r\n');
+$('#btnSample').onclick = loadSample; $('#btnSample2').onclick = loadSample;
+$('#btnExport').onclick = doExport; $('#btnDiff').onclick = showDiff;
+$('#btnUndo').onclick = undo; $('#btnRedo').onclick = redo;
+let searchT; $('#search').addEventListener('input', e => { clearTimeout(searchT); searchT = setTimeout(() => { filterText = e.target.value; render(); }, 180); });
+$('#btnSelVisible').onclick = () => { for (const r of rungs()) if (matchFilter(r)) selRungs.add(r.id); render(); };
+$('#btnSelNone').onclick = () => { selRungs.clear(); render(); };
+$('#btnSortAsc').onclick = () => sortSelection(1);
+$('#btnSortDesc').onclick = () => sortSelection(-1);
+$('#btnUp').onclick = () => { const s = orderedSelection().map(r => r.id); if (s.length) moveStep(s, -1); else toast('Aucun rung sélectionné'); };
+$('#btnDown').onclick = () => { const s = orderedSelection().map(r => r.id); if (s.length) moveStep(s, 1); else toast('Aucun rung sélectionné'); };
+$('#btnNew').onclick = () => { if (S.loaded) newRung(); };
+$('#btnDup').onclick = () => { const s = orderedSelection().map(r => r.id); if (s.length) duplicateRungs(s); else toast('Aucun rung sélectionné'); };
+$('#btnDel').onclick = () => { const s = orderedSelection().map(r => r.id); if (s.length) deleteRungs(s); else toast('Aucun rung sélectionné'); };
+$('#chkUnlock').onchange = e => { unlockSystem = e.target.checked; render(); };
+$('#chkIL').onchange = e => { showIL = e.target.checked; render(); };
+$('#zoom').oninput = e => { zoom = +e.target.value; render(); };
+$('#sigSearch').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); searchSignal(); } });
+$('#sigSearch').addEventListener('change', () => { if ($('#sigSearch').value.trim()) searchSignal(); });
+$('#btnSigPrev').onclick = () => { if (!hlAddr && $('#sigSearch').value.trim()) return searchSignal(); gotoUse(sigIdx - 1); };
+$('#btnSigNext').onclick = () => { if (!hlAddr && $('#sigSearch').value.trim()) return searchSignal(); gotoUse(sigIdx + 1); };
+$('#chkSigOnly').onchange = e => { sigOnly = e.target.checked; if (sigOnly && !hlAddr) toast("Recherchez d'abord un signal"); render(); };
+$('#btnCut').onclick = () => doCopy(true);
+$('#btnCopy').onclick = () => doCopy(false);
+$('#btnPaste').onclick = async () => { let t = null; try { if (navigator.clipboard && navigator.clipboard.readText) t = await navigator.clipboard.readText(); } catch (e){} pasteText(t && t.trim() ? t : null); };
+const isTyping = () => /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName) || $('#dlg').open;
+const hasTextSel = () => { const s = window.getSelection(); return s && s.toString().length > 0; };
+document.addEventListener('copy', e => { if (isTyping() || hasTextSel() || !S.loaded) return; if (doCopy(false, e)) e.preventDefault(); });
+document.addEventListener('cut', e => { if (isTyping() || hasTextSel() || !S.loaded) return; if (doCopy(true, e)) e.preventDefault(); });
+document.addEventListener('paste', e => { if (isTyping() || !S.loaded) return; e.preventDefault(); pasteText(e.clipboardData.getData('text/plain')); });
+$('#dlgBody').addEventListener('click', e => {
+  const b = e.target.closest('[data-cmp]'); if (b) return compareAction(b.dataset.cmp, +b.dataset.i);
+  const t = e.target.closest('[data-bktab]'); if (t){ bkTab = t.dataset.bktab; return renderBackup(); }
+  const sg = e.target.closest('[data-sigsearch]'); if (sg){ $('#dlg').close(); $('#sigSearch').value = sg.dataset.sigsearch; sigMatches = null; return setSignal(sg.dataset.sigsearch, true); }
+  const gr = e.target.closest('[data-gotorung]'); if (gr){ $('#dlg').close(); focusRung = gr.dataset.gotorung; selEls = []; return render(focusRung); }
+  const ts = e.target.closest('[data-trsave]'); if (ts) return saveTrailerSection(+ts.dataset.trsave);
+});
+$('#dlgBody').addEventListener('input', e => { if (e.target.id === 'bkJobFilter'){ bkJobFilter = e.target.value; clearTimeout(window._jf); window._jf = setTimeout(() => { const pos = e.target.selectionStart; renderBackup(); const i = $('#bkJobFilter'); if (i){ i.focus(); i.setSelectionRange(pos, pos); } }, 250); } });
+
+$('#rungs').addEventListener('click', e => {
+  if (suppressClick) return;
+  const chip = e.target.closest('#btnSample2'); if (chip) return;
+  const cb = e.target.closest('[data-cmpbar]');
+  if (cb){ if (cb.dataset.cmpbar === 'show') showCompare(); else { CMP = null; render(); } return; }
+  const card = e.target.closest('.rung'); if (!card) return;
+  const id = card.dataset.id;
+  const btn = e.target.closest('button[data-act]');
+  if (btn){ rungAction(id, btn.dataset.act); return; }
+  const el = e.target.closest('.el');
+  if (el){
+    const r = getItem(id), elId = el.dataset.id, multi = e.ctrlKey || e.metaKey || e.shiftKey;
+    if (multi && selElRung === id){ selEls = selEls.includes(elId) ? selEls.filter(x => x !== elId) : [...selEls, elId]; }
+    else { selEls = [elId]; selElRung = id; }
+    focusRung = id;
+    const f = findAny(r, elId);
+    if (f){ const a = f.kind === 'out' ? f.out.args : f.node.addr; if (a && /^#\d+$/.test(a) && a !== hlAddr){ hlAddr = a; sigUses = usages(a); sigIdx = sigUses.findIndex(u => u.id === id); sigMatches = null; } }
+    render(); return;
+  }
+  if (e.target.closest('.rh')){
+    if (e.shiftKey && anchorRung){
+      const vis = rungs().filter(matchFilter).map(r => r.id);
+      let a = vis.indexOf(anchorRung), b = vis.indexOf(id); if (a > b) [a, b] = [b, a];
+      if (a >= 0) for (let i = a; i <= b; i++) selRungs.add(vis[i]);
+    } else { if (selRungs.has(id)) selRungs.delete(id); else selRungs.add(id); anchorRung = id; }
+    focusRung = id; selEls = []; render(); return;
+  }
+  focusRung = id; selEls = []; selElRung = null; render();
+});
+$('#panel').addEventListener('click', e => {
+  const b = e.target.closest('[data-p]'); if (b){ panelAction(b.dataset.p); return; }
+  const sg = e.target.closest('[data-sig]'); if (sg){ gotoUse(sigIdx + (sg.dataset.sig === 'next' ? 1 : -1)); return; }
+  const si = e.target.closest('[data-sigi]'); if (si){ gotoUse(+si.dataset.sigi); return; }
+  const g = e.target.closest('[data-goto]'); if (g){ const id = g.dataset.goto; focusRung = id; selEls = []; filterText = ''; $('#search').value = ''; render(id); return; }
+  const hl = e.target.closest('[data-hl]'); if (hl){ setSignal(hl.dataset.hl, true); }
+});
+$('#panel').addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || e.target.tagName !== 'INPUT') return;
+  const map = {pAddr:'apply', pArgs:$('[data-p="applyOut"]') ? 'applyOut' : 'applyArgs', pNewOut:'addOut', pNewAddr:$('[data-p="serR"]') ? 'serR' : ($('[data-p="wrapPar"]') ? 'wrapPar' : 'rSerR')};
+  if (map[e.target.id]){ e.preventDefault(); panelAction(map[e.target.id]); }
+});
+document.addEventListener('keydown', e => {
+  if ($('#dlg').open) return;
+  const inInput = /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName);
+  if ((e.ctrlKey || e.metaKey) && !inInput){
+    if (e.key.toLowerCase() === 'z' && !e.shiftKey){ e.preventDefault(); undo(); }
+    else if (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey)){ e.preventDefault(); redo(); }
+  }
+  if (!inInput && (e.key === 'Delete') && selEls.length && selElRung){
+    focusRung = selElRung;
+    const r = getItem(selElRung);
+    if (selEls.length === 1){ const f = findAny(r, selEls[0]); panelAction(f && f.kind === 'out' ? 'delOut' : 'del'); } else panelAction('delMulti');
+  }
+  if (e.key === 'Escape' && !inInput){ selEls = []; hlAddr = null; sigMatches = null; sigUses = []; render(); }
+  if (e.key === 'F3'){ e.preventDefault(); gotoUse(sigIdx + (e.shiftKey ? -1 : 1)); }
+});
+
+/* glisser un contact vers une autre position (Ctrl / Alt : copier) */
+$('#rungs').addEventListener('pointerdown', e => {
+  if (e.button !== 0) return;
+  const el = e.target.closest('.el'); if (!el) return;
+  const card = el.closest('.rung'), r = getItem(card.dataset.id), f = r && findAny(r, el.dataset.id);
+  if (!f || f.kind !== 'logic' || f.node.type !== 'contact') return;
+  cdrag = {rid:r.id, id:f.node.id, x:e.clientX, y:e.clientY, on:false, label:f.node.addr, target:null};
+});
+function hideDragUI(){ $('#ghost').style.display = 'none'; $('#dropind').style.display = 'none'; document.body.classList.remove('cdragging'); }
+document.addEventListener('pointermove', e => {
+  if (!cdrag) return;
+  if (!cdrag.on){ if (Math.hypot(e.clientX - cdrag.x, e.clientY - cdrag.y) < 7) return; cdrag.on = true; document.body.classList.add('cdragging'); window.getSelection()?.removeAllRanges(); }
+  const copy = e.ctrlKey || e.altKey || e.metaKey;
+  const gh = $('#ghost'); gh.style.display = 'block'; gh.style.left = (e.clientX + 14) + 'px'; gh.style.top = (e.clientY + 10) + 'px';
+  const ind = $('#dropind'); ind.style.display = 'none'; cdrag.target = null;
+  const t = document.elementFromPoint(e.clientX, e.clientY), el = t && t.closest ? t.closest('.el') : null;
+  let txt = (copy ? 'Copier ' : 'Déplacer ') + cdrag.label;
+  if (el && el.dataset.id !== cdrag.id){
+    const card = el.closest('.rung'), r = card && getItem(card.dataset.id), f = r && findAny(r, el.dataset.id);
+    if (f && f.kind === 'logic'){
+      const rc = (el.querySelector('.hit') || el).getBoundingClientRect();
+      const rx = (e.clientX - rc.left) / rc.width, ry = (e.clientY - rc.top) / rc.height;
+      let zone = ry > 0.68 ? 'par' : (rx < 0.5 ? 'before' : 'after');
+      if (f.node.type !== 'contact' && zone === 'par') zone = 'after';
+      if (f.node.type === 'cnt' && zone === 'after') zone = 'before';
+      cdrag.target = {rid:r.id, id:f.node.id, zone};
+      if (zone === 'par') Object.assign(ind.style, {left:rc.left + 'px', top:(rc.bottom - 2) + 'px', width:rc.width + 'px', height:'4px'});
+      else Object.assign(ind.style, {left:((zone === 'before' ? rc.left : rc.right) - 2) + 'px', top:rc.top + 'px', width:'4px', height:rc.height + 'px'});
+      ind.style.display = 'block';
+      txt += zone === 'par' ? ' → en parallèle de ' : zone === 'before' ? ' → en série avant ' : ' → en série après ';
+      txt += f.node.addr || f.node.op;
+    }
+  }
+  gh.textContent = txt;
+});
+document.addEventListener('pointerup', e => {
+  if (!cdrag) return;
+  const d = cdrag; cdrag = null; hideDragUI();
+  if (!d.on) return;
+  suppressClick = true; setTimeout(() => suppressClick = false, 0);
+  if (d.target) moveContact(d, e.ctrlKey || e.altKey || e.metaKey);
+});
+document.addEventListener('pointercancel', () => { cdrag = null; hideDragUI(); });
+function moveContact(d, copy){
+  mutate(() => {
+    const src = getItem(d.rid), dst = getItem(d.target.rid);
+    guard(dst.id); if (!copy) guard(src.id);
+    if (!src.ok || !dst.ok) throw new Error('Rung en mode texte');
+    const fs = findNode(src.logic, d.id); if (!fs) throw new Error('Contact introuvable');
+    let node = fs.node;
+    if (copy) node = {...node, id:nid()};
+    else {
+      if (!fs.parent) throw new Error('Seul contact du rung : maintenez Ctrl pour le copier au lieu de le déplacer');
+      removeNode(fs);
+    }
+    const ft = findNode(dst.logic, d.target.id); if (!ft) throw new Error('Cible introuvable');
+    insertRel(dst, ft, node, d.target.zone);
+    commitRung(dst); if (src !== dst && !copy) commitRung(src);
+    selElRung = dst.id; selEls = [node.id]; focusRung = dst.id;
+  });
+}
+
+/* glisser-déposer des rungs */
+$('#rungs').addEventListener('dragstart', e => {
+  const g = e.target.closest('.grip'); if (!g){ return; }
+  const id = g.closest('.rung').dataset.id;
+  dragIds = selRungs.has(id) ? orderedSelection().map(r => r.id) : [id];
+  e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', 'rung');
+});
+function clearDrop(){ document.querySelectorAll('.dropbefore,.dropafter').forEach(x => x.classList.remove('dropbefore', 'dropafter')); }
+$('#rungs').addEventListener('dragover', e => {
+  if (!dragIds) return; const card = e.target.closest('.rung'); if (!card) return;
+  e.preventDefault(); clearDrop();
+  const rc = card.getBoundingClientRect(); card.classList.add(e.clientY < rc.top + rc.height / 2 ? 'dropbefore' : 'dropafter');
+});
+$('#rungs').addEventListener('dragleave', e => { if (!e.relatedTarget || !$('#rungs').contains(e.relatedTarget)) clearDrop(); });
+$('#rungs').addEventListener('drop', e => {
+  if (!dragIds) return; e.preventDefault();
+  const card = e.target.closest('.rung'); const ids = dragIds; dragIds = null;
+  if (!card){ clearDrop(); return; }
+  const before = card.classList.contains('dropbefore'); clearDrop();
+  const target = card.dataset.id; if (ids.includes(target)) return;
+  mutate(() => {
+    const pm = partIndexMap();
+    for (const id of ids){ guard(id); if (pm[id] !== pm[target]) throw new Error('Déplacement impossible entre PART 1 et PART 2'); }
+    guard(target);
+    const moving = S.items.filter(i => ids.includes(i.id));
+    S.items = S.items.filter(i => !ids.includes(i.id));
+    let k = S.items.findIndex(i => i.id === target); if (!before) k++;
+    S.items.splice(k, 0, ...moving);
+  });
+});
+$('#rungs').addEventListener('dragend', () => { dragIds = null; clearDrop(); });
+
+/* dépôt d'un fichier sur la page */
+document.addEventListener('dragover', e => { if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')){ e.preventDefault(); $('#dropzone')?.classList.add('drag'); } });
+document.addEventListener('dragleave', e => { if (!e.relatedTarget) $('#dropzone')?.classList.remove('drag'); });
+document.addEventListener('drop', e => {
+  if (!e.dataTransfer || !e.dataTransfer.files.length) return;
+  e.preventDefault(); $('#dropzone')?.classList.remove('drag');
+  handleFiles([...e.dataTransfer.files]);
+});
+window.addEventListener('beforeunload', e => {
+  if (!S.loaded) return; const c = changeSummary();
+  if (hasChanges(c)){ e.preventDefault(); e.returnValue = ''; }
+});
+try { new ResizeObserver(() => document.documentElement.style.setProperty('--tbh', $('#tools').offsetHeight + 'px')).observe($('#tools')); } catch (e){}
+checkResume();
+</script>
+</body>
+</html>
