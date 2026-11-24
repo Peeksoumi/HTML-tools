@@ -17,21 +17,14 @@ for (const r of reseaux) {
     const u = new URL(l.url);
     assert.strictEqual(u.protocol, 'https:', 'lien non https : ' + l.id);
     assert.ok(l.embed === undefined || l.embed === true, 'embed : true ou absent');
-    assert.ok(!l.lieu || ['mondial', 'pickup', 'laposte'].includes(l.lieu), 'lieu inconnu : ' + l.id);
+    assert.ok(!l.lieu || ['pickup', 'laposte'].includes(l.lieu), 'lieu inconnu : ' + l.id);
   }
 }
 
 // Pré-remplissage du lieu (fonction de la page, exécutée seule)
 const src = html.match(/function urlLien[\s\S]*?\n}\n/)[0];
 const urlLien = new Function('URL', src + '; return urlLien;')(URL);
-const mondial = reseaux[0].liens[0], pickup = reseaux.find(r => r.id === 'pickup').liens[0], sans = reseaux.find(r => r.id === 'ups').liens[0];
-assert.strictEqual(urlLien(mondial, ''), mondial.url, 'sans lieu : URL inchangée');
-const m = new URL(urlLien(mondial, '44000 Nantes'));
-assert.strictEqual(m.searchParams.get('codePostal'), '44000');
-assert.strictEqual(m.searchParams.get('ville'), 'Nantes');
-const m2 = new URL(urlLien(mondial, 'Nantes'));
-assert.strictEqual(m2.searchParams.get('codePostal'), '');
-assert.strictEqual(m2.searchParams.get('ville'), 'Nantes');
+const pickup = reseaux.find(r => r.id === 'pickup').liens[0], sans = reseaux.find(r => r.id === 'ups').liens[0];
 const p = new URL(urlLien(pickup, 'Saint-Herblain & co'));
 assert.strictEqual(p.searchParams.get('pudo_keyword'), 'Saint-Herblain & co');
 const poste = reseaux.find(r => r.id === 'colissimo').liens[0];
