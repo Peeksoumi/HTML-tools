@@ -64,7 +64,7 @@
     <h2>Fonctionnement et sources</h2>
     <h3>Fonctionnement</h3><ul>
       <li><b>Liens</b> : chaque réseau a un ou plusieurs liens vers la carte de son propre site. Relais Colis, Pickup et La Poste s'affichent dans la page (« Afficher ici ») ; les autres s'ouvrent dans un nouvel onglet.</li>
-      <li><b>Lieu pré-rempli</b> : si tu saisis une ville ou un code postal (ou touches « Ma position », qui le déduit de ta position), il est ajouté en paramètre d'URL pour Mondial Relay et Pickup ; les autres sites se remplissent sur leur page.</li>
+      <li><b>Lieu pré-rempli</b> : si tu saisis une ville ou un code postal (ou touches « Ma position », qui le déduit de ta position), il est ajouté en paramètre d'URL pour Mondial Relay, Pickup et La Poste ; les autres sites n'ont pas de lien direct et se remplissent sur leur page.</li>
       <li><b>Vérification des liens</b> : un contrôleur tourne sur le serveur du site toutes les 6 h, teste chaque lien de cette page (réponse HTTP) et envoie une alerte push si l'un d'eux reste en panne.</li>
       <li><b>Sur ton appareil</b> : la liste est dans la page (aucune requête avant ton clic) ; ta position ne quitte l'appareil que pour « Ma position » ; ta saisie n'est envoyée qu'au site du réseau que tu ouvres.</li>
     </ul>
@@ -77,14 +77,14 @@
       <li>Mondial Relay, Chronopost, UPS, DPD et Vinted Go interdisent l'affichage dans une autre page (en-tête anti-iframe) : ils s'ouvrent dans un onglet. Le cadre intégré est celui du site officiel, ni modifié ni lu par la page.</li>
       <li>Le contrôle vérifie que l'adresse répond, pas que la carte s'affiche : un site peut changer sa page sans que l'adresse tombe en erreur.</li>
       <li>Mondial Relay, UPS et Vinted Go refusent les robots, même derrière un navigateur : le serveur ne peut pas contrôler leur lien (« non vérifiable », sans alerte), il faut l'essayer soi-même.</li>
-      <li>Les paramètres de lieu pré-rempli ne sont pas documentés par les réseaux et peuvent cesser de fonctionner : saisis alors le lieu sur leur page.</li>
+      <li>Les paramètres de lieu pré-rempli ne sont pas documentés par les réseaux et peuvent cesser de fonctionner : saisis alors le lieu sur leur page. Relais Colis, Chronopost et Vinted Go n'en acceptent pas (testé dans un navigateur réel le 24/11/2026) ; DPD, UPS et Mondial Relay bloquent les robots, leurs paramètres ne se vérifient que sur ton appareil.</li>
       <li>« Ma position » donne la commune, pas l'adresse exacte, et ne marche qu'en France ; la précision dépend du GPS ou du réseau de l'appareil.</li>
       <li>Tailles de colis acceptées, disponibilité d'un locker et fermetures exceptionnelles : à vérifier sur ton bordereau ou la fiche du point.</li>
     </ul>
   </div>
 </main>
 
-<!-- Source unique des liens : lue par la page ET par le contrôleur du serveur (private/relais_liens/check_liens.py). Un lien = id, libelle, url ; "lieu" = pré-remplissage (mondial | pickup) ; "embed" = le site accepte d'être affiché dans la page (en-têtes anti-iframe vérifiés). -->
+<!-- Source unique des liens : lue par la page ET par le contrôleur du serveur (private/relais_liens/check_liens.py). Un lien = id, libelle, url ; "lieu" = pré-remplissage (mondial | pickup | laposte) ; "embed" = le site accepte d'être affiché dans la page (en-têtes anti-iframe vérifiés). -->
 <script type="application/json" id="liens">
 [
   { "id": "mondial", "nom": "Mondial Relay", "couleur": "#d9261c", "desc": "Points Relais (commerces) et Lockers.",
@@ -102,7 +102,7 @@
     ] },
   { "id": "colissimo", "nom": "La Poste / Colissimo", "couleur": "#1f4e9c", "desc": "Bureaux de poste, relais et consignes Pickup.",
     "liens": [
-      { "id": "laposte-localiser", "libelle": "Localiser un bureau ou un point de retrait", "url": "https://localiser.laposte.fr/", "embed": true }
+      { "id": "laposte-localiser", "libelle": "Localiser un bureau ou un point de retrait", "url": "https://localiser.laposte.fr/", "lieu": "laposte", "embed": true }
     ] },
   { "id": "ups", "nom": "UPS Access Point", "couleur": "#6b4a1b", "desc": "Commerces de proximité UPS Access Point.",
     "liens": [
@@ -136,6 +136,8 @@ function urlLien(lien, lieu) {
   } else if (lien.lieu === 'pickup') {
     u.searchParams.set('pudo_keyword', t);
     u.searchParams.set('lang', 'fr');
+  } else if (lien.lieu === 'laposte') {
+    u.searchParams.set('qp', t);
   }
   return u.toString();
 }
