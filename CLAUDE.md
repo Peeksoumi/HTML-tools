@@ -83,7 +83,23 @@ qui explique comment l'outil produit son résultat et d'où viennent les donnée
 - Un dossier par outil, avec `index.html` autonome (CSS/JS inlinés), un `README.md`, et un test si possible.
 - Ne pas ajouter de dépendance externe sans nécessité ; rien n'est envoyé à un serveur tiers sans le dire dans la page.
 - Tout nouvel outil doit avoir sa carte (Ouvrir + Télécharger la page) et sa tuile de raccourci (`.launcher`) dans `index.html` à la racine, la page d'accueil du site.
-- Après modification : tester, puis fusionner dans `main` (le serveur se met à jour seul).
+- Après modification : tester, puis fusionner dans `main` soi-même (procédure ci-dessus ; le serveur se met à jour seul).
+
+## Fusionner dans `main` : procédure qui marche du premier coup
+L'utilisateur autorise Claude à fusionner lui-même ses propres PR dans `main`, sans validation préalable (décision du 24/11/2026) : ne pas s'arrêter à « PR ouverte, à fusionner par vous ».
+Depuis une session Claude Code, `gh pr create` et `gh pr merge` échouent (GraphQL indisponible, HTTP 403) : utiliser l'API REST.
+
+```bash
+git checkout -b <branche> && git add -A && git commit -m "…"            # message terminé par les lignes d'attribution demandées par la session
+git -c push.negotiate=true push -u origin <branche>                       # dépôt cloné en --depth 1 : toujours ce push
+gh api repos/Peeksoumi/HTML-tools/pulls -f title='…' -f head='<branche>' -f base='main' -f body='…' --jq '.number'
+gh api -X PUT repos/Peeksoumi/HTML-tools/pulls/<numéro>/merge -f merge_method=squash --jq '.merged,.message'   # doit afficher « true »
+```
+
+- Une commande par appel (ne pas enchaîner création de PR, fusion et suppression de branche avec `&&`) : le contrôle d'autorisation de la session juge la commande entière, et un seul refus bloque tout.
+- Ne pas utiliser `gh pr merge` ni `--delete-branch` ; laisser la branche en place (la supprimer seulement si l'utilisateur le demande).
+- Si la fusion est refusée par le contrôle d'autorisation, ne pas la contourner : dire à l'utilisateur que la PR est prête et qu'il peut répondre « tu peux fusionner », puis relancer seulement la commande de fusion.
+- Après fusion, la mise en ligne sur le VPS prend ~2 min ; un service systemd (ex. `lola-relais`) doit être redémarré côté serveur pour charger un script Python modifié.
 
 ---
 
