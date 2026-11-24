@@ -5,6 +5,8 @@
 - Lit **les trois sources en parallèle**, en permanence : aisstream.io (websocket tenu ouvert, clé = identifiant systemd `aisstream_key`, jamais dans le dépôt),
   AISVesselTracker et Shiptrail (une thread chacune, toutes les 15 s). Chaque lecture est gardée telle quelle, avec l'heure de la position et le nom de la source (anneau brut).
 - La « meilleure donnée » (positions.json) : les trois sources fusionnées sans doublon (même message AIS vu par deux sources : heure la plus ancienne, vitesse et cap complétés).
+- Source affichée (« source » de positions.json) : choisie avec la latence stable de chaque source (`LATENCE_S`) : aisstream tant que sa position est fraîche, puis avt dès que sa
+  position devient plus récente que celle d'aisstream, puis shiptrail (`choisir_source`). Sans heure de position, celle-ci est déduite de la latence habituelle de la source.
 - Dès qu'une nouvelle position arrive, il publie dans un dépôt GitHub public, en écrasant tout (un seul commit, aucun historique git), au plus toutes les 15 s
   (GitHub recommande ≤ 6 pushes/min/dépôt) : positions.json (meilleure donnée, relue par la page bac-lola pour se resynchroniser) et, dans le même commit, sources.json
   (toutes les lectures brutes horodatées avec leur source, 1 h).
@@ -136,6 +138,9 @@ def source_shiptrail():
 
 PAS = 15            # s entre deux interrogations
 RETARD_MAX = 180    # s : au-delà, on bascule sur la source de secours
+# Latence médiane de chaque source (s) : réception par le relais moins heure de la position, mesurée le lundi 23/11/2026
+# (1 957 relevés, voir l'analyse « Latence des sources AIS du bac Lola »). Stable au fil de la journée : aisstream 6-12 s, avt 40-60 s, shiptrail 40-60 s.
+LATENCE_S = {"aisstream": 9, "avt": 45, "shiptrail": 50}
 FENETRE_S = 60 * 60   # on ne conserve jamais plus d'une heure de positions
 PUBLIER_MIN_S = 15    # s minimum entre deux publications GitHub (≤ 4/min, sous les 6 pushes/min recommandés)
 BATTEMENT_S = 60               # s : sans nouvelle position, on republie quand même (« maj » = relais vivant) au moins à cette fréquence
@@ -177,7 +182,8 @@ def flottant(x):
 
 def lire(nom, fonction):
     champs = fonction()  # [lat, lon, vitesse, cap, heure_source]
-    ts = vers_ms(champs[4] if len(champs) > 4 else "") or int(time.time() * 1000)
+    # sans heure de position, on la déduit de la latence habituelle de la source (et non de l'heure de réception, qui la ferait paraître plus fraîche qu'elle n'est)
+    ts = vers_ms(champs[4] if len(champs) > 4 else "") or int(time.time() * 1000) - LATENCE_S.get(nom, 0) * 1000
     return [ts, float(champs[0]), float(champs[1]), flottant(champs[2]), flottant(champs[3])]
 
 
@@ -195,6 +201,33 @@ def noter_brut(s, source):
         limite = time.time() * 1000 - FENETRE_S * 1000
         while brut and brut[0][0] < limite:
             brut.pop(0)
+
+
+def choisir_source(derniers, maintenant_ms):
+    """Source qui donne la dernière position connue du bac. `derniers` : {source: [ts_ms, ...]} (dernière lecture de chaque source).
+
+    On part de la source la plus rapide (aisstream) et on ne passe à la suivante que si la position retenue est plus vieille que la latence de cette dernière :
+    tant que la position aisstream a moins de 45 s, avt (45 s de latence) ne peut pas détenir de position plus récente, donc on s'arrête.
+    Au-delà, avt remplace aisstream dès que sa position est plus récente, puis shiptrail (50 s) de la même façon."""
+    meilleure = None
+    for nom in sorted(LATENCE_S, key=LATENCE_S.get):
+        if meilleure and maintenant_ms - derniers[meilleure][0] <= LATENCE_S[nom] * 1000:
+            break
+        if nom in derniers and (meilleure is None or derniers[nom][0] > derniers[meilleure][0]):
+            meilleure = nom
+    return meilleure
+
+
+def maj_source():
+    """Met à jour etat["source"] (et le journal) d'après les dernières lectures brutes de chaque source."""
+    with verrou:
+        derniers = {x[5]: x for x in brut}   # `brut` est trié par heure : la dernière entrée de chaque source l'emporte
+    maintenant = int(time.time() * 1000)
+    if "avt" in derniers and maintenant - derniers["avt"][0] > RETARD_MAX * 1000:
+        del derniers["avt"]    # AVT trop en retard : ignoré aussi de la meilleure donnée (voir lire_source)
+    src = choisir_source(derniers, maintenant)
+    if src:
+        noter("source", src)
 
 
 def ajouter(s):
@@ -244,10 +277,7 @@ def lire_source(nom):
         noter("avt", "en retard")
         return
     ajouter(s)
-    with verrou:
-        dernier = anneau[-1][0] if anneau else 0
-    if s[0] >= dernier - 2000:
-        noter("source", nom)
+    maj_source()
     etat["erreur"] = None
 
 
@@ -262,6 +292,7 @@ def boucle(nom):
 
 
 def charge_utile():
+    maj_source()
     with verrou:
         limite = time.time() * 1000 - FENETRE_S * 1000
         return {"maj": int(time.time() * 1000), "fenetre_min": FENETRE_S // 60, "n": len(anneau), "source": etat["source"],
@@ -444,9 +475,10 @@ def boucle_aisstream():
                 msg = ws.recevoir()
                 s = releve_aisstream(msg) if msg is not None else None
                 if s:
-                    noter("source", "aisstream"); noter("ais", "ok")
+                    noter("ais", "ok")
                     noter_brut(s, "aisstream")
                     ajouter(s)
+                    maj_source()
                     attente = 5
         except Exception as e:
             noter("ais", "échec : %s" % str(e)[:150])
