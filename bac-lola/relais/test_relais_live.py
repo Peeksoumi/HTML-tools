@@ -158,6 +158,28 @@ class TestRelais(unittest.TestCase):
         self.assertEqual(len(R.brut), 1)       # gardée en brut
         self.assertEqual(len(R.anneau), 0)     # mais trop vieille pour la meilleure donnée
 
+    def test_choix_source_selon_la_latence(self):
+        now = 1_000_000_000
+        ais = lambda age: {"aisstream": [now - age * 1000]}
+        # aisstream fraîche (moins que la latence d'avt) : on s'arrête, même si avt annonce une position plus récente
+        self.assertEqual(R.choisir_source(dict(ais(20), avt=[now - 5000]), now), "aisstream")
+        # aisstream plus vieille que la latence d'avt : avt la remplace seulement si sa position est plus récente
+        self.assertEqual(R.choisir_source(dict(ais(100), avt=[now - 60000]), now), "avt")
+        self.assertEqual(R.choisir_source(dict(ais(100), avt=[now - 130000]), now), "aisstream")
+        # ni aisstream ni avt récentes : shiptrail prend le relais si elle est plus récente
+        self.assertEqual(R.choisir_source(dict(ais(100), avt=[now - 90000], shiptrail=[now - 70000]), now), "shiptrail")
+        # sans aisstream, ou sans rien
+        self.assertEqual(R.choisir_source({"avt": [now - 50000]}, now), "avt")
+        self.assertIsNone(R.choisir_source({}, now))
+
+    def test_heure_de_position_deduite_de_la_latence(self):
+        avant = int(time.time() * 1000)
+        s = R.lire("avt", lambda: ["47.2", "-1.7", "1.0", "90", ""])      # source sans heure de position
+        apres = int(time.time() * 1000)
+        self.assertTrue(avant - 45000 <= s[0] <= apres - 45000)
+        s = R.lire("avt", lambda: ["47.2", "-1.7", "1.0", "90", "2026-11-23T10:00:00Z"])   # avec heure : inchangée
+        self.assertEqual(s[0], R.vers_ms("2026-11-23T10:00:00Z"))
+
     def test_publication_a_chaque_nouvelle_position(self):
         import os, tempfile
         d = tempfile.mkdtemp()
