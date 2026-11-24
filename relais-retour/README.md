@@ -8,10 +8,9 @@ Page autonome (aucune donnée ni bibliothèque externe, rien n'est envoyé avant
 - **Affichage dans la page** : les liens marqués `"embed": true` (Relais Colis, Pickup, La Poste) s'ouvrent dans un cadre intégré (« Afficher ici »). Les autres sites
   (Mondial Relay, Chronopost, UPS, DPD, Vinted Go) envoient un en-tête anti-iframe et s'ouvrent dans un onglet.
 - **📍 Ma position** : géolocalisation de l'appareil, convertie en code postal + ville par l'API Adresse (data.gouv.fr), puis mise dans le champ « lieu ».
-- **Lieu pré-rempli (facultatif)** : une ville ou un code postal saisi est ajouté en paramètre d'URL pour Mondial Relay (`codePostal`, `ville`)
-  , Pickup (`pudo_keyword`) et La Poste (`qp`). Ces paramètres ne sont pas documentés par les réseaux : à vérifier en usage.
+- **Lieu pré-rempli (facultatif)** : une ville ou un code postal saisi est ajouté en paramètre d'URL pour Pickup (`pudo_keyword`) et La Poste (`qp`). Ces paramètres ne sont pas documentés par les réseaux : à vérifier en usage.
   Test réel du 24/11/2026 (navigateur du serveur, job 121-122 du dépôt privé) : `qp` (La Poste) géocode le lieu et affiche les résultats ; `pudo_keyword` (Pickup)
-  remplit le champ de recherche ; Relais Colis, Chronopost et Vinted Go n'ont pas de lien direct ; Mondial Relay, DPD et UPS refusent les robots (non vérifiables).
+  remplit le champ de recherche ; Relais Colis, Chronopost, Vinted Go et Mondial Relay (testé à la main : `codePostal`/`ville`, `zipCode`/`city` sans effet) n'ont pas de lien direct ; DPD et UPS refusent les robots (non vérifiables).
 - **Source unique des liens** : le bloc `<script type="application/json" id="liens">` de `index.html`. Pour ajouter ou corriger un lien,
   modifier ce bloc : la page et le contrôleur du serveur le relisent.
 
