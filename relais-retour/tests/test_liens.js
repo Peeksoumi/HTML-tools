@@ -17,7 +17,7 @@ for (const r of reseaux) {
     const u = new URL(l.url);
     assert.strictEqual(u.protocol, 'https:', 'lien non https : ' + l.id);
     assert.ok(l.embed === undefined || l.embed === true, 'embed : true ou absent');
-    assert.ok(!l.lieu || ['mondial', 'pickup'].includes(l.lieu), 'lieu inconnu : ' + l.id);
+    assert.ok(!l.lieu || ['mondial', 'pickup', 'laposte'].includes(l.lieu), 'lieu inconnu : ' + l.id);
   }
 }
 
@@ -34,6 +34,9 @@ assert.strictEqual(m2.searchParams.get('codePostal'), '');
 assert.strictEqual(m2.searchParams.get('ville'), 'Nantes');
 const p = new URL(urlLien(pickup, 'Saint-Herblain & co'));
 assert.strictEqual(p.searchParams.get('pudo_keyword'), 'Saint-Herblain & co');
+const poste = reseaux.find(r => r.id === 'colissimo').liens[0];
+assert.strictEqual(new URL(urlLien(poste, '69003 Lyon')).searchParams.get('qp'), '69003 Lyon', 'La Poste : qp');
+assert.strictEqual(urlLien(poste, ''), poste.url);
 assert.strictEqual(urlLien(sans, '44000'), sans.url, 'lien sans pré-remplissage : inchangé');
 
 // Règles du dépôt (CLAUDE.md)
