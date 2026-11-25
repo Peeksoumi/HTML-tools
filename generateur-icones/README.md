@@ -1,5 +1,8 @@
 # Générateur d'icônes
 
+Quelques mots → une icône au style des tuiles de l'accueil (emoji sur pastille colorée), propositions au choix, puis « 🔍 Chercher des similaires » (symboles proches, couleurs, formes) et modification par demande (« plutôt un camion »).
+Recherche hors ligne dans le dictionnaire français Unicode CLDR intégré (licence Unicode v3), complété par le lexique `ALIAS`. Régénération du dictionnaire : `python3 -I tools/emoji_data.py <annotations.json>`.
+
 Outil 100 % navigateur (un seul `index.html`, aucune dépendance) : créer une icône à partir d'une image (import, glisser-déposer, Ctrl+V) ou d'un texte / emoji,
 puis la modifier en direct par une demande en français (« fond dégradé bleu vert, cercle, texte blanc gras, ajoute une ombre »).
 
