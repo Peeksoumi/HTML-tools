@@ -17,5 +17,5 @@ L'unité systemd (`lola-relais.service`) est maintenue côté serveur et pointe 
 - Une même position relevée par deux sources (≤ 2 m, ≤ 45 s d'écart) n'est gardée qu'une fois : on conserve l'heure la plus ancienne et on complète vitesse et cap manquants.
 
 ## Choix de la source affichée
-`positions.json` indique dans `source` celle qui détient la dernière position connue, choisie avec la latence médiane stable de chaque source (`LATENCE_S` : aisstream 9 s, avt 45 s, shiptrail 50 s, mesurées le 23/11/2026) :
-aisstream tant que sa position a moins de 45 s (avt ne peut pas en avoir de plus récente), puis avt dès que sa position est plus récente que celle d'aisstream, puis shiptrail. Une source qui ne donne pas l'heure de sa position est datée de l'heure de réception moins sa latence.
+`positions.json` indique dans `source` celle qui détient la dernière position connue, choisie avec la latence médiane stable de chaque source (`LATENCE_S` : aisstream 8 s, avt 44 s, shiptrail 45 s, mesurées du 20 au 24/11/2026 avec correction du biais des heures source) :
+aisstream tant que sa position a moins de 44 s (avt ne peut pas en avoir de plus récente), puis avt dès que sa position est plus récente que celle d'aisstream, puis shiptrail. Une source qui ne donne pas l'heure de sa position est datée de l'heure de réception moins sa latence.

@@ -1,7 +1,7 @@
 // Test de la page avec un faux DOM : node tests/test_page.js
 const fs=require('fs'), vm=require('vm'), path=require('path');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
-const m=html.match(/<script>([\s\S]*)<\/script>/); if(!m) throw new Error("script introuvable");
+const m=[null,html.slice(html.lastIndexOf("<script>")+8,html.lastIndexOf("</script>"))]; if(!m) throw new Error("script introuvable");
 const els={};
 const doc={getElementById:id=>els[id]||(els[id]={innerHTML:"",className:"",textContent:""})};
 let intervals=[], reseauHs=false, urls=[], majFige=0, apiRefuse=false;
