@@ -138,9 +138,9 @@ def source_shiptrail():
 
 PAS = 15            # s entre deux interrogations
 RETARD_MAX = 180    # s : au-delà, on bascule sur la source de secours
-# Latence médiane de chaque source (s) : réception par le relais moins heure de la position, mesurée le lundi 23/11/2026
-# (1 957 relevés, voir l'analyse « Latence des sources AIS du bac Lola »). Stable au fil de la journée : aisstream 6-12 s, avt 40-60 s, shiptrail 40-60 s.
-LATENCE_S = {"aisstream": 9, "avt": 45, "shiptrail": 50}
+# Latence médiane de chaque source (s) : réception par le relais moins heure de la position, mesurée du 20 au 24/11/2026 (médiane de la latence
+# corrigée du biais des heures source, comparées à la trajectoire recalée sur les coordonnées). Dérive lente : avt ~32 → 44 s, shiptrail ~70 → 45 s.
+LATENCE_S = {"aisstream": 8, "avt": 44, "shiptrail": 45}
 FENETRE_S = 60 * 60   # on ne conserve jamais plus d'une heure de positions
 PUBLIER_MIN_S = 15    # s minimum entre deux publications GitHub (≤ 4/min, sous les 6 pushes/min recommandés)
 BATTEMENT_S = 60               # s : sans nouvelle position, on republie quand même (« maj » = relais vivant) au moins à cette fréquence

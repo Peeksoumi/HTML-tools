@@ -176,7 +176,7 @@ class TestRelais(unittest.TestCase):
         avant = int(time.time() * 1000)
         s = R.lire("avt", lambda: ["47.2", "-1.7", "1.0", "90", ""])      # source sans heure de position
         apres = int(time.time() * 1000)
-        self.assertTrue(avant - 45000 <= s[0] <= apres - 45000)
+        self.assertTrue(avant - 44000 <= s[0] <= apres - 44000)
         s = R.lire("avt", lambda: ["47.2", "-1.7", "1.0", "90", "2026-11-23T10:00:00Z"])   # avec heure : inchangée
         self.assertEqual(s[0], R.vers_ms("2026-11-23T10:00:00Z"))
 

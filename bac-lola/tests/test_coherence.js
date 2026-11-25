@@ -2,7 +2,7 @@
 // node tests/test_coherence.js
 const fs=require('fs'), vm=require('vm'), path=require('path');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
-const code=html.match(/<script>([\s\S]*)<\/script>/)[1];
+const code=[null,html.slice(html.lastIndexOf("<script>")+8,html.lastIndexOf("</script>"))][1];
 const t0=Date.parse("2026-11-17T08:00:00Z");
 const N=[47.19744,-1.67439], S=[47.19534,-1.6743];
 const mid=[[47.1969,-1.6731],[47.1962,-1.6724],[47.1956,-1.6728]];

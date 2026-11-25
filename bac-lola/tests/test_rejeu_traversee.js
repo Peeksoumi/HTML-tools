@@ -2,7 +2,7 @@
 // Régression : après la dernière position (14:24:09, 0,0 nd, au quai de Basse-Indre), la page doit dire « à quai », pas « en route / en approche ».
 const fs=require('fs'), vm=require('vm'), path=require('path');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
-const m=html.match(/<script>([\s\S]*)<\/script>/);
+const m=[null,html.slice(html.lastIndexOf("<script>")+8,html.lastIndexOf("</script>"))];
 const els={}; const doc={getElementById:id=>els[id]||(els[id]={innerHTML:"",className:"",textContent:""})};
 const T=h=>Date.parse("2026-11-19T"+h+"Z");
 const reels=[["14:09:43",47.19741,-1.67433,0.0],["14:11:19",47.19743,-1.67448,1.2],["14:12:07",47.19722,-1.67564,3.3],["14:13:24",47.19617,-1.67575,2.6],

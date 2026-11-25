@@ -15,9 +15,13 @@ liste de l'enchaînement prévu des changements (une ligne par traversée, dépa
    Position fraîche (< 2 min en mouvement, < 4 min à quai) = situation **mesurée** ; au-delà = **hypothèse** du modèle, affichée en gris pointillé ; alerte rouge à 3 min (mouvement) / 5 min (quai) ; prévisions suspendues à 10 min en service. La page ne lit jamais les relevés d'entraînement.
 3. **Modes** : rotation continue si les départs consécutifs sont espacés de ≤ 8,5 min ; perturbation si l'écart médian à la grille > 4,5 min ;
    arrêt hors service ou sans mouvement depuis 30 min.
-4. **Prévision** : simulation du cycle. Grille : créneau + décalage appris (semaine +1,3 min, week-end +1,7 min, réajusté sur les 5 derniers départs),
-   avec rattrapage immédiat si le bac a moins de 6 min de retard. Rotation : arrivée + 3,6 min. Fenêtres de pointe de semaine (06:55–09:30, 16:00–19:15)
-   pour anticiper l'entrée / la sortie de rotation.
+4. **Prévision (modèle 3)** : simulation du cycle. Les heures d'événement sont **recalées sur les coordonnées** (profil trapézoïdal : démarrage 5 s, freinage 60 s, croisière ≈ 4,4 nœuds).
+   Grille : créneau + décalage appris par type de jour et quai, sans effet de courant (semaine ≈ +0,8–0,9 min, week-end ≈ +1,2 min), avec rattrapage immédiat si le bac a moins de 6 min de retard.
+   Rotation : arrivée + séjour appris par quai et par heure (≈ 4,1 min à Indret, 4,8 min à Basse-Indre). Traversée apprise par type de jour, quai et sens du courant.
+   Chaque valeur est corrigée par les derniers événements (prior = 3 observations). Fenêtres de pointe de semaine (06:55–09:30, 16:00–18:55) pour anticiper l'entrée / la sortie de rotation ;
+   retour au poste de nuit : arrivé à Indret avec le prochain départ nominal à plus de 3 h, le bac repart 2 min après vers Basse-Indre.
+   Les constantes (`PARAM.m3`) sont apprises sur les 7 derniers jours par [`entrainement/entrainer_modele3.py`](entrainement/entrainer_modele3.py) (entrée : tableau des traversées recalées ; voir l'en-tête du script) et sont à réentraîner régulièrement.
+   Rejeu : constantes 17→23/11, test 24/11 : erreur moyenne 1,53 min contre 1,67 min pour l'ancien modèle (−8 %).
 
 ## Changement de courant (situation de perturbation anticipée)
 Le courant de la Loire s'inverse (flot ⇄ jusant) deux fois par marée. La page le calcule seule d'après la **date** : pleines et basses mers de **Nantes** et coefficient
@@ -67,3 +71,5 @@ Un bandeau rouge « Connexion perdue » apparaît dès que le serveur de positio
 ## Développement
 Moteur, géométrie du chenal et interface sont inlinés dans `index.html` (un seul bloc `<script>`). Le calcul du courant est généré : modifier `src/courant-wrapper.js` ou `courant-loire/src`, puis `python3 inject_courant.py`. Test : `node tests/test_courant.js`.
 Tests : `node tests/test_moteur.js` (grille, modes, prévision), `node tests/test_page.js` (page avec faux DOM, événements détectés en direct).
+
+Mise à jour du 25/11 : modèle 3 (recalage sur coordonnées, séjour par quai et heure, traversée selon le courant, décalage sans effet de courant) appris sur 18→24/11, pointe du soir jusqu'à 18:55, retour au poste de nuit ; latences du relais corrigées (aisstream 8 s, avt 44 s, shiptrail 45 s).

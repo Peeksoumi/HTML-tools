@@ -129,10 +129,10 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
     <li><b>Nominal</b> : grille GTFS, un départ toutes les 20 min par quai (semaine : Basse-Indre 05:30→22:10, Indret 05:40→22:20 ; week-end et fériés : 06:30→21:30 et 06:40→21:20). Arrivée nominale = départ nominal + 3 min.</li>
     <li><b>Lecture</b> : chaque quai affiche son prochain départ prévu et la situation du bac (à quai ici, en traversée vers l'autre quai, à l'autre quai, en traversée vers ici) ; l'enchaînement complet des changements est listé une seule fois, une ligne par traversée, départ et arrivée ensemble, chacun dans la colonne de son quai (Indret à gauche, Basse-Indre à droite, comme le schéma) ; l'horaire officiel et l'écart Δ restent sur les cartes.</li>
     <li><b>Modes</b> : <i>rotation continue</i> si les départs consécutifs sont espacés de ≤ 8,5 min ; <i>retard / perturbation</i> si l'écart médian à la grille dépasse 4,5 min ; <i>arrêt</i> hors service ou sans mouvement depuis 30 min.</li>
-    <li><b>Prévision hybride</b> : simulation du cycle départ → traversée (3,0 min en semaine, 3,3–3,4 min le week-end) → arrivée → départ. En grille : créneau + décalage appris (semaine +1,3 min, week-end +1,7 min, réajusté sur les 5 derniers départs). En rotation : arrivée + 3,6 min de séjour. En semaine, les fenêtres de pointe observées (06:55–09:30, 16:00–19:15) anticipent l'entrée et la sortie de rotation.</li>
-    <li><b>Validation</b> : rejeu sur 490 départs du 13 au 18/11/2026 : erreur médiane 0,6 min, 93 % à ±2 min (grille officielle seule : 57 %). En rotation continue, erreur moyenne 1,5 min contre 8,4 min pour la grille.</li>
+    <li><b>Prévision (modèle 3)</b> : simulation du cycle départ → traversée → arrivée → départ. Les heures d'événement sont d'abord <b>recalées sur les coordonnées</b> (profil de vitesse trapézoïdal : démarrage 5 s, freinage 60 s, croisière ≈ 4,4 nœuds), car le détecteur confirme avec une à deux positions de retard. Traversée apprise par type de jour, quai et sens du courant (≈ 3,1–3,7 min). En grille : créneau + décalage appris (semaine ≈ +0,8–0,9 min, week-end ≈ +1,2 min). En rotation : arrivée + séjour appris par quai et par heure (≈ 4,1 min à Indret, 4,8 min à Basse-Indre). Chaque valeur apprise est corrigée par les derniers événements (le prior compte pour 3 observations ; 5 derniers départs, 6 traversées, 5 séjours). En semaine, les fenêtres de pointe (06:55–09:30, 16:00–18:55) anticipent l'entrée et la sortie de rotation. <b>Retour au poste de nuit</b> : arrivé à Indret avec le prochain départ nominal à plus de 3 h (bac en retard après le dernier créneau), le bac repart 2 min plus tard vers Basse-Indre.</li>
+    <li><b>Validation</b> : rejeu « page ouverte en continu » (lecture toutes les 75 s) avec prévision à 15 min, comparée aux heures recalées sur les coordonnées. Constantes apprises sur 17→23/11 et testées sur le 24/11 : erreur moyenne 1,53 min contre 1,67 min pour l'ancien modèle (−8 %) ; sur toute la période, le gain vient surtout du recalage et du décalage à la grille appris sans effet de courant. Les constantes de la page sont apprises sur les 7 derniers jours (18→24/11), donc sans test indépendant : l'écart réel sera un peu moins bon que sur ces jours.</li>
     <li><b>Changement de courant</b> : la page calcule seule, d'après la <b>date</b>, les pleines et basses mers de <b>Nantes</b> et leur coefficient (analyse harmonique : constantes REFMAR, calage SHOM, moteur de <i>courant-loire</i>), et le débit moyen mensuel de la Loire à Montjean Q (m³/s). Équation, en minutes après l'étale : <b>début du flot = basse mer + 30,2 − 0,0241·Q + 0,164·C</b> ; <b>début du jusant = pleine mer + 34,3 + 0,0136·Q − 0,096·C</b> (C = coefficient ; 20 min mesurées sur le bac incluses ; valable pour Q de 200 à 1 600). À petits débits (Q ≈ 300, C ≈ 50) : flot ≈ +31 min, jusant ≈ +34 min ; en janvier (Q = 1 450, C ≈ 50) : flot ≈ +4 min, jusant ≈ +49 min. Calée sur 12 renverses mesurées du 13 au 19/11/2026 (Q de 200 à 310) : erreur moyenne ≈ 13–16 min, pire cas 29–38 min, fenêtre ± 20 min (± 30 min au-delà de 1 000 m³/s : <b>jamais mesuré</b>). Le changement est affiché comme un retard possible, en violet, dans l'enchaînement prévu, à l'heure de la renverse (à venir ou en cours, jusqu'à 90 min avant) ; les lignes dont un horaire tombe dans la fenêtre sont surlignées.</li>
-    <li><b>Quais et courant</b> : le sens du courant (flot ou jusant) déduit de l'équation corrige légèrement la prévision des départs et des traversées : à Basse-Indre le bac part ≈ 0,7 min plus tôt au flot et plus tard au jusant, à Indret l'inverse ; la traversée dure ≈ 22 s de plus au flot (144 s contre 122 s). Effet mesuré sur ≈ 90 départs par cas (6 jours, 07–20 h, test de Mann-Whitney significatif) : petit mais régulier.</li>
+    <li><b>Quais et courant</b> : le sens du courant (flot ou jusant) déduit de l'équation sert à choisir la durée de traversée apprise (à Basse-Indre ≈ 0,3 min de plus au jusant en semaine). L'effet de ± 0,7 min sur l'heure de départ, mesuré avec les heures brutes du détecteur, n'apparaît plus avec les heures recalées : il n'est plus appliqué.</li>
     <li><b>Visuel</b> : un bateau est placé entre Indret et Basse-Indre selon la dernière position AIS projetée sur le chenal ; sa situation (à quai à Indret, à quai à Basse-Indre, en route vers l'un ou l'autre) est la même que celle des cartes de quai : elle vient du dernier changement détecté, pas de la vitesse brute. Une flèche orange indique la direction ; atténué si la position est ancienne.</li>
   </ul>
   <h3>Sources de données</h3>
@@ -143,12 +143,12 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
     <li><b>Google Maps</b> : le bouton « Itinéraire » de chaque quai ouvre simplement un lien google.com/maps (destination = accès au quai, voiture) ; la page n'envoie rien à Google tant que vous ne cliquez pas.</li>
     <li><b>Open-Meteo</b> (open-meteo.com, CC BY 4.0) : météo actuelle (température, ciel, vent) aux coordonnées des bacs, rafraîchie toutes les 10 min ; la page envoie seulement ces coordonnées fixes, rien de personnel.</li>
     <li><b>Marée et courant</b> : constantes harmoniques TICON-4 (Hart-Davis et al., 2025, SEANOE, CC BY 4.0), relayées par neaps/tide-database ; prédictions SHOM pour le calage de la marée ; Hydroportail (station M5300010, Loire à Montjean-sur-Loire) : débits moyens mensuels 1863-2026 (Q de l'équation de renverse) ; tables de renverses du Grand Port Maritime de Nantes Saint-Nazaire (comparaison). Tout est embarqué dans la page : aucun appel réseau pour la marée.</li>
-    <li><b>Calibrage</b> : relevés enregistrés par le serveur du 13 au 18/11/2026 : ils ne servent qu'à fixer les paramètres du modèle hors ligne, la page ne les lit jamais.</li>
+    <li><b>Calibrage</b> : relevés enregistrés par le serveur du 13 au 24/11/2026, recalés sur les coordonnées ; les constantes du modèle 3 sont apprises sur les 7 derniers jours (18→24/11) avec <i>entrainement/entrainer_modele3.py</i>. Ils ne servent qu'à fixer les paramètres hors ligne, la page ne les lit jamais.</li>
   </ul>
   <h3>Limites</h3>
   <ul>
     <li>Courant : Q vient de la date, pas du débit réel. Une année sèche en hiver ou humide en été est mal classée : en novembre 2026, le débit mesuré (≈ 310 m³/s) est la moitié de la moyenne du mois (775 m³/s), ce qui porte l'erreur moyenne de ≈ 13 à ≈ 16 min. Les 12 renverses de référence sont toutes en mortes-eaux (coefficients 32 à 69) à petits débits ; le terme en coefficient n'améliore pas l'ajustement mesuré (il reprend l'effet des tables du Port), et les gros débits et les vives-eaux ne sont pas validés. Le sens du courant est déduit de la trajectoire du bac, pas d'une mesure directe. Sur 397 départs, aucun retard significatif n'a été relevé près des renverses (22 % d'écarts > 4 min dans ± 30 min, 19 % ailleurs) : seul le sens du courant décale légèrement départs et traversées (≈ ± 1 min).</li>
-    <li>Calibrage sur 6 jours seulement, dont 3 jours de semaine : décalages et fenêtres de rotation provisoires, vendredi et vacances non étudiés.</li>
+    <li>Calibrage sur 7 jours seulement (5 de semaine, 2 de week-end) : séjours par heure, décalages et fenêtres de rotation provisoires (certaines heures n'ont que quelques observations), vacances non étudiées. Les constantes sont figées dans la page : à réentraîner régulièrement.</li><li>Le recalage suppose un profil de vitesse moyen : l'heure d'un départ ou d'une arrivée reste connue à quelques secondes près, pas davantage.</li>
     <li>Les causes d'un retard (autre bateau, vent) ne sont pas détectées en direct ; le changement de courant est anticipé par le calcul, sans effet démontré sur les retards ; ils sont enregistrés à part pour une version ultérieure.</li>
     <li>À l'ouverture, la page rejoue 1 h de positions : le sens est connu tout de suite. Les sources AIS publiques se rafraîchissent environ chaque minute, avec ~1 min de retard : heures mesurées à ± 1 min, prévisions en retard d'autant. La copie GitHub dépend du relais du serveur : s'il tombe, elle n'est plus mise à jour (la situation est alors estimée par le modèle). Si aucune position n'arrive depuis 1 min en mouvement ou 5 min à quai, un bandeau rouge l'indique ; prévisions suspendues au-delà de 10 min en période de service (la nuit, une position ancienne est normale : « Hors service »). Si GitHub est injoignable : « Connexion perdue ».</li>
     <li>Manœuvres hors service (positionnement de début ou de fin de journée) non prévues ; un arrêt est déclaré après 30 min sans mouvement en période de service.</li>
@@ -598,12 +598,22 @@ const PARAM = {
     seuilRotation:8.5,          // min : intervalle entre deux départs consécutifs en dessous duquel = rotation continue
     seuilPerturbation:4.5,      // min : écart médian à la grille au-delà duquel = retard / perturbation
     arretMin:30,                // min : sans mouvement en période de service = arrêt
-    fenetresRotation:[[415,570],[960,1155]], // semaine : 06:55→09:30 et 16:00→19:15 (observé)
+    fenetresRotation:[[415,570],[960,1135]], // semaine : 06:55→09:30 et 16:00→18:55 (observé ; recalé sur les heures de départ et d'arrivée corrigées par les coordonnées)
+    retourNuit:2,               // min : séjour à Indret avant le retour au poste de nuit (Basse-Indre) quand le départ nominal suivant est à plus de 3 h
+    // Modèle 3 : constantes apprises sur les 7 derniers jours (18→24/11/2026, 705 traversées dont 152 en rotation) à partir des heures recalées sur les coordonnées
+    //  (outil : entrainement/entrainer_modele3.py). sejour : séjour en rotation par quai (min) + correction par heure (min) ; traversee : durée par jour/quai/sens du courant (min) ;
+    //  decalage : départ réel après le créneau officiel (min), sans effet du courant.
+    m3:{"sejour":{"N":4.807,"S":4.147},"sejourHeure":{"6":0.345,"7":-0.073,"8":-0.163,"9":-0.31,"12":0.449,"13":-0.265,"16":0.343,"17":0.071,"18":-0.185},"traversee":{"WEEKEND":{"N":{"flot":3.14,"jusant":3.692},"S":{"flot":3.329,"jusant":3.268}},"SEMAINE":{"N":{"flot":3.166,"jusant":3.433},"S":{"flot":3.329,"jusant":3.241}}},"decalage":{"WEEKEND":{"N":1.149,"S":1.178},"SEMAINE":{"N":0.891,"S":0.82}}},
     // Effet du sens du courant (flot = vers Nantes), écart au départ moyen, mesuré 13→19/11/2026 (≈ 90 départs par cas, 07–20 h) ; N = Basse-Indre, S = Indret
     courantDepart:{ N:{flot:-0.7,jusant:0.7}, S:{flot:0.7,jusant:-0.7} }, // min
     courantTraversee:{ flot:0.18, jusant:-0.18 }                         // min : traversée ≈ 22 s plus longue à flot (144 s contre 122 s)
 };
-const corrCourant=(t,now,Q)=>{ const s=COURANT.sensA(t,now); return s?{dep:PARAM.courantDepart[Q][s],tra:PARAM.courantTraversee[s]}:{dep:0,tra:0}; };
+const corrCourant=(t,now,Q)=>{ const s=COURANT.sensA(t,now); return s?{dep:PARAM.courantDepart[Q][s],tra:PARAM.courantTraversee[s]}:{dep:0,tra:0}; }; // modèle 3 : plus utilisée pour la prévision (voir priorTra), conservée pour le calcul de courant
+// Priors du modèle 3 : séjour par quai et heure, traversée par jour/quai/sens du courant, décalage à la grille
+const typeJour=t=>typeService(partiesParis(t).cle)==="SEMAINE"?"SEMAINE":"WEEKEND";
+const priorSejour=(Q,t)=>PARAM.m3.sejour[Q]+(PARAM.m3.sejourHeure[Math.floor(partiesParis(t).minute/60)]||0);
+const priorTra=(Q,t,now)=>PARAM.m3.traversee[typeJour(t)][Q][COURANT.sensA(t,now)||"flot"];
+const priorOff=(Q,t)=>PARAM.m3.decalage[typeJour(t)][Q];
 
 // --- Heure de Paris ---
 const fmtParis = new Intl.DateTimeFormat("en-GB",{
@@ -769,31 +779,26 @@ function detecterMode(evs, now, activite){
     return {mode:"normal", raison:"Service normal", detail:"Respecte la grille horaire"};
 }
 
-// Paramètres vivants : priors ajustés par les derniers événements
+// Paramètres vivants : écart moyen des derniers événements aux priors du modèle 3 (prior compté 3 fois)
 function parametresVivants(evs, now){
-    const rec=evs.filter(e=>now-e.t<4*3600*1000);
-    const off={}, tra={}, TS=typeService(partiesParis(now).cle)==="SEMAINE"?"SEMAINE":"WEEKEND";
-    for(const Q of ["N","S"]){
-        const d=rec.filter(e=>e.type==="dep"&&e.q===Q&&!e.approx).map(ecartGrille).filter(x=>x!==null&&x>-6&&x<8).slice(-5);
-        off[Q]=(3*PARAM.decalage[TS][Q]+d.reduce((a,b)=>a+b,0))/(3+d.length);
-        const tt=[];
-        for(let i=1;i<rec.length;i++) if(rec[i-1].type==="dep"&&rec[i-1].q===Q&&rec[i].type==="arr"&&rec[i].q!==Q&&!rec[i-1].approx&&!rec[i].approx) tt.push((rec[i].t-rec[i-1].t)/MIN);
-        const m=tt.slice(-6);
-        tra[Q]=(3*PARAM.traversee[TS][Q]+m.reduce((a,b)=>a+b,0))/(3+m.length);
+    const rec=evs.filter(e=>now-e.t<4*3600*1000), off={N:[],S:[]}, tra={N:[],S:[]}, sej=[];
+    for(const e of rec) if(e.type==="dep"&&!e.approx){ const x=ecartGrille(e); if(x!==null&&x>-6&&x<8) off[e.q].push(x-priorOff(e.q,e.t)); }
+    for(let i=1;i<rec.length;i++){
+        const a=rec[i-1], b=rec[i]; if(a.approx||b.approx) continue;
+        if(a.type==="dep"&&b.type==="arr"&&b.q!==a.q) tra[a.q].push((b.t-a.t)/MIN-priorTra(a.q,a.t,now));
+        if(a.type==="arr"&&b.type==="dep"&&a.q===b.q){ const x=(b.t-a.t)/MIN; if(x<8) sej.push(x-priorSejour(a.q,a.t)); }
     }
-    const sj=[];
-    for(let i=1;i<rec.length;i++) if(rec[i-1].type==="arr"&&rec[i].type==="dep"&&rec[i-1].q===rec[i].q&&!rec[i-1].approx&&!rec[i].approx) sj.push((rec[i].t-rec[i-1].t)/MIN);
-    const sjr=sj.filter(x=>x<5.5).slice(-5);
-    return {off,tra,sejourRot:(3*PARAM.sejourRotation+sjr.reduce((a,b)=>a+b,0))/(3+sjr.length)};
+    const m=(l,k)=>{ l=l.slice(-k); return l.reduce((x,y)=>x+y,0)/(3+l.length); };
+    return {off:{N:m(off.N,5),S:m(off.S,5)}, tra:{N:m(tra.N,6),S:m(tra.S,6)}, sej:m(sej,5)};
 }
 
 // Départ prévu depuis Q pour un bac arrivé à `tArr`, selon le mode simulé
 function departPrevu(Q, tArr, simMode, pv, now){
     if(simMode==="rotation"){
-        const t=tArr+pv.sejourRot*MIN;
+        const t=tArr+(priorSejour(Q,tArr)+pv.sej)*MIN;
         return {t, nominal:creneauProche(t,Q)};
     }
-    const off=(pv.off[Q]+corrCourant(tArr,now,Q).dep)*MIN, mini=tArr+PARAM.sejourMin*MIN;
+    const off=(priorOff(Q,tArr)+pv.off[Q])*MIN, mini=tArr+PARAM.sejourMin*MIN;
     let s=creneauSuivant(mini-off-PARAM.tolRetard*MIN,Q);
     if(s===null) return {t:mini, nominal:null};
     return {t:Math.max(s+off,mini), nominal:s};
@@ -816,12 +821,14 @@ function prevoir(evs, now, n, activite){
                 if(simMode==="rotation" && !w) simMode="grille";
                 else if(simMode==="grille" && w && etatMode.mode!=="arret") simMode="rotation";
             }
-            const d=departPrevu(phase.Q,phase.t,simMode,pv,now);
+            let d=departPrevu(phase.Q,phase.t,simMode,pv,now);
+            // retour au poste de nuit : arrivé à Indret, le prochain départ nominal est à plus de 3 h → le bac repart vite vers Basse-Indre
+            if(phase.Q==="S"&&d.nominal!=null&&d.nominal-phase.t>3*3600000) d={t:phase.t+PARAM.retourNuit*MIN,nominal:null};
             const t=Math.max(d.t,plancher);
             sortie.push({type:"dep",q:phase.Q,t,nominal:d.nominal,mode:simMode});
             phase={a:"mer",de:phase.Q,t};
         } else {
-            const t=Math.max(phase.t+(pv.tra[phase.de]+corrCourant(phase.t,now,phase.de).tra)*MIN,plancher);
+            const t=Math.max(phase.t+(priorTra(phase.de,phase.t,now)+pv.tra[phase.de])*MIN,plancher);
             const prevDep=sortie.length&&sortie[sortie.length-1].type==="dep"?sortie[sortie.length-1]:null;
             const nomDep=prevDep ? prevDep.nominal : creneauProche(phase.t,phase.de);
             sortie.push({type:"arr",q:autre(phase.de),t,nominal:nomDep===null||nomDep===undefined?null:nomDep+PARAM.traverseeRef*MIN,mode:simMode});
@@ -977,10 +984,30 @@ function vitesseDeplacement(a,b){ // nœuds, entre deux positions [ts,lat,lon] (
     const dx=(b[2]-a[2])*COS_LAT_REFERENCE*111320, dy=(b[1]-a[1])*110574;
     return Math.sqrt(dx*dx+dy*dy)/dt/0.514444;
 }
+// Recalage des heures d'événement sur les coordonnées (modèle 3) : profil de vitesse trapézoïdal (démarrage 5 s, freinage 60 s, croisière ≈ 4,4 nœuds) appliqué
+// aux positions qui encadrent le départ / l'arrivée détecté. Le détecteur confirme avec deux positions de retard : l'heure brute est trop tardive.
+const RECALAGE={KN:0.514444, TA:5, TB:60, VC:4.4};
+let histPos=[]; // dernières positions sur le chenal : {t, p (progression 0 Indret → 1 Basse-Indre), v (nœuds)}
+function recalerEvenement(e,hist){
+    const Q=e.type==="dep"?e.q:autre(e.q), dist=p=>Q==="S"?p*DISTANCE_TOTALE_TRACE:(1-p)*DISTANCE_TOTALE_TRACE, {KN,TA,TB,VC}=RECALAGE;
+    if(e.type==="dep"){
+        let r=null,f=null; for(const h of hist){ if(h.t<=e.t) r=h; else { f=h; break; } }
+        if(!r||!f) return e.t;
+        const v=(f.v>=2?f.v:VC)*KN, x=Math.max(0,dist(f.p)-dist(r.p));
+        const tau=x<v*TA/2?Math.sqrt(2*TA*x/v):x/v+TA/2;
+        return Math.round(Math.min(f.t,Math.max(r.t,f.t-tau*1000)));
+    }
+    let k=null,a=null; for(const h of hist){ if(h.t<e.t) k=h; else if(h.t===e.t){ a=h; break; } }
+    if(!k||!a) return e.t;
+    const v=Math.max(VC,k.v||0)*KN, r=Math.max(0,dist(a.p)-dist(k.p));
+    const y=r>=v*TB/2?(r-v*TB/2)/v+TB:Math.sqrt(2*TB*r/v);
+    return Math.round(Math.max(k.t,Math.min(e.t,k.t+y*1000)));
+}
 function traiter(s){ // s = [ts (heure AIS, ms), lat, lon, vitesse|null, cap|null]
     const v=s[3]!=null ? s[3] : (prec ? vitesseDeplacement(prec,s) : 0);
     const pos=positionSurTrace(s[1],s[2]);
     horsChenal=pos.ecart>SEUIL_HORS_ZONE;
+    if(!horsChenal){ histPos.push({t:s[0],p:Math.max(0,Math.min(1,pos.progression)),v}); if(histPos.length>40) histPos.shift(); }
     detecteur.pousser({t:s[0],p:Math.max(0,Math.min(1,pos.progression)),vitesse:v,hors:horsChenal});
     if(v>=V_MARCHE) derniereMarche=s[0];
     pBac=Math.max(0,Math.min(1,pos.progression));
@@ -988,7 +1015,7 @@ function traiter(s){ // s = [ts (heure AIS, ms), lat, lon, vitesse|null, cap|nul
 }
 function evenementsEffectifs(now){
     if(!detecteur) return [];
-    const evs=journal.slice(), s=detecteur.etat(), last=evs.length?evs[evs.length-1].t:0;
+    const evs=journal.slice(), s=detecteur.etat(), last=evs.length?(evs[evs.length-1].t0||evs[evs.length-1].t):0; // t0 : heure brute du détecteur (avant recalage)
     if(s.phase==="quai" && s.tArr-last>1000) evs.push({type:"arr",q:s.q,t:Math.round(s.tArr),approx:true});
     if(s.phase==="traversee" && s.de && ((s.tDep||now-30000)-last>1000)) evs.push({type:"dep",q:s.de,t:Math.round(s.tDep||now-30000),approx:true});
     return evs;
@@ -1022,7 +1049,7 @@ async function lirePosition(){
     }
     const tout=(git||[]).sort((a,b)=>a[0]-b[0]);
     if(tout.length){
-        if(!detecteur){ journal=[]; detecteur=creerDetecteur(null,e=>{ journal.push(e); }); } // première lecture : rejeu de la dernière heure
+        if(!detecteur){ journal=[]; histPos=[]; detecteur=creerDetecteur(null,e=>{ e.t0=e.t; e.t=recalerEvenement(e,histPos); journal.push(e); }); } // première lecture : rejeu de la dernière heure
         tout.filter(s=>s[0]>dernierTs).forEach(traiter);
     }
     lecturesOk=githubOk;
