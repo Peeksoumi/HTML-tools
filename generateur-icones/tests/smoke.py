@@ -40,6 +40,14 @@ async def main():
         await pg.wait_for_selector("#remove-img:not([hidden])")
         await ask("transparent, agrandis")
         await pg.click("#remove-img"); assert await pg.is_hidden("#remove-img")
+        # quelques mots -> icône, modification par demande, similaires
+        for q, emo, col in [("relais colis", "📦", "#d97706"), ("parking gratuit", "🅿️", "#2563eb"), ("bac lola", "⛴️", "#0e7490"), ("ladder yaskawa", None, "#0f766e")]:
+            await pg.fill("#words", q); await pg.click("#make-form button"); await pg.wait_for_timeout(150)
+            assert await val("c1") == col and (emo is None or await val("text") == emo), (q, await val("text"), await val("c1"))
+        await ask("plutôt un camion"); assert await val("text") == "🚚" and await val("c1") == "#0f766e"
+        await pg.click("#similar"); assert await pg.locator("#tiles button").count() >= 12
+        await pg.locator("#tiles button").nth(2).click(); assert await val("text") != "🚚"
+        await ask("annule"); assert await val("text") == "🚚"
         # IA simulée
         await pg.route("https://api.anthropic.com/**", lambda r: r.fulfill(status=200, content_type="application/json",
             body=json.dumps({"content": [{"type": "text", "text": '{"message":"Fait","text":"☀️","c1":"#00ff00","bgType":"solid","shape":"nimporte"}'}]})))
