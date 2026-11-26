@@ -38,13 +38,28 @@ directement sur un outil (sans passer par l'accueil) obtient sinon « Impossible
 dans son `<head>`, juste après `<link rel="icon" …>` :
 
 ```html
-<link rel="manifest" href="../manifest.json">
+<link rel="manifest" href="manifest.json">
 <script>if('serviceWorker' in navigator)navigator.serviceWorker.register('../sw.js').catch(function(){});</script>
 ```
 
-- Chemins relatifs (`../manifest.json`, `../sw.js` ; sans `../` sur l'accueil) : le manifeste (`start_url` et `scope` = `./`) et le service worker sont à la racine du site.
+- **Chaque application a son propre manifeste** (`<dossier>/manifest.json`) avec ses propres icônes (`<dossier>/icons/`) : c'est le manifeste, pas le favicon,
+  qui fixe l'icône de l'appli installée. Ne jamais pointer une page d'outil vers `../manifest.json` (elle prendrait l'icône de l'accueil).
+- Ne pas écrire ces fichiers à la main : après tout nouvel outil ou tout changement de favicon, de `<title>` ou de nom de tuile, lancer `python3 tools/gen_manifests.py`
+  et committer le résultat (il génère aussi les icônes de l'accueil ; seul le `manifest.json` racine est tenu à la main).
+- Chemins relatifs uniquement (`manifest.json`, `../sw.js` ; `sw.js` sur l'accueil ; dans le manifeste, `start_url` et `scope` = `./`, icônes en `icons/…`) :
+  l'icône est ainsi la même quel que soit le site d'installation (VPS, `peeksoumi.com`, GitHub Pages). Le service worker reste unique, à la racine.
 - Pages générées : modifier le gabarit (`src/template.html` ou `build.py`) puis relancer `build.py`. Dans `mythomachie/build.py` (f-string), écrire `{{}}` pour `{}`, et ne pas marquer ces deux lignes `data-m` (elles ne doivent pas être dans la page téléchargée).
-- À vérifier avant chaque commit : `grep -c 'rel="manifest"' <dossier>/index.html` doit donner 1.
+- À vérifier avant chaque commit : `grep -c 'rel="manifest" href="manifest.json"' <dossier>/index.html` doit donner 1, et `<dossier>/manifest.json` + `<dossier>/icons/` existent.
+
+## Règle obligatoire : mention GitHub en bas de CHAQUE page
+Toute page HTML (accueil comprise) se termine par la mention ci-dessous, tout en bas du contenu (après « Fonctionnement et sources » et tout pied de page) :
+
+```html
+<p class="depot-github" style="grid-column:1/-1;margin:16px 0 0;padding:0 8px;text-align:center;font-size:13px;opacity:.75">Cette page est stockée sur GitHub : <a href="https://github.com/Peeksoumi/HTML-tools" target="_blank" rel="noopener" style="color:inherit">Peeksoumi/HTML-tools</a></p>
+```
+
+- Pages générées : la placer dans `src/template.html` (ou `mythomachie/src/body.html`, dans le menu) puis relancer `build.py`.
+- À vérifier avant chaque commit : `grep -c 'class="depot-github"' <dossier>/index.html` doit donner 1.
 
 ## Règle : bouton « Télécharger la page » si l'outil est utilisable seul
 Quand un outil fonctionne de façon autonome (tout le traitement se fait dans le navigateur, sans serveur ni API maison), la page doit proposer
@@ -59,7 +74,7 @@ un bouton pour télécharger le fichier HTML et l'utiliser hors du site, à côt
 - À vérifier avant chaque commit : `grep -c "download=" <dossier>/index.html` doit donner au moins 1 pour les outils autonomes.
 
 ## Règle obligatoire : section « Fonctionnement et sources » en bas de CHAQUE page d'outil
-Toute page d'outil (un dossier = une page ; la page d'accueil en est exemptée) se termine par une section visible, synthétique et structurée,
+Toute page d'outil (un dossier = une page ; la page d'accueil en est exemptée) se termine (avant la seule mention GitHub) par une section visible, synthétique et structurée,
 qui explique comment l'outil produit son résultat et d'où viennent les données. Format fixe, trois sous-titres, quelques puces courtes (≤ 2 lignes chacune) :
 
 ```html
