@@ -36,7 +36,7 @@
   .ok { color:var(--ok); } .ko { color:var(--ko); } .w { color:var(--warn); }
   .badge { font-size:.72rem; border:1px solid var(--bd); border-radius:99px; padding:0 7px; margin-left:4px; color:var(--mut); }
   footer { margin:1.5rem 0 2rem; color:var(--mut); font-size:.85rem; display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; }
-  footer a { color:var(--pri); }
+  .liens { display:flex; flex-wrap:wrap; gap:6px 16px; margin:0 0 .6rem; font-size:.9rem; } .liens a { color:var(--pri); }
   .hide { display:none; }
   .fonct { margin-top:24px; padding:14px 16px; border:1px solid var(--bd); border-radius:12px; background:var(--card); color:var(--txt); text-align:left; font-size:.88rem; line-height:1.45; }
   .fonct h2 { font-size:1rem; margin:0 0 4px; }
@@ -47,6 +47,8 @@
 <body>
 <main>
   <h1>🅿️ Parking gratuit autour de moi</h1>
+  <p class="liens"><a href="https://github.com/Peeksoumi/HTML-tools/issues/new?title=%5Bparking_gratuit%5D%20&amp;body=Outil%20concern%C3%A9%20%3A%20parking_gratuit%0A%0A**Ma%20suggestion%20ou%20le%20bug%20rencontr%C3%A9%20%3A**%0A%0A" target="_blank" rel="noopener">💡 Proposer une amélioration</a>
+    <a href="index.html" download="parking_gratuit.html" title="Connexion requise (Leaflet, OpenStreetMap, open data)">⬇️ Télécharger la page</a></p>
   <div class="card">
     <form id="f">
       <input type="search" id="q" placeholder="Ville, adresse… ou position GPS « 47.2184, -1.5536 »" autocomplete="off">
@@ -69,46 +71,476 @@
   </div>
   <div class="fonct" id="fonctionnement">
     <h2>Fonctionnement et sources</h2>
-    <h3>Fonctionnement</h3><ul><li><b>Recherche</b> : le serveur du site interroge les sources autour de la position, fusionne les résultats et écarte les parkings payants. La liste classe d'abord les parkings gratuits (confirmés, puis probables), puis ceux au tarif inconnu ; à gratuité égale, du plus proche au plus éloigné.</li><li><b>Fusion</b> : un même parking vu par plusieurs sources est regroupé (&lt; 25 m, ou &lt; 300 m avec un nom ressemblant) ; le temps réel de l'opérateur l'emporte sur la capacité OSM ; deux sources contradictoires sur la gratuité → tarif « inconnu ».</li><li><b>Places de rue</b> (estimation) = longueur × côtés × 85 % ÷ 5,5 m (parallèle), 3 m (épi) ou 2,5 m (perpendiculaire).</li><li><b>Lecture des chiffres</b> : « places libres » = temps réel des parkings gratuits ; capacités sans temps réel et places de rue sont des estimations, à ne pas additionner.</li></ul>
+    <h3>Fonctionnement</h3><ul><li><b>Recherche</b> : votre navigateur interroge directement les sources autour de la position, fusionne les résultats et écarte les parkings payants. La liste classe d'abord les parkings gratuits (confirmés, puis probables), puis ceux au tarif inconnu ; à gratuité égale, du plus proche au plus éloigné.</li><li><b>Fusion</b> : un même parking vu par plusieurs sources est regroupé (&lt; 25 m, ou &lt; 300 m avec un nom ressemblant) ; le temps réel de l'opérateur l'emporte sur la capacité OSM ; deux sources contradictoires sur la gratuité → tarif « inconnu ».</li><li><b>Places de rue</b> (estimation) = longueur × côtés × 85 % ÷ 5,5 m (parallèle), 3 m (épi) ou 2,5 m (perpendiculaire).</li><li><b>Lecture des chiffres</b> : « places libres » = temps réel des parkings gratuits ; capacités sans temps réel et places de rue sont des estimations, à ne pas additionner.</li><li><b>Données envoyées</b> : le texte saisi et les positions partent directement vers Nominatim et Overpass, qui voient votre adresse IP.</li></ul>
     <h3>Sources de données</h3><ul><li><b>OpenStreetMap</b> (Overpass) : parkings (capacité, gratuité) et rues avec stationnement ; © contributeurs OSM, ODbL.</li><li><b>Open data temps réel</b> (Opendatasoft) : places libres par parking, pour Nantes et Strasbourg seulement.</li><li><b>Nominatim</b> : géocodage des adresses et noms déduits des parkings anonymes.</li></ul>
-    <h3>Limites</h3><ul><li>La recherche exige le serveur de l'outil sur le même site : elle ne fonctionne pas sur un hébergement statique (GitHub Pages).</li>
+    <h3>Limites</h3><ul><li>Services publics à usage limité (Nominatim : 1 requête/s) : ils peuvent ralentir ou refuser ; page ouverte comme fichier, le géocodage ou les tuiles peuvent être bloqués.</li>
 <li>Pas de temps réel hors des villes configurées ; parkings en ouvrage exclus sauf gratuité renseignée ; qualité dépendante de la saisie OSM ; zones bleues signalées mais non détaillées.</li></ul>
   </div>
   <footer>
-    <a href="https://github.com/Peeksoumi/HTML-tools/issues/new?title=%5Bparking_gratuit%5D%20&amp;body=Outil%20concern%C3%A9%20%3A%20parking_gratuit%0A%0A**Ma%20suggestion%20ou%20le%20bug%20rencontr%C3%A9%20%3A**%0A%0A" target="_blank" rel="noopener">💡 Proposer une amélioration</a>
     <span>Données © contributeurs OpenStreetMap (ODbL) et open data des collectivités.</span>
   </footer>
 </main>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script id="moteur">
+// Géocodage, recherche et fusion des sources, exécutés dans le navigateur (portage de sources.py).
+const OVERPASS_URLS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter'
+];
+const NOMINATIM = 'https://nominatim.openstreetmap.org/';
+// Copie de sources.json (la page téléchargée doit rester autonome) ; test_moteur.js vérifie qu'elles sont identiques.
+const SOURCES_TR = /*sources*/[
+  {
+    "id": "nantes",
+    "nom": "Nantes Métropole (Naolib)",
+    "centre": [
+      47.2184,
+      -1.5536
+    ],
+    "rayon_km": 30,
+    "url": "https://data.nantesmetropole.fr/api/explore/v2.1/catalog/datasets/244400404_parkings-publics-nantes-disponibilites/records?limit=100",
+    "champs": {
+      "nom": [
+        "grp_nom",
+        "nom"
+      ],
+      "libres": [
+        "grp_disponible",
+        "disponible"
+      ],
+      "total": [
+        "grp_exploitation",
+        "capacite"
+      ],
+      "horodatage": [
+        "grp_horodatage",
+        "horodatage"
+      ]
+    },
+    "gratuit": null,
+    "gratuit_si_nom": "relais|P\\+R"
+  },
+  {
+    "id": "strasbourg",
+    "nom": "Eurométropole de Strasbourg",
+    "centre": [
+      48.5734,
+      7.7521
+    ],
+    "rayon_km": 30,
+    "url": "https://data.strasbourg.eu/api/explore/v2.1/catalog/datasets/occupation-parkings-temps-reel/records?limit=100",
+    "positions_url": "https://data.strasbourg.eu/api/explore/v2.1/catalog/datasets/parkings/records?limit=100",
+    "champs": {
+      "nom": [
+        "nom_parking",
+        "nom",
+        "libelle",
+        "name"
+      ],
+      "nom_position": [
+        "nom_parking",
+        "nom",
+        "libelle",
+        "name"
+      ],
+      "libres": [
+        "libre",
+        "disponible",
+        "places_libres",
+        "free"
+      ],
+      "total": [
+        "total",
+        "capacite",
+        "max"
+      ],
+      "horodatage": [
+        "horodatage",
+        "date",
+        "datetime"
+      ]
+    },
+    "gratuit": null,
+    "gratuit_si_nom": "relais|P\\+R"
+  }
+]/*fin*/;
+
+const SLOT = { parallel: 5.5, diagonal: 3.0, perpendicular: 2.5 };
+const PART_UTILE = 0.85;
+const CONDITIONS_EXCLUES = ['ticket', 'customers', 'residents', 'private', 'disabled', 'loading',
+  'no_parking', 'no_standing', 'no_stopping', 'permit', 'delivery'];
+
+const cache = new Map();
+async function cached(cle, ttl, fn) {          // ttl en secondes
+  const h = cache.get(cle);
+  if (h && Date.now() - h[0] < ttl * 1000) return h[1];
+  const v = await fn();
+  cache.set(cle, [Date.now(), v]);
+  return v;
+}
+
+async function httpJson(url, options = {}, delai = 40) {
+  const r = await fetch(url, { ...options, signal: AbortSignal.timeout(delai * 1000) });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+// Politique d'usage de Nominatim : 1 requête par seconde au plus.
+let fileNominatim = Promise.resolve(), dernierNominatim = 0;
+function nominatim(chemin, params, delai) {
+  const tour = fileNominatim.then(async () => {
+    const attente = dernierNominatim + 1100 - Date.now();
+    if (attente > 0) await new Promise(ok => setTimeout(ok, attente));
+    dernierNominatim = Date.now();
+    return httpJson(NOMINATIM + chemin + '?' + new URLSearchParams(params), {}, delai);
+  });
+  fileNominatim = tour.catch(() => {});
+  return tour;
+}
+
+function haversine(lat1, lon1, lat2, lon2) {
+  const p = Math.PI / 180;
+  const a = Math.sin((lat2 - lat1) * p / 2) ** 2
+    + Math.cos(lat1 * p) * Math.cos(lat2 * p) * Math.sin((lon2 - lon1) * p / 2) ** 2;
+  return 12742000 * Math.asin(Math.sqrt(a));
+}
+
+const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/\p{Mn}/gu, '').replace(/[^a-z0-9 ]+/g, ' ');
+const STOP = new Set(['parking', 'parc', 'de', 'du', 'la', 'le', 'les', 'des', 'd', 'l', 'et', 'en', 'ouvrage', 'enclos', 'public']);
+const tokens = n => new Set(norm(n).split(' ').filter(t => t && !STOP.has(t)));
+
+function similarite(a, b) {
+  const ta = tokens(a), tb = tokens(b);
+  if (!ta.size || !tb.size) return 0;
+  const commun = [...ta].filter(t => tb.has(t)).length;
+  return commun / (ta.size + tb.size - commun);
+}
+
+function toInt(v) {
+  const m = v == null ? null : String(v).match(/^\s*(\d+)/);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+// ------------------------------------------------------------------ OpenStreetMap
+async function overpass(q) {
+  let derniere;
+  for (const url of OVERPASS_URLS) {
+    try {
+      return (await httpJson(url, { method: 'POST', body: new URLSearchParams({ data: q }) }, 35)).elements || [];
+    } catch (e) { derniere = e; }                 // on essaie le miroir suivant
+  }
+  throw derniere;
+}
+
+// Parkings + (pour nommer les anonymes) rues nommées à < 35 m et lieux nommés à < 60 m.
+const requeteParkings = (lat, lon, r) => overpass(`[out:json][timeout:25];
+nwr["amenity"="parking"]["fee"!="yes"](around:${r},${lat},${lon})->.p;
+.p out center tags;
+way(around.p:35)["highway"]["name"]->.h;
+.h out tags geom;
+(nwr(around.p:60)["name"]["shop"];nwr(around.p:60)["name"]["leisure"];
+ nwr(around.p:60)["name"]["tourism"];nwr(around.p:60)["name"]["amenity"]["amenity"!="parking"];)->.o;
+.o out center tags;`);
+
+function requeteRues(lat, lon, r) {
+  const cotes = ['both', 'right', 'left'].map(c =>
+    `way["highway"]["name"]["parking:lane:${c}"~"^(parallel|diagonal|perpendicular)$"](around:${r},${lat},${lon});`).join('\n');
+  return overpass(`[out:json][timeout:25];\n(\n${cotes}\n);\nout tags geom;`);
+}
+
+function distPolyligne(lat, lon, geom) {
+  const xy = (la, lo) => [lo * Math.cos(lat * Math.PI / 180) * 111320, la * 110540];
+  const [px, py] = xy(lat, lon);
+  const pts = geom.map(g => xy(g.lat, g.lon));
+  let best = Infinity;
+  for (let i = 1; i < pts.length; i++) {
+    const [ax, ay] = pts[i - 1], dx = pts[i][0] - ax, dy = pts[i][1] - ay;
+    const t = dx === 0 && dy === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)));
+    best = Math.min(best, Math.hypot(px - (ax + t * dx), py - (ay + t * dy)));
+  }
+  return best;
+}
+
+const latDe = el => el.lat ?? el.center?.lat;
+const lonDe = el => el.lon ?? el.center?.lon;
+
+function contexte(elements) {
+  const rues = [], lieux = [];
+  for (const el of elements) {
+    const t = el.tags || {};
+    if (!t.name || t.amenity === 'parking') continue;
+    if ('highway' in t && el.geometry) rues.push([t.name, el.geometry]);
+    else if (['shop', 'leisure', 'tourism', 'amenity'].some(k => k in t) && latDe(el) != null && lonDe(el) != null)
+      lieux.push([t.name, latDe(el), lonDe(el)]);
+  }
+  return [rues, lieux];
+}
+
+const plusProche = liste => liste.sort((a, b) => a[0] - b[0])[0];
+
+function deduireNom(t, lat, lon, rues, lieux) {
+  if (t['addr:street']) {
+    const num = t['addr:housenumber'];
+    return [`Parking ${num ? num + ' ' : ''}${t['addr:street']}`, 'adresse'];
+  }
+  const l = plusProche(lieux.map(([n, la, lo]) => [haversine(lat, lon, la, lo), n]));
+  if (l && l[0] <= 50) return [`Parking ${l[1]}`, 'lieu proche'];
+  const r = plusProche(rues.map(([n, g]) => [distPolyligne(lat, lon, g), n]));
+  if (r && r[0] <= 40) return [`Parking ${r[1]}`, 'rue proche'];
+  return [{ surface: 'Parking de surface', street_side: 'Parking en bord de rue',
+            lane: 'Parking en bord de rue' }[t.parking] || 'Parking sans nom', 'inconnu'];
+}
+
+function parseParkings(elements, masques = [0]) {
+  const out = [];
+  const [rues, lieux] = contexte(elements);
+  for (const el of elements) {
+    const t = el.tags || {};
+    if (t.amenity !== 'parking') continue;
+    if (['private', 'customers', 'permit', 'delivery', 'no'].includes(t.access)) continue;
+    if (t.fee === 'yes' || 'charge' in t || 'fee:conditional' in t) continue;
+    const sur = t.fee === 'no';
+    // Les parkings en ouvrage / souterrains sont presque toujours payants : fee=no exigé.
+    if (['underground', 'multi-storey', 'rooftop'].includes(t.parking) && !sur) continue;
+    const lat = latDe(el), lon = lonDe(el);
+    if (lat == null || lon == null) continue;
+    const cap = toInt(t.capacity);
+    let nom = t.name || t.operator || t.brand, deduit = null;
+    if (!nom) {
+      if (!sur && cap !== null && cap < 5) { masques[0]++; continue; }   // mini parkings anonymes : bruit
+      [nom, deduit] = deduireNom(t, lat, lon, rues, lieux);
+    }
+    out.push({ nom, nom_deduit: deduit, lat, lon, capacite: cap, libres: null, gratuit: true,
+      certitude: sur ? 'sûr' : 'probable', sources: ['OpenStreetMap'], horodatage: null });
+  }
+  return out;
+}
+
+async function geocodageInverse(lat, lon) {
+  const d = await cached(`rev ${lat.toFixed(5)} ${lon.toFixed(5)}`, 86400, () =>
+    nominatim('reverse', { lat, lon, format: 'jsonv2', zoom: 18, 'accept-language': 'fr' }, 15));
+  const a = d.address || {};
+  const rue = a.road || a.pedestrian || a.residential;
+  if (rue) return `Parking ${a.house_number ? a.house_number + ' ' : ''}${rue}`;
+  return d.name ? `Parking ${d.name}` : null;
+}
+
+async function completerNoms(parkings, maxRequetes = 6) {
+  for (const p of parkings.filter(p => p.nom_deduit === 'inconnu').slice(0, maxRequetes)) {
+    try {
+      const nom = await geocodageInverse(p.lat, p.lon);
+      if (nom) { p.nom = nom; p.nom_deduit = 'géocodage'; }
+    } catch (e) { break; }                        // on garde le nom générique
+  }
+}
+
+const cote = (t, s, cle) => t[`${cle}:${s}`] || t[`${cle}:both`] || null;
+
+function parseRues(elements) {
+  const rues = new Map();
+  for (const el of elements) {
+    const t = el.tags || {};
+    if (el.type !== 'way' || !('highway' in t) || t.amenity === 'parking') continue;
+    const geom = el.geometry || [];
+    if (geom.length < 2) continue;
+    let longueur = 0;
+    for (let i = 1; i < geom.length; i++) longueur += haversine(geom[i - 1].lat, geom[i - 1].lon, geom[i].lat, geom[i].lon);
+    const mid = geom[Math.floor(geom.length / 2)];
+    let cotes = ['both', 'left', 'right'].filter(s => Object.hasOwn(SLOT, t[`parking:lane:${s}`]));
+    if (cotes.includes('both')) cotes = ['both'];
+    for (const s of cotes) {
+      const orient = t[`parking:lane:${s}`];
+      const cond = (cote(t, s, 'parking:condition') || '').split(';')[0].trim();
+      const fee = cote(t, s, 'parking:fee') || t[`parking:lane:${s}:fee`];
+      if (CONDITIONS_EXCLUES.includes(cond) || fee === 'yes') continue;
+      const statut = cond === 'free' || fee === 'no' ? 'sur' : cond === 'disc' ? 'disque' : 'probable';
+      const cap = toInt(t[`parking:lane:${s}:capacity`]);
+      const places = cap !== null ? cap : longueur * (s === 'both' ? 2 : 1) * PART_UTILE / SLOT[orient];
+      if (!rues.has(t.name)) rues.set(t.name, { nom: t.name, lat: 0, lon: 0, poids: 0, places: 0,
+        sur: 0, probable: 0, disque: 0, longueur_m: 0, orientations: new Set() });
+      const r = rues.get(t.name);
+      r.places += places; r[statut] += places; r.longueur_m += longueur; r.orientations.add(orient);
+      r.lat += mid.lat * longueur; r.lon += mid.lon * longueur; r.poids += longueur;
+    }
+  }
+  return [...rues.values()].filter(r => r.poids > 0).map(r => ({
+    nom: r.nom, lat: r.lat / r.poids, lon: r.lon / r.poids,
+    places_estimees: Math.round(r.places), dont_sur: Math.round(r.sur),
+    dont_probable: Math.round(r.probable), dont_disque: Math.round(r.disque),
+    longueur_m: Math.round(r.longueur_m), orientation: [...r.orientations].sort().join('/'),
+    sources: ['OpenStreetMap']
+  })).filter(r => r.places_estimees > 0);
+}
+
+// ------------------------------------------------------------------ Open data temps réel
+const pick = (rec, candidats) => {
+  const c = candidats.find(c => rec[c] != null && rec[c] !== '');
+  return c === undefined ? null : rec[c];
+};
+
+function couple(a, b) {
+  const p = [parseFloat(a), parseFloat(b)];
+  return p.every(Number.isFinite) ? p : null;
+}
+
+function extrairePosition(rec) {
+  for (const k of ['location', 'geo_point_2d', 'position', 'coordonnees', 'geopoint', 'geometry']) {
+    const g = rec[k];
+    if (Array.isArray(g)) { if (g.length === 2) return couple(g[0], g[1]); }
+    else if (g && typeof g === 'object') {
+      if ('lat' in g && 'lon' in g) return couple(g.lat, g.lon);
+      const c = g.coordinates || g.geometry?.coordinates;
+      if (c && c.length >= 2 && !Array.isArray(c[0])) return couple(c[1], c[0]);
+    } else if (typeof g === 'string' && g.includes(',')) {
+      const p = couple(...g.split(','));
+      if (p) return p;
+    }
+  }
+  const lat = pick(rec, ['latitude', 'lat', 'y']), lon = pick(rec, ['longitude', 'lon', 'lng', 'x']);
+  return lat !== null && lon !== null ? couple(lat, lon) : null;
+}
+
+async function enregistrements(url) {
+  const d = await httpJson(url);
+  return 'results' in d ? d.results : (d.records || []).map(r => r.fields || r);
+}
+
+function gratuitSelonSource(src, nom) {
+  if (src.gratuit_si_nom && new RegExp(src.gratuit_si_nom, 'i').test(nom || '')) return true;
+  return src.gratuit ?? null;
+}
+
+async function lireTempsReel(src) {
+  const champs = src.champs || {};
+  const positions = new Map();
+  if (src.positions_url) {
+    for (const rec of await enregistrements(src.positions_url)) {
+      const nom = pick(rec, champs.nom_position || champs.nom || ['nom']), pos = extrairePosition(rec);
+      if (nom && pos) positions.set(norm(nom), pos);
+    }
+  }
+  const out = [];
+  for (const rec of await enregistrements(src.url)) {
+    const nom = pick(rec, champs.nom || ['nom']);
+    if (!nom) continue;
+    const pos = extrairePosition(rec) || positions.get(norm(nom));
+    out.push({ nom: String(nom), lat: pos ? pos[0] : null, lon: pos ? pos[1] : null,
+      capacite: toInt(pick(rec, champs.total || ['total'])),
+      libres: toInt(pick(rec, champs.libres || ['libres'])),
+      gratuit: gratuitSelonSource(src, String(nom)), certitude: 'opérateur',
+      sources: [src.nom || src.id], horodatage: pick(rec, champs.horodatage || ['horodatage']) });
+  }
+  return out;
+}
+
+async function tempsReelPour(lat, lon, r) {
+  const proches = SOURCES_TR.filter(s => haversine(lat, lon, ...s.centre) <= (s.rayon_km || 30) * 1000 + r);
+  const lus = await Promise.all(proches.map(async src => {
+    try { return { src, items: await cached('rt ' + src.id, 120, () => lireTempsReel(src)), erreur: null }; }
+    catch (e) { return { src, items: [], erreur: `${e.name}: ${e.message}` }; }
+  }));
+  return [lus.flatMap(x => x.items), lus.map(x => ({ id: x.src.id, nom: x.src.nom || x.src.id,
+    ok: x.erreur === null, nb: x.items.length, erreur: x.erreur }))];
+}
+
+// ------------------------------------------------------------------ Fusion
+function memeParking(a, b) {
+  if (a.lat == null || b.lat == null) return similarite(a.nom, b.nom) >= 0.6;
+  const d = haversine(a.lat, a.lon, b.lat, b.lon);
+  return d <= 25 || (d <= 300 && similarite(a.nom, b.nom) >= 0.4);
+}
+
+function fusionner(parkings) {
+  const res = [];
+  const tries = [...parkings].sort((a, b) => (a.certitude !== 'opérateur') - (b.certitude !== 'opérateur'));
+  for (const p of tries) {
+    const cible = res.find(r => memeParking(r, p));
+    if (!cible) { res.push({ ...p, sources: [...p.sources], notes: [] }); continue; }
+    cible.sources.push(...p.sources.filter(s => !cible.sources.includes(s)));
+    if (cible.nom_deduit && !p.nom_deduit) { cible.nom = p.nom; cible.nom_deduit = null; }  // nom réel > nom déduit
+    if (p.libres !== null) { cible.libres = p.libres; cible.horodatage = p.horodatage; }
+    if (p.capacite !== null && (cible.capacite === null || p.certitude === 'opérateur')) cible.capacite = p.capacite;
+    if (cible.lat === null && p.lat !== null) { cible.lat = p.lat; cible.lon = p.lon; }
+    // Tarif : on fusionne en signalant les désaccords.
+    if (cible.gratuit === null) cible.gratuit = p.gratuit;
+    else if (p.gratuit !== null && cible.gratuit !== p.gratuit) {
+      cible.gratuit = null;
+      cible.notes.push('sources en désaccord sur la gratuité');
+    }
+    if (p.certitude === 'sûr' && cible.certitude !== 'opérateur') cible.certitude = 'sûr';
+  }
+  return res;
+}
+
+// Tri : gratuit confirmé (0), gratuit probable (1), tarif inconnu (2).
+const rangGratuite = p => p.gratuit === null ? 2 : p.certitude === 'probable' ? 1 : 0;
+
+function totaux(parkings, rues) {
+  const somme = (l, k) => l.reduce((s, x) => s + x[k], 0);
+  const gratuits = parkings.filter(p => p.gratuit === true), inconnus = parkings.filter(p => p.gratuit === null);
+  const tr = gratuits.filter(p => p.libres !== null), sans = gratuits.filter(p => p.libres === null && p.capacite);
+  return { parkings_gratuits: gratuits.length, parkings_tarif_inconnu: inconnus.length,
+    libres_temps_reel: somme(tr, 'libres'), parkings_temps_reel: tr.length,
+    capacite_sans_temps_reel: somme(sans, 'capacite'), parkings_sans_temps_reel: sans.length,
+    rues: rues.length, places_rues_estimees: somme(rues, 'places_estimees'),
+    libres_temps_reel_tarif_inconnu: somme(inconnus.filter(p => p.libres !== null), 'libres') };
+}
+
+async function rechercheSources(lat, lon, rayon = 1000, maxRues = 20) {
+  rayon = Math.max(100, Math.min(Math.trunc(rayon), 4000));
+  const osm = async (nom, id, fn) => {
+    try {
+      const el = await cached(`${id} ${lat.toFixed(3)} ${lon.toFixed(3)} ${rayon}`, 600, () => fn(lat, lon, rayon));
+      return [el, { id, nom, ok: true, nb: el.length, erreur: null }];
+    } catch (e) { return [[], { id, nom, ok: false, nb: 0, erreur: `${e.name}: ${e.message}` }]; }
+  };
+  const [[elP, rapP], [elR, rapR]] = await Promise.all([
+    osm('OpenStreetMap (parkings)', 'osm_parkings', requeteParkings),
+    osm('OpenStreetMap (rues)', 'osm_rues', requeteRues)]);
+  const masques = [0];
+  const osmP = parseParkings(elP, masques);
+  const rues = parseRues(elR);
+  const [rt, rapRt] = await tempsReelPour(lat, lon, rayon);
+  let parkings = fusionner(osmP.concat(rt));
+  for (const p of parkings) p.distance_m = p.lat !== null ? Math.trunc(haversine(lat, lon, p.lat, p.lon)) : null;
+  parkings = parkings.filter(p => p.gratuit !== false && (p.distance_m === null || p.distance_m <= rayon));
+  parkings.sort((a, b) => rangGratuite(a) - rangGratuite(b)
+    || (a.distance_m === null) - (b.distance_m === null) || a.distance_m - b.distance_m);
+  await completerNoms(parkings.filter(p => p.lat !== null));
+  for (const r of rues) r.distance_m = Math.trunc(haversine(lat, lon, r.lat, r.lon));
+  rues.sort((a, b) => b.places_estimees - a.places_estimees);
+  return { centre: { lat, lon }, rayon, totaux: totaux(parkings, rues), parkings, rues: rues.slice(0, maxRues),
+    sources: [rapP, rapR, ...rapRt], anonymes_masques: masques[0],
+    avertissement: "Les places libres ne sont connues que là où une source temps réel existe ; ailleurs, c'est la capacité (OpenStreetMap). Les places de rue sont des estimations." };
+}
+
+async function geocoder(q) {
+  const d = await cached('geo ' + q.trim().toLowerCase(), 3600, () =>
+    nominatim('search', { q, format: 'jsonv2', limit: 5, 'accept-language': 'fr' }, 20));
+  return d.map(x => ({ nom: x.display_name, lat: parseFloat(x.lat), lon: parseFloat(x.lon) }));
+}
+</script>
 <script>
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let map, couche;
 const msg = (t, err) => { $('msg').textContent = t || ''; $('msg').className = err ? 'err' : ''; };
 
-async function api(chemin) {
-  // API du même site uniquement : à côté de la page (/parking/), sinon dans le dossier voisin parking/
-  let r = await fetch(chemin);
-  if (r.status === 404) r = await fetch('../parking/' + chemin);
-  if (r.status === 404) throw new Error("La recherche a besoin d'un serveur, absent de ce site.");
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(j.erreur || ('HTTP ' + r.status));
-  return j;
-}
-
 async function chercherTexte(texte) {
   const m = texte.match(/^\s*(-?\d{1,2}(?:[.,]\d+)?)\s*[,; ]\s*(-?\d{1,3}(?:[.,]\d+)?)\s*$/);
   if (m) return rechercher(parseFloat(m[1].replace(',', '.')), parseFloat(m[2].replace(',', '.')));
   msg('Recherche du lieu…');
-  const g = await api('api/geocode?q=' + encodeURIComponent(texte));
-  if (!g.resultats.length) throw new Error('Lieu introuvable');
-  $('q').value = g.resultats[0].nom.split(',').slice(0, 2).join(',');
-  return rechercher(g.resultats[0].lat, g.resultats[0].lon);
+  const g = await geocoder(texte).catch(e => { throw new Error('Recherche du lieu impossible (' + e.message + ').'); });
+  if (!g.length) throw new Error('Lieu introuvable');
+  $('q').value = g[0].nom.split(',').slice(0, 2).join(',');
+  return rechercher(g[0].lat, g[0].lon);
 }
 
 async function rechercher(lat, lon) {
   msg('Interrogation des sources…');
-  const d = await api(`api/recherche?lat=${lat}&lon=${lon}&rayon=${$('rayon').value}`);
+  if (!(Math.abs(lat) <= 90 && Math.abs(lon) <= 180)) throw new Error('Coordonnées hors limites.');
+  const d = await rechercheSources(lat, lon, Number($('rayon').value));
   afficher(d);
   msg('');
 }
