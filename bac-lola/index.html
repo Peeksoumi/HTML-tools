@@ -38,6 +38,12 @@ tr.cour td{background:rgba(169,139,217,.14)}
 .m-perturbation{border-left-color:var(--orange)}.m-perturbation .mode{color:var(--orange)}
 .m-arret{border-left-color:var(--gris)}.m-arret .mode{color:var(--gris)}
 .led{width:7px;height:7px;display:inline-block;border-radius:50%;background:var(--vert);box-shadow:0 0 4px var(--vert);margin-right:6px}
+#officiel{margin-bottom:12px}
+.off-ev{border:1px solid var(--border);border-left-width:6px;border-radius:10px;padding:10px 14px;margin-bottom:8px;background:var(--panel);font-size:14px}
+.off-ev .titre{font-weight:600;margin-bottom:4px}
+.off-ev.en-cours{border-left-color:var(--rouge)}.off-ev.en-cours .titre{color:var(--rouge)}
+.off-ev.prevu{border-left-color:var(--gris)}.off-ev.prevu .titre{color:var(--gris)}
+.off-ok,.off-hor{font-size:12px;color:var(--dim);margin-top:4px}
 .alerte{background:var(--rouge);color:#fff;border-radius:6px;padding:6px 10px;margin-top:8px;font-size:14px;font-weight:600}
 .voie{position:relative;height:74px;margin:2px 14px 0}
 .voie .eau{position:absolute;left:0;right:0;top:44px;height:3px;border-radius:2px;background:var(--bleu);opacity:.55}
@@ -115,6 +121,7 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
     <span id="meteo" class="meteo" title="Météo actuelle aux bacs (Open-Meteo)"></span>
 </header>
 <div id="bandeau" class="m-arret"><div class="mode">Chargement…</div><div class="detail"></div><div class="live"></div></div>
+<div id="officiel"></div>
 <div id="carte" class="bloc"></div>
 <div id="quais"></div>
 <h2 class="t">Enchaînement prévu</h2><div class="bloc" id="chaine"></div>
@@ -133,12 +140,14 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
     <li><b>Validation</b> : rejeu « page ouverte en continu » (lecture toutes les 75 s) avec prévision à 15 min, comparée aux heures recalées sur les coordonnées. Constantes apprises sur 17→23/11 et testées sur le 24/11 : erreur moyenne 1,53 min contre 1,67 min pour l'ancien modèle (−8 %) ; sur toute la période, le gain vient surtout du recalage et du décalage à la grille appris sans effet de courant. Les constantes de la page sont apprises sur les 7 derniers jours (18→24/11), donc sans test indépendant : l'écart réel sera un peu moins bon que sur ces jours.</li>
     <li><b>Changement de courant</b> : la page calcule seule, d'après la <b>date</b>, les pleines et basses mers de <b>Nantes</b> et leur coefficient (analyse harmonique : constantes REFMAR, calage SHOM, moteur de <i>courant-loire</i>), et le débit moyen mensuel de la Loire à Montjean Q (m³/s). Équation, en minutes après l'étale : <b>début du flot = basse mer + 30,2 − 0,0241·Q + 0,164·C</b> ; <b>début du jusant = pleine mer + 34,3 + 0,0136·Q − 0,096·C</b> (C = coefficient ; 20 min mesurées sur le bac incluses ; valable pour Q de 200 à 1 600). À petits débits (Q ≈ 300, C ≈ 50) : flot ≈ +31 min, jusant ≈ +34 min ; en janvier (Q = 1 450, C ≈ 50) : flot ≈ +4 min, jusant ≈ +49 min. Calée sur 12 renverses mesurées du 13 au 19/11/2026 (Q de 200 à 310) : erreur moyenne ≈ 13–16 min, pire cas 29–38 min, fenêtre ± 20 min (± 30 min au-delà de 1 000 m³/s : <b>jamais mesuré</b>). Le changement est affiché comme un retard possible, en violet, dans l'enchaînement prévu, à l'heure de la renverse (à venir ou en cours, jusqu'à 90 min avant) ; les lignes dont un horaire tombe dans la fenêtre sont surlignées.</li>
     <li><b>Quais et courant</b> : le sens du courant (flot ou jusant) déduit de l'équation sert à choisir la durée de traversée apprise (à Basse-Indre ≈ 0,3 min de plus au jusant en semaine). L'effet de ± 0,7 min sur l'heure de départ, mesuré avec les heures brutes du détecteur, n'apparaît plus avec les heures recalées : il n'est plus appliqué.</li>
+    <li><b>Informations officielles</b> : indépendamment du modèle, la page interroge toutes les 2 min l'API du Département qui alimente l'appli « Bacs de Loire » et affiche tel quel le message d'une perturbation annoncée (en cours ou prévisionnelle) ; sans perturbation, une ligne discrète le dit. Elle lit aussi les horaires officiels (toutes les 30 min) et avertit s'ils diffèrent de la grille GTFS du modèle. Ces informations ne changent pas les prévisions.</li>
     <li><b>Visuel</b> : un bateau est placé entre Indret et Basse-Indre selon la dernière position AIS projetée sur le chenal ; sa situation (à quai à Indret, à quai à Basse-Indre, en route vers l'un ou l'autre) est la même que celle des cartes de quai : elle vient du dernier changement détecté, pas de la vitesse brute. Une flèche orange indique la direction ; atténué si la position est ancienne.</li>
   </ul>
   <h3>Sources de données</h3>
   <ul>
     <li><b>GTFS « Horaires des bacs de Loire en Loire-Atlantique »</b> (Département de Loire-Atlantique, data.gouv.fr, Licence Ouverte) : créneaux nominaux et jours fériés.</li>
     <li><b>Position AIS de Lola</b> (MMSI 227158520) : aisstream.io (flux AIS de récepteurs de bénévoles), avec repli sur AISVesselTracker puis Shiptrail si aisstream est muet depuis 20 s en mouvement ou 75 s à quai (ces services refusent les appels d'une page web). Un script du dépôt (<i>bac-lola/relais</i>), exécuté sur le serveur du site, garde la connexion à aisstream, interroge les secours au besoin et garde 1 h en mémoire vive. Le relais publie la dernière heure de positions dans la copie publique <b>GitHub</b> <i>Peeksoumi/lola-relais</i> dès qu'une nouvelle position arrive (au plus toutes les 15 s, un seul commit, sans historique) ; la page ne lit que cette copie, c'est la source qui cale le modèle. Aucune base de données, la page ne lit jamais les relevés d'entraînement ; c'est l'un des deux appels réseau de la page (avec Open-Meteo), rien n'y est envoyé.</li>
+    <li><b>API du Département de Loire-Atlantique</b> (api.loire-atlantique.fr, non documentée, sans clé ; les mêmes que l'appli officielle) : perturbations annoncées (<i>traficevents</i>, liste vide s'il n'y en a pas) et horaires officiels (<i>traficparameter</i>) ; appel direct du navigateur, aucune donnée personnelle envoyée.</li>
     <li><b>API GitHub</b> (api.github.com) : lecture de positions.json du dépôt lola-relais, sans cache CDN ; limite de 60 requêtes/h par IP, d'où une lecture toutes les 75 s et le repli automatique sur raw.githubusercontent.com (cache de ~5 min) pendant 10 min si elle refuse.</li>
     <li><b>Google Maps</b> : le bouton « Itinéraire » de chaque quai ouvre simplement un lien google.com/maps (destination = accès au quai, voiture) ; la page n'envoie rien à Google tant que vous ne cliquez pas.</li>
     <li><b>Open-Meteo</b> (open-meteo.com, CC BY 4.0) : météo actuelle (température, ciel, vent) aux coordonnées des bacs, rafraîchie toutes les 10 min ; la page envoie seulement ces coordonnées fixes, rien de personnel.</li>
@@ -147,6 +156,7 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
   </ul>
   <h3>Limites</h3>
   <ul>
+    <li>Perturbations officielles : l'API n'est pas documentée et peut changer sans préavis ; son format réel n'a pas encore été observé (aucune perturbation depuis le début de la collecte le 25/11/2026), donc l'affichage du message est générique. Une perturbation non annoncée (panne, passage d'un bateau) n'y figure pas.</li>
     <li>Courant : Q vient de la date, pas du débit réel. Une année sèche en hiver ou humide en été est mal classée : en novembre 2026, le débit mesuré (≈ 310 m³/s) est la moitié de la moyenne du mois (775 m³/s), ce qui porte l'erreur moyenne de ≈ 13 à ≈ 16 min. Les 12 renverses de référence sont toutes en mortes-eaux (coefficients 32 à 69) à petits débits ; le terme en coefficient n'améliore pas l'ajustement mesuré (il reprend l'effet des tables du Port), et les gros débits et les vives-eaux ne sont pas validés. Le sens du courant est déduit de la trajectoire du bac, pas d'une mesure directe. Sur 397 départs, aucun retard significatif n'a été relevé près des renverses (22 % d'écarts > 4 min dans ± 30 min, 19 % ailleurs) : seul le sens du courant décale légèrement départs et traversées (≈ ± 1 min).</li>
     <li>Calibrage sur 7 jours seulement (5 de semaine, 2 de week-end) : séjours par heure, décalages et fenêtres de rotation provisoires (certaines heures n'ont que quelques observations), vacances non étudiées. Les constantes sont figées dans la page : à réentraîner régulièrement.</li><li>Le recalage suppose un profil de vitesse moyen : l'heure d'un départ ou d'une arrivée reste connue à quelques secondes près, pas davantage.</li>
     <li>Les causes d'un retard (autre bateau, vent) ne sont pas détectées en direct ; le changement de courant est anticipé par le calcul, sans effet démontré sur les retards ; ils sont enregistrés à part pour une version ultérieure.</li>
@@ -1197,9 +1207,53 @@ function rendre(){
         : '<div class="vide">Aucun changement mesuré pour l\'instant.</div>';
 }
 
+// Informations officielles du Département : mêmes API (sans clé) que l'appli « Bacs de Loire », appelées directement par le navigateur (CORS ouvert, vérifié le 26/11/2026).
+// Perturbations annoncées (liste vide = aucune) et horaires officiels ; indépendant du relais AIS et du modèle.
+const URL_OFFICIEL_EV = "https://api.loire-atlantique.fr/opendata/1.0/traficevents?filter="+encodeURIComponent("Bac de Loire Basse-Indre - Indret");
+const URL_OFFICIEL_HOR = "https://api.loire-atlantique.fr/bacspsn_android/1.0/traficparameter?id=bacs_horaires";
+let offEv=null, offEvMaj=0, offEvErr=false, offHor=null;
+const esc=x=>String(x).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const hmMin=x=>{ const m=/^(\d{1,2})h(\d{2})$/.exec(String(x||"").trim()); return m?(+m[1])*60+(+m[2]):null; };
+async function lireJsonOfficiel(url){
+    const c=new AbortController(), to=setTimeout(()=>c.abort(),15000);
+    try{ const r=await fetch(url,{signal:c.signal}); if(!r.ok) throw new Error("HTTP "+r.status); return await r.json(); } finally{ clearTimeout(to); }
+}
+async function lireOfficielEv(){
+    try{ const d=await lireJsonOfficiel(URL_OFFICIEL_EV); if(!Array.isArray(d)) throw new Error("format"); offEv=d; offEvMaj=Date.now(); offEvErr=false; }
+    catch(e){ offEvErr=true; }
+    rendreOfficiel();
+}
+async function lireOfficielHor(){
+    try{ const d=await lireJsonOfficiel(URL_OFFICIEL_HOR), l=d&&d.bacs_horaires&&d.bacs_horaires.liaison1; if(l) offHor=l; }catch(e){}
+    rendreOfficiel();
+}
+function rendreOfficiel(){
+    let h="";
+    if(offEv&&offEv.length) offEv.forEach(e=>{
+        const lignes=[e.ligne1,e.ligne2,e.ligne3,e.ligne4,e.ligne5,e.ligne6].filter(x=>x&&String(x).trim()).map(esc).join("<br>");
+        h+='<div class="off-ev '+(e.statut==="en cours"?"en-cours":"prevu")+'" role="alert"><div class="titre">🛈 Département · '+esc(e.type||"Information")+(e.statut?' · '+esc(e.statut):"")+'</div><div>'+lignes+'</div></div>';
+    });
+    else if(offEv) h+='<div class="off-ok">Département : aucune perturbation annoncée (vérifié à '+formatHM(offEvMaj)+')</div>';
+    if(offEvErr) h+='<div class="off-ok">'+(offEv?'⚠ Alertes du Département : vérification impossible depuis '+formatHM(offEvMaj):'Alertes officielles du Département indisponibles')+'</div>';
+    if(offHor){
+        const l=offHor, t=(a,b)=>esc(a)+"→"+esc(b), spe=l.mode==="special"&&l.from_first_special;
+        const diff=hmMin(l.from_first)!==GRILLE.SEMAINE.N[0]||hmMin(l.from_last)!==GRILLE.SEMAINE.N[1]||hmMin(l.to_first)!==GRILLE.SEMAINE.S[0]||hmMin(l.to_last)!==GRILLE.SEMAINE.S[1]
+            ||(spe&&(hmMin(l.from_first_special)!==GRILLE.WEEKEND.N[0]||hmMin(l.from_last_special)!==GRILLE.WEEKEND.N[1]||hmMin(l.to_first_special)!==GRILLE.WEEKEND.S[0]||hmMin(l.to_last_special)!==GRILLE.WEEKEND.S[1]));
+        if(l.from_message&&String(l.from_message).trim()) h+='<div class="off-ev en-cours"><div class="titre">🛈 Département · horaires</div><div>'+esc(l.from_message)+'</div></div>';
+        h+='<div class="off-hor">Horaires officiels (Département) : Basse-Indre '+t(l.from_first,l.from_last)+' · Indret '+t(l.to_first,l.to_last)+(l.from_period?' · un départ toutes les '+esc(l.from_period):'')
+          +(spe?' · jours spéciaux : Basse-Indre '+t(l.from_first_special,l.from_last_special)+' · Indret '+t(l.to_first_special,l.to_last_special):'')+'</div>';
+        if(diff) h+='<div class="alerte" role="alert">⚠ Les horaires officiels du Département diffèrent de la grille GTFS utilisée par le modèle : prévisions à vérifier.</div>';
+    }
+    $("officiel").innerHTML=h;
+}
+
 rendre();
 lirePosition();
 lireMeteo();
+lireOfficielEv();
+lireOfficielHor();
+setInterval(lireOfficielEv,120000);
+setInterval(lireOfficielHor,1800000);
 setInterval(lireMeteo,600000);
 setInterval(lirePosition,15000);
 setInterval(rendre,1000);
