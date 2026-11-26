@@ -79,6 +79,13 @@ qui explique comment l'outil produit son résultat et d'où viennent les donnée
 - Un seul bloc par page : pas de second « méthode / sources » (ex. `<details>`) qui ferait doublon.
 - À vérifier avant chaque commit, pour chaque page créée ou modifiée : `grep -c 'id="fonctionnement"' <dossier>/index.html` doit donner 1.
 
+## GitHub Pages : branche `gh-pages`
+- `gh-pages` (publiée par GitHub Pages, dossier racine) est une copie de `main`, mise à jour par `.github/workflows/gh-pages.yml` à chaque push sur `main`.
+- Ne jamais committer ni fusionner dans `gh-pages` : la synchronisation force la branche et efface ces changements. Tout passe par `main`.
+- La publication sur le VPS, depuis `main`, est indépendante.
+- Limite : sur un site de projet (`…github.io/HTML-tools/`), les chemins commençant par `/` (`/manifest.json`, `/sw.js`, liens de l'accueil) visent la racine du domaine, pas le dépôt.
+- Après fusion, vérifier l'exécution du workflow dans l'onglet Actions.
+
 ## Conventions
 - Un dossier par outil, avec `index.html` autonome (CSS/JS inlinés), un `README.md`, et un test si possible.
 - Ne pas ajouter de dépendance externe sans nécessité ; rien n'est envoyé à un serveur tiers sans le dire dans la page.
