@@ -17,11 +17,11 @@ vm.runInContext(src+"\nthis.__t={lireOfficielEv,lireOfficielHor};",ctx);
 const ok=(c,msg)=>{ if(!c){ console.error("ÉCHEC :",msg); process.exitCode=1; } else console.log("ok :",msg); };
 (async()=>{
   await ctx.__t.lireOfficielEv(); await ctx.__t.lireOfficielHor();
-  let o=els.officiel.innerHTML;
+  let o=els.officiel.innerHTML, oh=els.officielHor.innerHTML;
   ok(urls.some(u=>u==="https://api.loire-atlantique.fr/opendata/1.0/traficevents?filter=Bac%20de%20Loire%20Basse-Indre%20-%20Indret"),"adresse des perturbations identique à celle de l'appli officielle");
   ok(/aucune perturbation annoncée/.test(o)&&!/off-ev/.test(o),"liste vide : « aucune perturbation annoncée », pas de bloc d'alerte");
-  ok(/Basse-Indre 5h30→22h10 · Indret 5h40→22h20/.test(o)&&/un départ toutes les 20 min/.test(o)&&/Basse-Indre 6h30→21h30 · Indret 6h40→21h20/.test(o),"horaires officiels affichés (normaux et jours spéciaux)");
-  ok(!/class="alerte"/.test(o),"horaires identiques à la grille GTFS : pas d'avertissement");
+  ok(/Basse-Indre 5h30→22h10 · Indret 5h40→22h20/.test(oh)&&/un départ toutes les 20 min/.test(oh)&&/Basse-Indre 6h30→21h30 · Indret 6h40→21h20/.test(oh)&&!/Horaires officiels/.test(o),"horaires officiels affichés sous l'enchaînement prévu (normaux et jours spéciaux), pas sous le bandeau");
+  ok(!/class="alerte"/.test(o+oh),"horaires identiques à la grille GTFS : pas d'avertissement");
   events=[{type:"Interruption",statut:"en cours",datePublication:"2026-11-26 08:00:00.0",ligne1:"Bac arrêté <b>vent</b>",ligne2:"Reprise vers 14h",ligne3:"",ligne4:null}];
   await ctx.__t.lireOfficielEv(); o=els.officiel.innerHTML;
   ok(/off-ev en-cours/.test(o)&&/Interruption · en cours/.test(o)&&/Reprise vers 14h/.test(o),"perturbation en cours affichée avec ses lignes");
@@ -30,8 +30,8 @@ const ok=(c,msg)=>{ if(!c){ console.error("ÉCHEC :",msg); process.exitCode=1; }
   events=[{type:"Travaux",statut:"prévisionnel",ligne1:"Fermeture le 3 décembre"}];
   await ctx.__t.lireOfficielEv(); ok(/off-ev prevu/.test(els.officiel.innerHTML),"perturbation prévisionnelle : style distinct");
   horaires.liaison1.from_last="22h30"; horaires.liaison1.from_message="Horaires modifiés";
-  await ctx.__t.lireOfficielHor(); o=els.officiel.innerHTML;
-  ok(/class="alerte"[^>]*>⚠ Les horaires officiels du Département diffèrent/.test(o),"horaires différents de la grille : avertissement");
+  await ctx.__t.lireOfficielHor(); o=els.officiel.innerHTML; oh=els.officielHor.innerHTML;
+  ok(/class="alerte"[^>]*>⚠ Les horaires officiels du Département diffèrent/.test(oh),"horaires différents de la grille : avertissement");
   ok(/Département · horaires<\/div><div>Horaires modifiés/.test(o),"message d'horaires du Département affiché");
   ko=true; events=[]; await ctx.__t.lireOfficielEv(); o=els.officiel.innerHTML;
   ok(/vérification impossible depuis/.test(o),"API injoignable après un succès : dernier état conservé + mention");
