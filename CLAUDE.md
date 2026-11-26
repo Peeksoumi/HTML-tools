@@ -52,10 +52,12 @@ dans son `<head>`, juste après `<link rel="icon" …>` :
 - À vérifier avant chaque commit : `grep -c 'rel="manifest" href="manifest.json"' <dossier>/index.html` doit donner 1, et `<dossier>/manifest.json` + `<dossier>/icons/` existent.
 
 ## Règle obligatoire : mention GitHub en bas de CHAQUE page
-Toute page HTML (accueil comprise) se termine par la mention ci-dessous, tout en bas du contenu (après « Fonctionnement et sources » et tout pied de page) :
+Toute page HTML (accueil comprise) se termine par la mention ci-dessous, tout en bas du contenu (après « Fonctionnement et sources » et tout pied de page).
+Elle ne s'affiche **que sur github.io** : masquée par défaut, le script qui la suit la révèle (rien sur le VPS, `peeksoumi.com` ni la page téléchargée). Copier les deux lignes ensemble :
 
 ```html
-<p class="depot-github" style="grid-column:1/-1;margin:16px 0 0;padding:0 8px;text-align:center;font-size:13px;opacity:.75">Cette page est stockée sur GitHub : <a href="https://github.com/Peeksoumi/HTML-tools" target="_blank" rel="noopener" style="color:inherit">Peeksoumi/HTML-tools</a></p>
+<p class="depot-github" hidden style="grid-column:1/-1;margin:16px 0 0;padding:0 8px;text-align:center;font-size:13px;opacity:.75">Cette page est stockée sur GitHub : <a href="https://github.com/Peeksoumi/HTML-tools" target="_blank" rel="noopener" style="color:inherit">Peeksoumi/HTML-tools</a></p>
+<script>if(location.hostname.endsWith('.github.io'))document.currentScript.previousElementSibling.hidden=false</script>
 ```
 
 - Pages générées : la placer dans `src/template.html` (ou `mythomachie/src/body.html`, dans le menu) puis relancer `build.py`.
