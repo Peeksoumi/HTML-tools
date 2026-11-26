@@ -5,13 +5,13 @@ function lsGet(k) { try { return localStorage.getItem(k); } catch (_) { return n
 function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (_) { } }
 function netUrl() {
   const o = lsGet('mythomachie.serveur'); if (o) return o;
-  const h = location.hostname, web = location.protocol === 'https:' || location.protocol === 'http:';
-  if (web && (h === 'peeksoumi.com' || h === 'www.peeksoumi.com' || h === '141.227.151.70')) return (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/mythomachie/ws';
+  const web = location.protocol === 'https:' || location.protocol === 'http:';
+  if (web) return new URL('ws', location.href).href.replace(/^http/, 'ws').split('#')[0]; // serveur du même site
   return 'wss://peeksoumi.com/mythomachie/ws';
 }
 function shareUrl(code) {
-  const h = location.hostname;
-  const base = (h === 'peeksoumi.com' || h === 'www.peeksoumi.com' || h === '141.227.151.70') ? location.origin + location.pathname : 'https://peeksoumi.com/mythomachie/';
+  const web = location.protocol === 'https:' || location.protocol === 'http:';
+  const base = web ? location.origin + location.pathname : 'https://peeksoumi.com/mythomachie/';
   return base + '#' + code;
 }
 function myName() { const v = ($('mp-name').value || '').trim().slice(0, 20); return v || ('Héros ' + (10 + ((Math.random() * 89) | 0))); }
@@ -36,7 +36,7 @@ function netConnect() {
     setNetState(NET.retry > 2 ? 'error' : 'off');
     if (NET.want) { const d = Math.min(8000, 700 * Math.pow(2, NET.retry++)); setTimeout(() => { if (NET.want) netConnect(); }, d); }
     if (G && G.mp && !G.over) toast('Connexion perdue : reconnexion…', 'warn');
-    if (NET.retry === 3 && !(G && G.mp)) mpMsg('Le serveur de jeu ne répond pas. Le jeu en ligne fonctionne depuis peeksoumi.com/mythomachie.');
+    if (NET.retry === 3 && !(G && G.mp)) mpMsg('Le serveur de jeu ne répond pas. Le jeu en ligne n’est pas disponible si ce site n’a pas de serveur de jeu.');
   };
 }
 /* Connexion muette (téléphone sorti de veille, réseau changé) : on l'abandonne sans attendre et on en ouvre une autre. */

@@ -6,7 +6,7 @@ Dépôt public d'outils web (une page HTML autonome par dossier). Publié automa
 ## Règle obligatoire : lien vers les issues sur CHAQUE page
 Toute page HTML créée ou modifiée dans ce dépôt doit afficher, de façon visible, un lien pour proposer des améliorations :
 
-- lien principal (en-tête ou en haut de page), libellé « 💡 Proposer une amélioration », **pré-rempli avec le nom de l'outil** (titre `[<dossier>] ` + corps indiquant l'outil et son URL),
+- lien principal (en-tête ou en haut de page), libellé « 💡 Proposer une amélioration », **pré-rempli avec le nom de l'outil** (titre `[<dossier>] ` + corps indiquant l'outil, sans adresse de site),
   pour que l'issue créée précise toujours de quelle page il s'agit : `https://github.com/Peeksoumi/HTML-tools/issues/new?title=%5B<dossier>%5D%20&body=...` (paramètres encodés ; `&` écrit `&amp;` dans le HTML) ;
 - un seul lien par page : pas de doublon en pied de page (ni pour les issues, ni pour le téléchargement).
 
@@ -84,7 +84,9 @@ qui explique comment l'outil produit son résultat et d'où viennent les donnée
 - Ne jamais committer ni fusionner dans `gh-pages` : la synchronisation force la branche et efface ces changements. Tout passe par `main`.
 - La publication sur le VPS, depuis `main`, est indépendante.
 - Le site doit fonctionner à la fois à la racine d'un domaine (`peeksoumi.com`, VPS) et dans un sous-dossier (`…github.io/HTML-tools/`) : jamais de chemin commençant par `/` dans les pages, le manifeste ou le service worker.
-- GitHub Pages ne sert que des fichiers : pour un outil qui dépend du serveur, pointer vers `https://peeksoumi.com/…` (ex. `parking_gratuit`).
+- Les deux sites sont indépendants : aucune redirection, aucun lien ni appel d'une page vers l'autre site (`peeksoumi.com`, IP du VPS, `github.io`). Un serveur s'appelle par un chemin relatif au site consulté.
+- GitHub Pages ne sert que des fichiers : une fonction qui dépend du serveur doit y afficher qu'elle est indisponible, ou utiliser une source publique tierce.
+- Seule exception : la page Mythomachie téléchargée (`file:`) utilise le serveur de jeu de `peeksoumi.com`.
 - Garder `.nojekyll` à la racine (fichiers publiés tels quels).
 - Après fusion, vérifier l'exécution du workflow dans l'onglet Actions.
 
