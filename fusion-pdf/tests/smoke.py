@@ -2,7 +2,7 @@
 """Test de bout en bout (Chrome headless) : charge 2 PDF (2 + 3 pages), réordonne, supprime une page, exporte,
 puis vérifie le PDF produit (4 pages). Usage : python3 tests/make_pdfs.py && python3 tests/smoke.py"""
 import asyncio, os, pathlib, sys
-from playwright.async_api import async_playwright
+from playwright.async_api import async_playwright, expect
 here = pathlib.Path(__file__).resolve().parent
 page_url = (here.parent / "index.html").as_uri()
 chrome = next((p for p in ("/usr/bin/google-chrome", "/usr/bin/chromium", "/usr/bin/chromium-browser") if os.path.exists(p)), None)
@@ -10,11 +10,13 @@ async def main():
     async with async_playwright() as p:
         b = await p.chromium.launch(executable_path=chrome, args=["--no-sandbox"]) if chrome else await p.chromium.launch()
         ctx = await b.new_context(accept_downloads=True)
+        await ctx.set_offline(True)  # la page doit fonctionner sans réseau
         pg = await ctx.new_page()
+        reseau = []; pg.on("request", lambda r: reseau.append(r.url) if r.url.startswith("http") else None)
         errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
         await pg.goto(page_url)
         await pg.set_input_files("#file-input", [str(here / "A.pdf"), str(here / "B.pdf")])
-        await pg.wait_for_function("document.querySelectorAll('.page-card').length===5", timeout=90000)
+        await expect(pg.locator(".page-card")).to_have_count(5, timeout=90000)
         assert await pg.locator("#export-btn").is_enabled()
         cards = pg.locator(".page-card")
         await cards.nth(0).drag_to(cards.nth(4), target_position={"x": 120, "y": 50})
@@ -33,6 +35,7 @@ async def main():
         print("pages exportées :", n, "| taille :", out.stat().st_size // 1024, "Ko")
         assert n == 4, n
         assert not errs, errs
+        assert not reseau, reseau
         await b.close()
     print("OK")
 asyncio.run(main())
