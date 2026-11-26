@@ -44,6 +44,9 @@ dans son `<head>`, juste après `<link rel="icon" …>` :
 
 - **Proposition d'installation** : juste après ces deux lignes, `<script src="../install.js" defer></script>` (`install.js` sur l'accueil). Il affiche le bandeau « Installer » ; dans `mythomachie/build.py`, sans `data-m`.
   À vérifier : `grep -c 'install.js' <dossier>/index.html` doit donner 1.
+- **Bouton « 📲 Installer l’appli » sur CHAQUE page**, à côté de « ⬇️ Télécharger la page » (à défaut, à côté de « 💡 Proposer une amélioration »). `install.js` l'ajoute seul :
+  ne pas l'écrire en dur. Il copie le style du lien voisin et repère le bouton de téléchargement par `download="<dossier>.html"` (garder ce nom exact).
+  Il est absent de la page téléchargée (`file:`) et de l'appli installée. À vérifier dans un navigateur : un seul `.bouton-installer` par page, bien placé sur écran de téléphone.
 - **Chaque application a son propre manifeste** (`<dossier>/manifest.json`) avec ses propres icônes (`<dossier>/icons/`) : c'est le manifeste, pas le favicon,
   qui fixe l'icône de l'appli installée. Ne jamais pointer une page d'outil vers `../manifest.json` (elle prendrait l'icône de l'accueil).
 - Ne pas écrire ces fichiers à la main : après tout nouvel outil ou tout changement de favicon, de `<title>` ou de nom de tuile, lancer `python3 tools/gen_manifests.py`

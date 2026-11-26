@@ -1,5 +1,6 @@
 // Propose d'installer la page consultée comme application.
-// Le bandeau apparaît quand le navigateur permet l'installation, ou avec ?installer (bouton « Installer » de l'accueil).
+// Le bandeau apparaît quand le navigateur permet l'installation, ou avec ?installer (bouton « Installer » de l’accueil).
+// Ajoute aussi un bouton « Installer l’appli » dans la page.
 (function () {
   if (location.protocol === 'file:') return;
   if (matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches || navigator.standalone) return;
@@ -27,13 +28,7 @@
       bouton.type = 'button';
       bouton.textContent = '📲 Installer';
       bouton.style.cssText = 'font:600 14px system-ui,sans-serif;padding:8px 12px;border:0;border-radius:8px;background:#fff;color:#111827;cursor:pointer';
-      bouton.onclick = function () {
-        var i = invite;
-        invite = null; // une invite ne sert qu'une fois
-        if (!i) return;
-        i.prompt();
-        i.userChoice.then(fermer);
-      };
+      bouton.onclick = installer;
       var croix = document.createElement('button');
       croix.type = 'button';
       croix.textContent = '✕';
@@ -46,6 +41,34 @@
     texte.textContent = message;
     bouton.hidden = !invite;
   }
+
+  function installer() {
+    var i = invite;
+    invite = null; // une invite ne sert qu'une fois
+    if (!i) return false;
+    i.prompt();
+    i.userChoice.then(fermer);
+    return true;
+  }
+  // Bouton permanent, à côté de « Télécharger la page » (à défaut, du lien « Proposer une amélioration »).
+  function ajouterBouton() {
+    var dossier = location.pathname.replace(/[^/]*$/, '').split('/').filter(Boolean).pop();
+    var voisin = document.querySelector('a[download="' + dossier + '.html"]') || document.querySelector('a[href*="HTML-tools/issues/new"]');
+    if (!voisin) return;
+    var b = voisin.cloneNode(false); // même style que le voisin
+    ['id', 'download', 'target', 'rel', 'title', 'data-m'].forEach(function (a) { b.removeAttribute(a); });
+    b.href = '?installer';
+    b.classList.add('bouton-installer');
+    b.textContent = '📲 Installer l’appli';
+    b.addEventListener('click', function (e) {
+      e.preventDefault();
+      ferme = false;
+      if (!installer()) montrer(aide());
+    });
+    voisin.after(' ', b);
+  }
+  if (document.readyState === 'loading') addEventListener('DOMContentLoaded', ajouterBouton);
+  else ajouterBouton();
 
   addEventListener('beforeinstallprompt', function (e) {
     e.preventDefault();
