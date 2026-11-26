@@ -3,9 +3,10 @@
 Trouve les **places de parking gratuites** autour d'une position (ville, adresse ou coordonnées GPS), avec
 **géolocalisation** (bouton « 📍 Ma position »), le **nombre de places restantes** et les **rues connues pour
 avoir beaucoup de places**. Page publiée sur le VPS sous `/parking/` (port 8080, et HTTPS peeksoumi.com).
-Dépôt public HTML-tools ; dépend d'un serveur (pas de bouton « Télécharger la page »).
+Le géocodage et la recherche sont exécutés **dans le navigateur** (script `<script id="moteur">` de `index.html`) :
+aucun serveur maison nécessaire, la page fonctionne aussi sur GitHub Pages et peut être téléchargée (connexion requise).
 
-## Sources fusionnées (`sources.py`)
+## Sources fusionnées
 | Source | Apporte | Limite |
 |---|---|---|
 | OpenStreetMap (Overpass) – parkings | position, capacité, gratuité (`fee=no` = sûr ; non renseigné = « probable ») | pas de temps réel ; parkings en ouvrage/souterrains exclus sauf `fee=no` |
@@ -25,20 +26,20 @@ c'étaient des places libres.
 Nom déduit de la position, dans l'ordre : adresse OSM (`addr:street`) → lieu nommé à < 50 m (magasin, loisir, tourisme) →
 rue nommée à < 40 m → géocodage inverse Nominatim (6 par recherche maximum, 1 req/s) → « Parking de surface / en bord de rue ».
 La liste affiche un badge « nom déduit : … ». Les mini parkings anonymes (< 5 places déclarées) sont masqués.
-Le serveur se relance seul quand `server.py`, `sources.py` ou `sources.json` changent (après le `git pull` du VPS).
 
 ## Ajouter une ville
-Ajouter un objet dans `sources.json` (`id`, `nom`, `centre`, `rayon_km`, `url` de l'API Opendatasoft `…/records?limit=100`,
+Ajouter un objet dans `sources.json` **et dans `SOURCES_TR` de `index.html`** (le test vérifie qu'ils sont identiques ; `id`, `nom`, `centre`, `rayon_km`, `url` de l'API Opendatasoft `…/records?limit=100`,
 `champs` = noms de colonnes possibles, `gratuit`/`gratuit_si_nom`). `positions_url` sert quand le jeu temps réel n'a pas de
 coordonnées (jointure par nom). Les colonnes Nantes/Strasbourg sont des hypothèses : le job 061 affiche les colonnes
 réelles dans son journal (branche `server-logs`) pour les ajuster.
 
-## Essai local
-`python3 server.py` puis http://127.0.0.1:8092/ — tests hors ligne : `python3 -B -I test_parking.py`.
+## Essai local et tests
+`python3 -m http.server` à la racine du dépôt, puis http://127.0.0.1:8000/parking_gratuit/.
+Tests hors ligne : `node test_moteur.js` (moteur de la page, comparé à `sources.py`) et `python3 -B -I test_parking.py`.
 
-## API
-`/api/recherche?lat=&lon=&rayon=` (rayon 100–4000 m, cache 10 min OSM / 2 min temps réel) · `/api/geocode?q=` · `/api/status`.
+## Ancien serveur
+`server.py` et `sources.py` ne sont plus appelés par la page. Ils sont conservés car le VPS les utilise encore pour servir
+`/parking/` (job `server/jobs/061_parking_gratuit.sh` du dépôt private, service `parking-gratuit`). Ils pourront être
+supprimés une fois ce service retiré ; une modification de la logique de recherche se fait désormais dans `index.html`.
 
-## Déploiement
-`server/jobs/061_parking_gratuit.sh` (dépôt private ; unité systemd `server/parking-gratuit.service` dans private) (une fois, relancé si modifié) : service `parking-gratuit` + bloc nginx `/parking/` + tests réels.
 La géolocalisation du navigateur exige HTTPS : utiliser l'adresse https://peeksoumi.com/parking/.
