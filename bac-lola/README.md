@@ -55,6 +55,13 @@ Vent, marée, pluie, niveau de la mer et navires voisins n'expliquent ni la dur�
 Les paramètres (décalages, séjours, fenêtres) sont appris sur les mêmes données que le test : c'est une première estimation, à refaire quand
 il y aura plus de jours de semaine, de vendredis et de vacances.
 
+## Informations officielles du Département
+Indépendamment du modèle, la page interroge directement, sans clé et depuis le navigateur (CORS ouvert, vérifié le 26/11/2026), les API qu'utilise l'appli « Bacs de Loire » (adresses relevées dans l'APK 2.2.11) :
+`api.loire-atlantique.fr/opendata/1.0/traficevents?filter=Bac de Loire Basse-Indre - Indret` (toutes les 2 min : liste des perturbations, `statut` « en cours » ou « prévisionnel », texte sur `ligne1`..`ligne6` ; liste vide = aucune)
+et `.../bacspsn_android/1.0/traficparameter?id=bacs_horaires` (toutes les 30 min : premier / dernier départ, intervalle, jours spéciaux, message).
+Sous le bandeau : un bloc par perturbation annoncée (rouge si en cours, gris si prévisionnelle), sinon une ligne « aucune perturbation annoncée » ; puis les horaires officiels, avec un avertissement rouge s'ils diffèrent de la grille GTFS du modèle (constatés identiques le 26/11/2026 : « jours spéciaux » = week-end et fériés). Ces informations ne modifient pas les prévisions.
+Limites : API non documentée, format réel d'une perturbation encore jamais observé (liste vide depuis le 25/11/2026). Test : `node tests/test_officiel.js`.
+
 ## Météo
 Petit pictogramme en en-tête : température, ciel et vent actuels aux bacs, lus sur Open-Meteo (coordonnées fixes, rafraîchi toutes les 10 min ; masqué si indisponible).
 
@@ -73,3 +80,5 @@ Moteur, géométrie du chenal et interface sont inlinés dans `index.html` (un s
 Tests : `node tests/test_moteur.js` (grille, modes, prévision), `node tests/test_page.js` (page avec faux DOM, événements détectés en direct).
 
 Mise à jour du 25/11 : modèle 3 (recalage sur coordonnées, séjour par quai et heure, traversée selon le courant, décalage sans effet de courant) appris sur 18→24/11, pointe du soir jusqu'à 18:55, retour au poste de nuit ; latences du relais corrigées (aisstream 8 s, avt 44 s, shiptrail 45 s).
+
+Mise à jour du 26/11 : bandeau des perturbations officielles du Département et horaires officiels (API de l'appli Bacs de Loire), appelés directement par la page.
