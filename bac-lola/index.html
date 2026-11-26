@@ -38,7 +38,7 @@ tr.cour td{background:rgba(169,139,217,.14)}
 .m-perturbation{border-left-color:var(--orange)}.m-perturbation .mode{color:var(--orange)}
 .m-arret{border-left-color:var(--gris)}.m-arret .mode{color:var(--gris)}
 .led{width:7px;height:7px;display:inline-block;border-radius:50%;background:var(--vert);box-shadow:0 0 4px var(--vert);margin-right:6px}
-#officiel{margin-bottom:12px}
+#officiel{margin-bottom:12px}#officielHor{margin:6px 0 12px}
 .off-ev{border:1px solid var(--border);border-left-width:6px;border-radius:10px;padding:10px 14px;margin-bottom:8px;background:var(--panel);font-size:14px}
 .off-ev .titre{font-weight:600;margin-bottom:4px}
 .off-ev.en-cours{border-left-color:var(--rouge)}.off-ev.en-cours .titre{color:var(--rouge)}
@@ -125,6 +125,7 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
 <div id="carte" class="bloc"></div>
 <div id="quais"></div>
 <h2 class="t">Enchaînement prévu</h2><div class="bloc" id="chaine"></div>
+<div id="officielHor"></div>
 <h2 class="t">Derniers changements mesurés</h2><div class="bloc" id="mesures"></div>
 <div class="pied">Partout : orange = départ, bleu = arrivée · vert = position mesurée (AIS) · souligné pointillé = prévu par le modèle · gris pointillé = hypothèse (position ancienne) · Prévisions à ± 2 min près dans 9 cas sur 10 · Δ des cartes = écart prévu − horaire officiel (minutes) · violet = changement de courant prévu (fenêtre ± 20 min)</div>
 <div class="fonct" id="fonctionnement">
@@ -140,7 +141,7 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
     <li><b>Validation</b> : rejeu « page ouverte en continu » (lecture toutes les 75 s) avec prévision à 15 min, comparée aux heures recalées sur les coordonnées. Constantes apprises sur 17→23/11 et testées sur le 24/11 : erreur moyenne 1,53 min contre 1,67 min pour l'ancien modèle (−8 %) ; sur toute la période, le gain vient surtout du recalage et du décalage à la grille appris sans effet de courant. Les constantes de la page sont apprises sur les 7 derniers jours (18→24/11), donc sans test indépendant : l'écart réel sera un peu moins bon que sur ces jours.</li>
     <li><b>Changement de courant</b> : la page calcule seule, d'après la <b>date</b>, les pleines et basses mers de <b>Nantes</b> et leur coefficient (analyse harmonique : constantes REFMAR, calage SHOM, moteur de <i>courant-loire</i>), et le débit moyen mensuel de la Loire à Montjean Q (m³/s). Équation, en minutes après l'étale : <b>début du flot = basse mer + 30,2 − 0,0241·Q + 0,164·C</b> ; <b>début du jusant = pleine mer + 34,3 + 0,0136·Q − 0,096·C</b> (C = coefficient ; 20 min mesurées sur le bac incluses ; valable pour Q de 200 à 1 600). À petits débits (Q ≈ 300, C ≈ 50) : flot ≈ +31 min, jusant ≈ +34 min ; en janvier (Q = 1 450, C ≈ 50) : flot ≈ +4 min, jusant ≈ +49 min. Calée sur 12 renverses mesurées du 13 au 19/11/2026 (Q de 200 à 310) : erreur moyenne ≈ 13–16 min, pire cas 29–38 min, fenêtre ± 20 min (± 30 min au-delà de 1 000 m³/s : <b>jamais mesuré</b>). Le changement est affiché comme un retard possible, en violet, dans l'enchaînement prévu, à l'heure de la renverse (à venir ou en cours, jusqu'à 90 min avant) ; les lignes dont un horaire tombe dans la fenêtre sont surlignées.</li>
     <li><b>Quais et courant</b> : le sens du courant (flot ou jusant) déduit de l'équation sert à choisir la durée de traversée apprise (à Basse-Indre ≈ 0,3 min de plus au jusant en semaine). L'effet de ± 0,7 min sur l'heure de départ, mesuré avec les heures brutes du détecteur, n'apparaît plus avec les heures recalées : il n'est plus appliqué.</li>
-    <li><b>Informations officielles</b> : indépendamment du modèle, la page interroge toutes les 2 min l'API du Département qui alimente l'appli « Bacs de Loire » et affiche tel quel le message d'une perturbation annoncée (en cours ou prévisionnelle) ; sans perturbation, une ligne discrète le dit. Elle lit aussi les horaires officiels (toutes les 30 min) et avertit s'ils diffèrent de la grille GTFS du modèle. Ces informations ne changent pas les prévisions.</li>
+    <li><b>Informations officielles</b> : indépendamment du modèle, la page interroge toutes les 2 min l'API du Département qui alimente l'appli « Bacs de Loire » et affiche tel quel le message d'une perturbation annoncée (en cours ou prévisionnelle) ; sans perturbation, une ligne discrète le dit. Sous l'enchaînement prévu, elle affiche aussi les horaires officiels (lus toutes les 30 min) et avertit s'ils diffèrent de la grille GTFS du modèle. Ces informations ne changent pas les prévisions.</li>
     <li><b>Visuel</b> : un bateau est placé entre Indret et Basse-Indre selon la dernière position AIS projetée sur le chenal ; sa situation (à quai à Indret, à quai à Basse-Indre, en route vers l'un ou l'autre) est la même que celle des cartes de quai : elle vient du dernier changement détecté, pas de la vitesse brute. Une flèche orange indique la direction ; atténué si la position est ancienne.</li>
   </ul>
   <h3>Sources de données</h3>
@@ -1228,7 +1229,7 @@ async function lireOfficielHor(){
     rendreOfficiel();
 }
 function rendreOfficiel(){
-    let h="";
+    let h="", hh="";
     if(offEv&&offEv.length) offEv.forEach(e=>{
         const lignes=[e.ligne1,e.ligne2,e.ligne3,e.ligne4,e.ligne5,e.ligne6].filter(x=>x&&String(x).trim()).map(esc).join("<br>");
         h+='<div class="off-ev '+(e.statut==="en cours"?"en-cours":"prevu")+'" role="alert"><div class="titre">🛈 Département · '+esc(e.type||"Information")+(e.statut?' · '+esc(e.statut):"")+'</div><div>'+lignes+'</div></div>';
@@ -1240,11 +1241,11 @@ function rendreOfficiel(){
         const diff=hmMin(l.from_first)!==GRILLE.SEMAINE.N[0]||hmMin(l.from_last)!==GRILLE.SEMAINE.N[1]||hmMin(l.to_first)!==GRILLE.SEMAINE.S[0]||hmMin(l.to_last)!==GRILLE.SEMAINE.S[1]
             ||(spe&&(hmMin(l.from_first_special)!==GRILLE.WEEKEND.N[0]||hmMin(l.from_last_special)!==GRILLE.WEEKEND.N[1]||hmMin(l.to_first_special)!==GRILLE.WEEKEND.S[0]||hmMin(l.to_last_special)!==GRILLE.WEEKEND.S[1]));
         if(l.from_message&&String(l.from_message).trim()) h+='<div class="off-ev en-cours"><div class="titre">🛈 Département · horaires</div><div>'+esc(l.from_message)+'</div></div>';
-        h+='<div class="off-hor">Horaires officiels (Département) : Basse-Indre '+t(l.from_first,l.from_last)+' · Indret '+t(l.to_first,l.to_last)+(l.from_period?' · un départ toutes les '+esc(l.from_period):'')
+        hh+='<div class="off-hor">Horaires officiels (Département) : Basse-Indre '+t(l.from_first,l.from_last)+' · Indret '+t(l.to_first,l.to_last)+(l.from_period?' · un départ toutes les '+esc(l.from_period):'')
           +(spe?' · jours spéciaux : Basse-Indre '+t(l.from_first_special,l.from_last_special)+' · Indret '+t(l.to_first_special,l.to_last_special):'')+'</div>';
-        if(diff) h+='<div class="alerte" role="alert">⚠ Les horaires officiels du Département diffèrent de la grille GTFS utilisée par le modèle : prévisions à vérifier.</div>';
+        if(diff) hh+='<div class="alerte" role="alert">⚠ Les horaires officiels du Département diffèrent de la grille GTFS utilisée par le modèle : prévisions à vérifier.</div>';
     }
-    $("officiel").innerHTML=h;
+    $("officiel").innerHTML=h; $("officielHor").innerHTML=hh;
 }
 
 rendre();

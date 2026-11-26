@@ -59,7 +59,7 @@ il y aura plus de jours de semaine, de vendredis et de vacances.
 Indépendamment du modèle, la page interroge directement, sans clé et depuis le navigateur (CORS ouvert, vérifié le 26/11/2026), les API qu'utilise l'appli « Bacs de Loire » (adresses relevées dans l'APK 2.2.11) :
 `api.loire-atlantique.fr/opendata/1.0/traficevents?filter=Bac de Loire Basse-Indre - Indret` (toutes les 2 min : liste des perturbations, `statut` « en cours » ou « prévisionnel », texte sur `ligne1`..`ligne6` ; liste vide = aucune)
 et `.../bacspsn_android/1.0/traficparameter?id=bacs_horaires` (toutes les 30 min : premier / dernier départ, intervalle, jours spéciaux, message).
-Sous le bandeau : un bloc par perturbation annoncée (rouge si en cours, gris si prévisionnelle), sinon une ligne « aucune perturbation annoncée » ; puis les horaires officiels, avec un avertissement rouge s'ils diffèrent de la grille GTFS du modèle (constatés identiques le 26/11/2026 : « jours spéciaux » = week-end et fériés). Ces informations ne modifient pas les prévisions.
+Sous le bandeau : un bloc par perturbation annoncée (rouge si en cours, gris si prévisionnelle), sinon une ligne « aucune perturbation annoncée ». Sous l'enchaînement prévu : les horaires officiels, avec un avertissement rouge s'ils diffèrent de la grille GTFS du modèle (constatés identiques le 26/11/2026 : « jours spéciaux » = week-end et fériés). Ces informations ne modifient pas les prévisions.
 Limites : API non documentée, format réel d'une perturbation encore jamais observé (liste vide depuis le 25/11/2026). Test : `node tests/test_officiel.js`.
 
 ## Météo
