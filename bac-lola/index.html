@@ -58,7 +58,14 @@ tr.cour td{background:rgba(169,139,217,.14)}
 #carte .sens{font-size:16px;color:var(--txt,#e8edf0);font-weight:600}
 #carte .sens small{display:block;font-size:13px;font-weight:400;color:var(--dim);margin-top:2px}
 .bateau{position:absolute;top:2px;width:44px;margin-left:-22px;transition:left 1.2s linear;line-height:0}
-.bateau svg{transition:transform .3s}
+.bateau svg{display:block;transition:transform .3s}
+a.bateau{cursor:pointer;z-index:2;border-radius:50%}
+a.bateau::before{content:"";position:absolute;inset:-5px -3px;border:2px solid var(--text);border-radius:50%;pointer-events:none;animation:onde 1.8s ease-out infinite}
+a.bateau:hover svg,a.bateau:focus-visible svg{filter:drop-shadow(0 0 6px #fff)}
+@keyframes onde{0%{transform:scale(.75);opacity:.9}100%{transform:scale(1.35);opacity:0}}
+@media (prefers-reduced-motion:reduce){a.bateau::before{animation:none;opacity:.5}}
+#carte .voir{display:inline-block;margin:8px 0 4px;padding:6px 12px;border:1px solid var(--border);border-radius:999px;font-size:13px;color:var(--text);text-decoration:none}
+#carte .centre{text-align:center}
 .bateau.vieux{opacity:.35}
 #carte .sens{font-family:var(--mono);font-size:13px;color:var(--dim);text-align:center;margin-top:2px}
 .led.off{background:var(--rouge);box-shadow:0 0 4px var(--rouge)}
@@ -152,6 +159,7 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
     <li><b>API du Département de Loire-Atlantique</b> (api.loire-atlantique.fr, non documentée, sans clé ; les mêmes que l'appli officielle) : perturbations annoncées (<i>traficevents</i>, liste vide s'il n'y en a pas) et horaires officiels (<i>traficparameter</i>) ; appel direct du navigateur, aucune donnée personnelle envoyée.</li>
     <li><b>API GitHub</b> (api.github.com) : lecture de positions.json du dépôt lola-relais, sans cache CDN ; limite de 60 requêtes/h par IP, d'où une lecture toutes les 75 s et le repli automatique sur raw.githubusercontent.com (cache de ~5 min) pendant 10 min si elle refuse.</li>
     <li><b>Google Maps</b> : le bouton « Itinéraire » de chaque quai ouvre simplement un lien google.com/maps (destination = accès au quai, voiture) ; la page n'envoie rien à Google tant que vous ne cliquez pas.</li>
+    <li><b>MyShipTracking</b> : toucher le bateau ouvre sa carte en direct sur myshiptracking.com (nouvel onglet) ; rien n'est envoyé à ce site avant le clic.</li>
     <li><b>Open-Meteo</b> (open-meteo.com, CC BY 4.0) : météo actuelle (température, ciel, vent) aux coordonnées des bacs, rafraîchie toutes les 10 min ; la page envoie seulement ces coordonnées fixes, rien de personnel.</li>
     <li><b>Marée et courant</b> : constantes harmoniques TICON-4 (Hart-Davis et al., 2025, SEANOE, CC BY 4.0), relayées par neaps/tide-database ; prédictions SHOM pour le calage de la marée ; Hydroportail (station M5300010, Loire à Montjean-sur-Loire) : débits moyens mensuels 1863-2026 (Q de l'équation de renverse) ; tables de renverses du Grand Port Maritime de Nantes Saint-Nazaire (comparaison). Tout est embarqué dans la page : aucun appel réseau pour la marée.</li>
     <li><b>Calibrage</b> : relevés enregistrés par le serveur du 13 au 24/11/2026, recalés sur les coordonnées ; les constantes du modèle 3 sont apprises sur les 7 derniers jours (18→24/11) avec <i>entrainement/entrainer_modele3.py</i>. Ils ne servent qu'à fixer les paramètres hors ligne, la page ne les lit jamais.</li>
@@ -1142,6 +1150,9 @@ function rendre(){
     else if(relaisMuet) alerte='⚠ Le relais ne publie plus depuis '+dur(now-majRelais)+' : la dernière position peut être périmée, situation affichée en hypothèse.';
     else if(age!==null && age>SE.alerte && !indispo && enService) alerte='⚠ Aucune nouvelle position du bac depuis '+dur(age)+' : source AIS en retard ou bac hors de portée.';
     b.innerHTML='<div class="mode">'+mode.raison+(incertain?' · dernier état connu':'')+'</div><div class="detail">'+mode.detail+'</div><div class="live">'+live+'</div>'+(alerte?'<div class="alerte" role="alert">'+alerte+'</div>':'');
+    const LIEN_DIRECT='href="https://www.myshiptracking.com/fr/?mmsi=227158520" target="_blank" rel="noopener"';
+    // réécrit seulement si le contenu change : sinon le bateau cliquable serait recréé chaque seconde (toucher perdu, animation relancée)
+    const majCarte=h=>{ const c=$("carte"); if(c.source!==h){ c.source=h; c.innerHTML=h; } };
     const BATEAU='<svg viewBox="0 0 44 36" width="44" height="36"><path d="M4 22h36l-5 9H9z" fill="#d9635f"/><rect x="8" y="14" width="28" height="8" rx="1" fill="#e8edf0"/><rect x="14" y="7" width="16" height="7" rx="1" fill="#e8edf0"/><rect x="26" y="1" width="4" height="7" fill="#d9635f"/><g fill="#4f8fbd"><rect x="11" y="16.5" width="3" height="3"/><rect x="17" y="16.5" width="3" height="3"/><rect x="23" y="16.5" width="3" height="3"/><rect x="29" y="16.5" width="3" height="3"/></g></svg>';
     // Visuel : dérivé de la MÊME situation que les cartes (dernier événement), jamais de la vitesse brute
     const der=evs.length?evs[evs.length-1]:null;
@@ -1159,15 +1170,15 @@ function rendre(){
         const hy=hyp?' hy':'';
         if(!aQuai) h+= vers==="N" ? '<div class="reste'+hy+'" style="left:'+(p*100).toFixed(1)+'%;right:14px"></div><div class="pointe n'+hy+'"></div>'
                                   : '<div class="reste'+hy+'" style="left:14px;right:'+((1-p)*100).toFixed(1)+'%"></div><div class="pointe s'+hy+'"></div>';
-        h+='<div class="bateau'+(indispo?' vieux':(hyp?' hypo':''))+'" style="left:'+(p*100).toFixed(1)+'%"><div style="transform:scaleX('+cote+')">'+BATEAU+'</div></div>'
+        h+='<a class="bateau'+(indispo?' vieux':(hyp?' hypo':''))+'" style="left:'+(p*100).toFixed(1)+'%" '+LIEN_DIRECT+' aria-label="Voir Lola en direct sur MyShipTracking"><div style="transform:scaleX('+cote+')">'+BATEAU+'</div></a>'
           +'<div class="nomq'+(!aQuai&&!hyp&&vers==="S"?' dest':'')+ici("S")+'" style="left:0">Indret</div><div class="nomq'+(!aQuai&&!hyp&&vers==="N"?' dest':'')+ici("N")+'" style="right:0">Basse-Indre</div></div>';
         let t,sous="";
         if(aQuai){ t="À quai à "+NOM_QUAI[Q]+(hyp?" (supposé)":""); if(prochain&&!indispo) sous=(prochain.t-now<60000?'<span class="td">Départ imminent</span>':'Départ prévu vers <span class="td">'+formatHM(prochain.t)+'</span>'); }
         else { t=(vers==="N"?"En route vers "+NOM_QUAI[vers]+" ➜":"⬅ En route vers "+NOM_QUAI[vers])+(hyp?" (supposé)":""); if(prochain&&!indispo) sous='Arrivée prévue vers <span class="ta">'+formatHM(prochain.t)+'</span>'; }
         if(indispo) sous="Position trop ancienne : situation à confirmer";
         else if(hyp) sous+=(sous?' · ':'')+'<i>~ hypothèse du modèle · dernière position il y a '+dur(age)+(horsChenal&&etatMes==="mesure"?' (hors du chenal)':'')+'</i>';
-        $("carte").innerHTML=h+'<div class="sens">'+t+(sous?'<small>'+sous+'</small>':'')+'</div>';
-    } else $("carte").innerHTML='<div class="sens">Situation du bac en attente…</div>';
+        majCarte(h+'<div class="sens">'+t+(sous?'<small>'+sous+'</small>':'')+'</div><div class="centre"><a class="voir" '+LIEN_DIRECT+'>👆 Touchez le bateau : suivez-le en direct ↗</a></div>');
+    } else majCarte('<div class="sens">Situation du bac en attente…</div>');
     const panne=indispo || (mode.mode==="arret" && mode.raison.indexOf("Arrêt")===0);
     const horsService=mode.mode==="arret" && !panne;
     let html="";
