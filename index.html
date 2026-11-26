@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>HTML-tools — outils web</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%234f46e5'/%3E%3Ctext x='50' y='70' font-size='60' text-anchor='middle'%3E🧰%3C/text%3E%3C/svg%3E">
-<link rel="manifest" href="/manifest.json">
+<link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#4f46e5">
 <style>
   :root { --bg:#f3f4f6; --card:#fff; --ink:#111827; --mute:#6b7280; --line:#e5e7eb; --acc:#4f46e5; --acc-h:#4338ca; }
@@ -46,7 +46,7 @@
   <nav class="launcher" aria-label="Raccourcis vers les outils">
     <a class="app" href="fusion-pdf/" style="--c:#dc2626"><span class="ico" aria-hidden="true">📄</span><span>Fusion PDF</span></a>
     <a class="app" href="carte-vers-gpx/" style="--c:#0b6e4f"><span class="ico" aria-hidden="true">🗺️</span><span>Carte → GPX</span></a>
-    <a class="app" href="/parking/" style="--c:#2563eb"><span class="ico" aria-hidden="true">🅿️</span><span>Parking gratuit</span></a>
+    <a class="app" href="https://peeksoumi.com/parking/" style="--c:#2563eb"><span class="ico" aria-hidden="true">🅿️</span><span>Parking gratuit</span></a>
     <a class="app" href="relais-retour/" style="--c:#d97706"><span class="ico" aria-hidden="true">📦</span><span>Relais colis</span></a>
     <a class="app" href="courant-loire/" style="--c:#1d6fb8"><span class="ico" aria-hidden="true">🌊</span><span>Courant Loire</span></a>
     <a class="app" href="bac-lola/" style="--c:#0e7490"><span class="ico" aria-hidden="true">⛴️</span><span>Bac Lola</span></a>
@@ -81,7 +81,7 @@
       <h2>Parking gratuit</h2>
       <p>Trouve les places de parking gratuites autour d'une position (ville, adresse ou GPS), avec places restantes et rues à stationnement.</p>
       <div class="actions">
-        <a class="btn primary" href="/parking/">Ouvrir</a>
+        <a class="btn primary" href="https://peeksoumi.com/parking/">Ouvrir</a>
       </div>
     </article>
 
@@ -170,7 +170,7 @@
 </div>
 <script>
 // Rend le site installable (appli Android) et prêt pour les notifications Web Push.
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 </body>
 </html>

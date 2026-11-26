@@ -38,11 +38,11 @@ directement sur un outil (sans passer par l'accueil) obtient sinon « Impossible
 dans son `<head>`, juste après `<link rel="icon" …>` :
 
 ```html
-<link rel="manifest" href="/manifest.json">
-<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(function(){});</script>
+<link rel="manifest" href="../manifest.json">
+<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('../sw.js').catch(function(){});</script>
 ```
 
-- Chemins absolus (`/manifest.json`, `/sw.js`) : le manifeste (`start_url` et `scope` = `/`) et le service worker sont à la racine du site.
+- Chemins relatifs (`../manifest.json`, `../sw.js` ; sans `../` sur l'accueil) : le manifeste (`start_url` et `scope` = `./`) et le service worker sont à la racine du site.
 - Pages générées : modifier le gabarit (`src/template.html` ou `build.py`) puis relancer `build.py`. Dans `mythomachie/build.py` (f-string), écrire `{{}}` pour `{}`, et ne pas marquer ces deux lignes `data-m` (elles ne doivent pas être dans la page téléchargée).
 - À vérifier avant chaque commit : `grep -c 'rel="manifest"' <dossier>/index.html` doit donner 1.
 
@@ -83,7 +83,9 @@ qui explique comment l'outil produit son résultat et d'où viennent les donnée
 - `gh-pages` (publiée par GitHub Pages, dossier racine) est une copie de `main`, mise à jour par `.github/workflows/gh-pages.yml` à chaque push sur `main`.
 - Ne jamais committer ni fusionner dans `gh-pages` : la synchronisation force la branche et efface ces changements. Tout passe par `main`.
 - La publication sur le VPS, depuis `main`, est indépendante.
-- Limite : sur un site de projet (`…github.io/HTML-tools/`), les chemins commençant par `/` (`/manifest.json`, `/sw.js`, liens de l'accueil) visent la racine du domaine, pas le dépôt.
+- Le site doit fonctionner à la fois à la racine d'un domaine (`peeksoumi.com`, VPS) et dans un sous-dossier (`…github.io/HTML-tools/`) : jamais de chemin commençant par `/` dans les pages, le manifeste ou le service worker.
+- GitHub Pages ne sert que des fichiers : pour un outil qui dépend du serveur, pointer vers `https://peeksoumi.com/…` (ex. `parking_gratuit`).
+- Garder `.nojekyll` à la racine (fichiers publiés tels quels).
 - Après fusion, vérifier l'exécution du workflow dans l'onglet Actions.
 
 ## Conventions

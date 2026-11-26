@@ -9,13 +9,13 @@ self.addEventListener('push', (event) => {
   try { d = event.data ? event.data.json() : {}; } catch (e) { d = { body: event.data ? event.data.text() : '' }; }
   event.waitUntil(self.registration.showNotification(d.title || 'Notification', {
     body: d.body || '',
-    icon: '/icons/icon-192.png',
-    data: { url: d.url || '/' },
+    icon: 'icons/icon-192.png',
+    data: { url: d.url || './' },
   }));
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = (event.notification.data && event.notification.data.url) || '/';
+  const url = (event.notification.data && event.notification.data.url) || './';
   event.waitUntil(self.clients.openWindow(url));
 });
