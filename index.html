@@ -7,6 +7,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%234f46e5'/%3E%3Ctext x='50' y='70' font-size='60' text-anchor='middle'%3E🧰%3C/text%3E%3C/svg%3E">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#4f46e5">
+<script src="install.js" defer></script>
 <style>
   :root { --bg:#f3f4f6; --card:#fff; --ink:#111827; --mute:#6b7280; --line:#e5e7eb; --acc:#4f46e5; --acc-h:#4338ca; }
   * { box-sizing: border-box; }
@@ -21,6 +22,8 @@
   .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px; display:flex; flex-direction:column; gap:10px; box-shadow:0 1px 3px rgba(0,0,0,.05); }
   .card h2 { font-size:1.15rem; margin:0; }
   .card p { margin:0; color:var(--mute); font-size:.95rem; flex:1; }
+  .deps { background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-size:.82rem; }
+  .deps ul { margin:4px 0 0; padding-left:18px; }
   .actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
   .btn { font:inherit; font-size:.9rem; font-weight:600; text-decoration:none; border-radius:8px; padding:8px 14px; border:1px solid var(--acc); }
   .btn.primary { background:var(--acc); color:#fff; }
@@ -62,112 +65,172 @@
     <article class="card">
       <h2>Fusion de PDF</h2>
       <p>Charge plusieurs PDF, réordonne ou supprime des pages par glisser-déposer, puis exporte un seul PDF.</p>
+      <div class="deps">
+        <strong>📦 Dépendances de la page téléchargée</strong>
+        <ul><li><b>Connexion requise</b> : bibliothèques pdf-lib (unpkg) et pdf.js (cdnjs).</li><li>Tes PDF restent dans ton navigateur.</li></ul>
+      </div>
       <div class="actions">
         <a class="btn primary" href="fusion-pdf/">Ouvrir</a>
         <a class="btn secondary" href="fusion-pdf/index.html" download="fusion-pdf.html" title="Enregistrer la page (connexion internet requise pour charger pdf-lib et pdf.js)">⬇️ Télécharger la page</a>
+        <a class="btn secondary" href="fusion-pdf/?installer" aria-label="Installer l’application : Fusion de PDF">📲 Installer l’appli</a>
       </div>
     </article>
 
     <article class="card">
       <h2>Carte → GPX</h2>
       <p>Redessine un itinéraire tracé sur une carte (PDF ou image) et le convertit en fichier GPX.</p>
+      <div class="deps">
+        <strong>📦 Dépendances de la page téléchargée</strong>
+        <ul><li><b>Connexion requise</b> pour : lire un PDF (pdf.js, jsDelivr), chercher un lieu (Nominatim, Open-Meteo, swisstopo), obtenir les altitudes (swisstopo, Suisse).</li><li>Envoyé : le texte cherché ; les points du tracé pour les altitudes.</li></ul>
+      </div>
       <div class="actions">
         <a class="btn primary" href="carte-vers-gpx/">Ouvrir</a>
         <a class="btn secondary" href="carte-vers-gpx/index.html" download="carte-vers-gpx.html" title="Enregistrer la page (connexion requise pour la recherche de lieu et les altitudes)">⬇️ Télécharger la page</a>
+        <a class="btn secondary" href="carte-vers-gpx/?installer" aria-label="Installer l’application : Carte → GPX">📲 Installer l’appli</a>
       </div>
     </article>
 
     <article class="card">
       <h2>Parking gratuit</h2>
       <p>Trouve les places de parking gratuites autour d'une position (ville, adresse ou GPS), avec places restantes et rues à stationnement.</p>
+      <div class="deps">
+        <strong>📦 Dépendances de la page téléchargée</strong>
+        <ul><li><b>Connexion requise</b> : Leaflet (unpkg), OpenStreetMap (carte, Overpass, Nominatim), open data de Nantes et Strasbourg.</li><li>Envoyé : la position ou l’adresse recherchée. Ouverte comme fichier, la recherche d’adresse ou la carte peuvent être bloquées.</li></ul>
+      </div>
       <div class="actions">
         <a class="btn primary" href="parking_gratuit/">Ouvrir</a>
         <a class="btn secondary" href="parking_gratuit/index.html" download="parking_gratuit.html" title="Enregistrer la page (connexion requise)">⬇️ Télécharger la page</a>
+        <a class="btn secondary" href="parking_gratuit/?installer" aria-label="Installer l’application : Parking gratuit">📲 Installer l’appli</a>
       </div>
     </article>
 
     <article class="card">
       <h2>Relais de retour colis</h2>
       <p>Points Mondial Relay (commerces, lockers) et autres réseaux autour de toi, avec horaires, filtre par réseau et itinéraire Google Maps.</p>
+      <div class="deps">
+        <strong>📦 Dépendances de la page téléchargée</strong>
+        <ul><li>La liste des réseaux est dans la page. <b>Connexion requise</b> pour les cartes des réseaux et pour « Ma position » (API Adresse, data.gouv.fr).</li></ul>
+      </div>
       <div class="actions">
         <a class="btn primary" href="relais-retour/">Ouvrir</a>
         <a class="btn secondary" href="relais-retour/index.html" download="relais-retour.html" title="Enregistrer la page (connexion requise pour ouvrir les cartes des réseaux)">⬇️ Télécharger la page</a>
+        <a class="btn secondary" href="relais-retour/?installer" aria-label="Installer l’application : Relais de retour colis">📲 Installer l’appli</a>
       </div>
     </article>
 
     <article class="card">
       <h2>Courant de la Loire</h2>
       <p>Heures de changement de sens du courant (jusant / flot) au bac Lola et à l'île de Nantes, d'après la marée, le coefficient et le débit.</p>
+      <div class="deps">
+        <strong>📦 Dépendances de la page téléchargée</strong>
+        <ul><li>Calcul disponible hors ligne.</li><li><b>Connexion requise</b> : débit en direct (Hub’Eau) et carte (Leaflet via unpkg, OpenStreetMap).</li></ul>
+      </div>
       <div class="actions">
         <a class="btn primary" href="courant-loire/">Ouvrir</a>
         <a class="btn secondary" href="courant-loire/index.html" download="courant-loire.html" title="Enregistrer la page (le calcul fonctionne hors ligne ; le débit en direct demande une connexion)">⬇️ Télécharger la page</a>
+        <a class="btn secondary" href="courant-loire/?installer" aria-label="Installer l’application : Courant de la Loire">📲 Installer l’appli</a>
       </div>
     </article>
 
     <article class="card">
       <h2>Bac Lola – situation à chaque quai</h2>
       <p>Où est le bac Indret / Basse-Indre, prochains départs et arrivées prévus à chaque quai avec l'écart à l'horaire officiel (service normal, rotation continue, retard, arrêt).</p>
+      <div class="deps">
+        <strong>📦 Dépendances de la page téléchargée</strong>
+        <ul><li>Calcul inclus dans la page.</li><li><b>Connexion requise</b> : position du bac (GitHub, dépôt lola-relais), perturbations et horaires (API du Département de Loire-Atlantique), météo (Open-Meteo).</li></ul>
+      </div>
       <div class="actions">
         <a class="btn primary" href="bac-lola/">Ouvrir</a>
         <a class="btn secondary" href="bac-lola/index.html" download="bac-lola.html" title="Enregistrer la page (le calcul fonctionne hors ligne ; la position en direct du bac demande une connexion)">⬇️ Télécharger la page</a>
+        <a class="btn secondary" href="bac-lola/?installer" aria-label="Installer l’application : Bac Lola – situation à chaque quai">📲 Installer l’appli</a>
       </div>
     </article>
 
     <article class="card">
       <h2>Lola – position AIS en direct</h2>
       <p>Position, vitesse et cap du bac Lola en direct, lus par le relais du serveur (aisstream.io, puis AISVesselTracker, puis Shiptrail), avec estimation entre deux relevés et carte du chenal Indret / Basse-Indre.</p>
+      <div class="deps">
+        <strong>📦 Version en ligne</strong>
+        <ul><li>Pas de téléchargement : la position en direct vient du relais du site, ou à défaut de sa copie publique GitHub (en retard de quelques minutes).</li></ul>
+      </div>
       <div class="actions">
         <a class="btn primary" href="lola-position/">Ouvrir</a>
+        <a class="btn secondary" href="lola-position/?installer" aria-label="Installer l’application : Lola – position AIS en direct">📲 Installer l’appli</a>
       </div>
     </article>
 
     <article class="card">
       <h2>Météo radar : nuages et pluie à 10 min</h2>
       <p>Carte animée des nuages (satellite EUMETSAT) ou de la pluie (radar) pendant l'heure écoulée, puis estimation de leur position maintenant et dans 10 minutes d'après le vent.</p>
+      <div class="deps">
+        <strong>📦 Dépendances de la page téléchargée</strong>
+        <ul><li><b>Connexion requise</b> : Leaflet (unpkg), EUMETSAT (satellite), RainViewer (pluie), Open-Meteo (vent), Esri et OpenStreetMap (cartes).</li></ul>
+      </div>
       <div class="actions">
         <a class="btn primary" href="meteo-radar/">Ouvrir</a>
         <a class="btn secondary" href="meteo-radar/index.html" download="meteo-radar.html" title="Enregistrer la page (connexion requise : carte, satellite EUMETSAT, radar RainViewer et vent Open-Meteo)">⬇️ Télécharger la page</a>
+        <a class="btn secondary" href="meteo-radar/?installer" aria-label="Installer l’application : Météo radar : nuages et pluie à 10 min">📲 Installer l’appli</a>
       </div>
     </article>
 
     <article class="card">
       <h2>Éditeur d'image</h2>
       <p>Retire le fond d'une image, modifie une zone peinte avec une phrase (IA), ou trouve des images libres de droits proches de la tienne.</p>
+      <div class="deps">
+        <strong>📦 Dépendances de la page téléchargée</strong>
+        <ul><li><b>Connexion requise</b> : bibliothèques et modèles (jsDelivr, staticimgly.com, Hugging Face), AI Horde, Openverse, Wikimedia Commons.</li><li>Le détourage reste dans ton navigateur. La modification par texte envoie l’image réduite et ta phrase à AI Horde ; les images similaires, seulement des mots-clés.</li></ul>
+      </div>
       <div class="actions">
         <a class="btn primary" href="editeur-image/">Ouvrir</a>
         <a class="btn secondary" href="editeur-image/index.html" download="editeur-image.html" title="Enregistrer la page (connexion requise : modèles de détourage et d'IA, AI Horde, Openverse, Wikimedia Commons)">⬇️ Télécharger la page</a>
+        <a class="btn secondary" href="editeur-image/?installer" aria-label="Installer l’application : Éditeur d'image">📲 Installer l’appli</a>
       </div>
     </article>
 
     <article class="card">
       <h2>Générateur d'icônes</h2>
       <p>Quelques mots donnent une icône (ou pars d'une image) ; cherche des similaires, modifie-la par une demande, puis exporte PNG, ICO, SVG ou ZIP.</p>
+      <div class="deps">
+        <strong>📦 Dépendances de la page téléchargée</strong>
+        <ul><li>Aucune dépendance : fonctionne hors ligne.</li><li>Seule l’option IA facultative demande une connexion (api.anthropic.com, avec ta clé).</li></ul>
+      </div>
       <div class="actions">
         <a class="btn primary" href="generateur-icones/">Ouvrir</a>
         <a class="btn secondary" href="generateur-icones/index.html" download="generateur-icones.html" title="Enregistrer la page (fonctionne hors ligne ; seule l'option IA facultative demande une connexion)">⬇️ Télécharger la page</a>
+        <a class="btn secondary" href="generateur-icones/?installer" aria-label="Installer l’application : Générateur d'icônes">📲 Installer l’appli</a>
       </div>
     </article>
 
     <article class="card">
       <h2>Mythomachie</h2>
       <p>Jeu de stratégie en temps réel mythologique : bâtis une cité, traverse trois âges, sers Zeus, Odin ou Râ et affronte 1 à 3 adversaires, seul hors ligne ou en ligne avec tes amis, au doigt ou à la souris.</p>
+      <div class="deps">
+        <strong>📦 Dépendances de la page téléchargée</strong>
+        <ul><li>Aucune dépendance en solo : fonctionne hors ligne.</li><li><b>Connexion requise</b> en ligne : serveur de jeu peeksoumi.com.</li></ul>
+      </div>
       <div class="actions">
         <a class="btn primary" href="mythomachie/">Ouvrir</a>
         <a class="btn secondary" href="mythomachie/index.html" download="mythomachie.html" title="Enregistrer le jeu (le mode seul fonctionne hors ligne ; le jeu en ligne demande une connexion)">⬇️ Télécharger la page</a>
+        <a class="btn secondary" href="mythomachie/?installer" aria-label="Installer l’application : Mythomachie">📲 Installer l’appli</a>
       </div>
     </article>
 
     <article class="card">
       <h2>Ladder Yaskawa</h2>
       <p>Ouvre le ladder d'un robot Yaskawa (CIOPRG.LST), l'affiche en schéma, le trie, le modifie à la souris et l'exporte. Compare deux versions et analyse la sauvegarde (noms d'E/S, alarmes, IF panel, jobs).</p>
+      <div class="deps">
+        <strong>📦 Dépendances de la page téléchargée</strong>
+        <ul><li>Aucune dépendance : fonctionne hors ligne, tes fichiers restent dans ton navigateur.</li></ul>
+      </div>
       <div class="actions">
         <a class="btn primary" href="ladder-yaskawa/">Ouvrir</a>
         <a class="btn secondary" href="ladder-yaskawa/index.html" download="ladder-yaskawa.html" title="Enregistrer la page pour l'utiliser hors ligne (aucune connexion requise)">⬇️ Télécharger la page</a>
+        <a class="btn secondary" href="ladder-yaskawa/?installer" aria-label="Installer l’application : Ladder Yaskawa">📲 Installer l’appli</a>
       </div>
     </article>
   </div>
 
-  <p class="note">Les fichiers que tu charges restent dans ton navigateur. Seules la recherche de lieu et les altitudes de Carte → GPX interrogent des services publics (Open-Meteo, swisstopo). Parking gratuit interroge OpenStreetMap et des données ouvertes via le serveur du site. Courant de la Loire lit le débit de la Loire (Hub'Eau, Vigicrues) ; le reste du calcul se fait dans ton navigateur. Bac Lola lit la position AIS du bac sur le serveur du site et dans un fichier public GitHub (dépôt lola-relais) et la météo actuelle sur Open-Meteo ; le reste du calcul se fait dans ton navigateur. Météo radar interroge EUMETSAT (images satellite), RainViewer (radar de pluie), Open-Meteo (vent) et Esri (fond de carte). Éditeur d'image télécharge ses modèles (jsDelivr, Hugging Face), envoie l'image réduite et ta phrase à AI Horde pour la modification par texte, et seulement des mots-clés à Openverse et Wikimedia Commons pour les images similaires ; le détourage reste dans ton navigateur. Générateur d'icônes ne contacte aucun serveur, sauf api.anthropic.com si tu actives l'option IA avec ta clé. Mythomachie ne contacte son serveur de jeu qu’en mode en ligne. Ladder Yaskawa ne contacte aucun serveur.</p>
+  <p class="note">L’encart 📦 de chaque outil indique ce dont il a besoin et ce qui est envoyé à des services externes. « Installer l’appli » ouvre l’outil, qui propose son installation avec sa propre icône.</p>
 <p class="depot-github" hidden style="grid-column:1/-1;margin:16px 0 0;padding:0 8px;text-align:center;font-size:13px;opacity:.75">Cette page est stockée sur GitHub : <a href="https://github.com/Peeksoumi/HTML-tools" target="_blank" rel="noopener" style="color:inherit">Peeksoumi/HTML-tools</a></p>
 <script>if(location.hostname.endsWith('.github.io'))document.currentScript.previousElementSibling.hidden=false</script>
 </div>
