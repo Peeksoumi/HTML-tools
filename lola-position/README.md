@@ -21,7 +21,7 @@ sudo systemctl restart lola-relais
 - `https://peeksoumi.com/lola-direct/positions` doit renvoyer la même chose (nginx publie le préfixe `/lola-direct/`).
 
 ## Méthode (page)
-1. Interroge `/lola-direct/positions` toutes les 5 s et affiche la dernière position (heure AIS, source indiquée) ; une position plus ancienne que celle affichée est ignorée.
+1. Interroge toutes les 5 s `../lola-direct/positions` (même site ; à défaut, sur erreur 404, la copie publique du dépôt `lola-relais`) et affiche la dernière position (heure AIS, source indiquée) ; une position plus ancienne que celle affichée est ignorée.
 Côté relais : aisstream en continu ; si aisstream est muet depuis 20 s en mouvement (75 s à quai), AISVesselTracker puis Shiptrail sont interrogés toutes les 15 s.
 2. Entre deux relevés : estimation en ligne droite d'après la vitesse et le cap (60 s au plus), lissée sur 0,7 s à l'arrivée du relevé suivant.
 3. Fraîcheur : « En direct » sous 2 min, avertissement jusqu'à 10 min, alerte rouge au-delà ; « Relais AIS injoignable » après deux échecs de suite (les dernières valeurs restent affichées). Après 3 échecs, les essais sont espacés.

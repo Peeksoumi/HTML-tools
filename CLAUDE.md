@@ -6,7 +6,7 @@ Dépôt public d'outils web (une page HTML autonome par dossier). Publié automa
 ## Règle obligatoire : lien vers les issues sur CHAQUE page
 Toute page HTML créée ou modifiée dans ce dépôt doit afficher, de façon visible, un lien pour proposer des améliorations :
 
-- lien principal (en-tête ou en haut de page), libellé « 💡 Proposer une amélioration », **pré-rempli avec le nom de l'outil** (titre `[<dossier>] ` + corps indiquant l'outil et son URL),
+- lien principal (en-tête ou en haut de page), libellé « 💡 Proposer une amélioration », **pré-rempli avec le nom de l'outil** (titre `[<dossier>] ` + corps indiquant l'outil, sans adresse de site),
   pour que l'issue créée précise toujours de quelle page il s'agit : `https://github.com/Peeksoumi/HTML-tools/issues/new?title=%5B<dossier>%5D%20&body=...` (paramètres encodés ; `&` écrit `&amp;` dans le HTML) ;
 - un seul lien par page : pas de doublon en pied de page (ni pour les issues, ni pour le téléchargement).
 
@@ -38,11 +38,11 @@ directement sur un outil (sans passer par l'accueil) obtient sinon « Impossible
 dans son `<head>`, juste après `<link rel="icon" …>` :
 
 ```html
-<link rel="manifest" href="/manifest.json">
-<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(function(){});</script>
+<link rel="manifest" href="../manifest.json">
+<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('../sw.js').catch(function(){});</script>
 ```
 
-- Chemins absolus (`/manifest.json`, `/sw.js`) : le manifeste (`start_url` et `scope` = `/`) et le service worker sont à la racine du site.
+- Chemins relatifs (`../manifest.json`, `../sw.js` ; sans `../` sur l'accueil) : le manifeste (`start_url` et `scope` = `./`) et le service worker sont à la racine du site.
 - Pages générées : modifier le gabarit (`src/template.html` ou `build.py`) puis relancer `build.py`. Dans `mythomachie/build.py` (f-string), écrire `{{}}` pour `{}`, et ne pas marquer ces deux lignes `data-m` (elles ne doivent pas être dans la page téléchargée).
 - À vérifier avant chaque commit : `grep -c 'rel="manifest"' <dossier>/index.html` doit donner 1.
 
@@ -78,6 +78,17 @@ qui explique comment l'outil produit son résultat et d'où viennent les donnée
 - Pages générées (`src/template.html` + `build.py`) : modifier le gabarit puis relancer `build.py`, jamais `index.html` seul.
 - Un seul bloc par page : pas de second « méthode / sources » (ex. `<details>`) qui ferait doublon.
 - À vérifier avant chaque commit, pour chaque page créée ou modifiée : `grep -c 'id="fonctionnement"' <dossier>/index.html` doit donner 1.
+
+## GitHub Pages : branche `gh-pages`
+- `gh-pages` (publiée par GitHub Pages, dossier racine) est une copie de `main`, mise à jour par `.github/workflows/gh-pages.yml` à chaque push sur `main`.
+- Ne jamais committer ni fusionner dans `gh-pages` : la synchronisation force la branche et efface ces changements. Tout passe par `main`.
+- La publication sur le VPS, depuis `main`, est indépendante.
+- Le site doit fonctionner à la fois à la racine d'un domaine (`peeksoumi.com`, VPS) et dans un sous-dossier (`…github.io/HTML-tools/`) : jamais de chemin commençant par `/` dans les pages, le manifeste ou le service worker.
+- Les deux sites sont indépendants : aucune redirection, aucun lien ni appel d'une page vers l'autre site (`peeksoumi.com`, IP du VPS, `github.io`). Un serveur s'appelle par un chemin relatif au site consulté.
+- GitHub Pages ne sert que des fichiers : une fonction qui dépend du serveur doit y afficher qu'elle est indisponible, ou utiliser une source publique tierce.
+- Seule exception : la page Mythomachie téléchargée (`file:`) utilise le serveur de jeu de `peeksoumi.com`.
+- Garder `.nojekyll` à la racine (fichiers publiés tels quels).
+- Après fusion, vérifier l'exécution du workflow dans l'onglet Actions.
 
 ## Conventions
 - Un dossier par outil, avec `index.html` autonome (CSS/JS inlinés), un `README.md`, et un test si possible.

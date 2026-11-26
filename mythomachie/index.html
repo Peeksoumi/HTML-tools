@@ -7,8 +7,8 @@
 <meta name="description" content="Mythomachie : jeu de stratégie en temps réel mythologique, jouable hors ligne dans le navigateur." data-m="1">
 <title data-m="1">Mythomachie</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231e2766'/%3E%3Ctext x='50' y='70' font-size='60' text-anchor='middle'%3E⚡%3C/text%3E%3C/svg%3E" data-m="1">
-<link rel="manifest" href="/manifest.json">
-<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(function(){});</script>
+<link rel="manifest" href="../manifest.json">
+<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('../sw.js').catch(function(){});</script>
 <style data-m="1">
 :root {
   /* Plan : carte plein écran ; interface en bandeaux de lapis filetés d'or ; menu sous un ciel d'étoiles. */
@@ -297,7 +297,7 @@ td small { color: var(--mist); }
   <section id="menu" class="screen">
     <div class="menu-inner">
       <nav class="toplinks" aria-label="Liens de la page">
-        <a href="https://github.com/Peeksoumi/HTML-tools/issues/new?title=%5Bmythomachie%5D%20&amp;body=Outil%20concern%C3%A9%20%3A%20mythomachie%20(http%3A%2F%2F141.227.151.70%3A8080%2Fmythomachie%2F)%0A%0A**Ma%20suggestion%20ou%20le%20bug%20rencontr%C3%A9%20%3A**%0A%0A" target="_blank" rel="noopener">💡 Proposer une amélioration</a>
+        <a href="https://github.com/Peeksoumi/HTML-tools/issues/new?title=%5Bmythomachie%5D%20&amp;body=Outil%20concern%C3%A9%20%3A%20mythomachie%0A%0A**Ma%20suggestion%20ou%20le%20bug%20rencontr%C3%A9%20%3A**%0A%0A" target="_blank" rel="noopener">💡 Proposer une amélioration</a>
         <a id="b-download" href="index.html" download="mythomachie.html" title="Enregistrer la page : le jeu entier tient dans ce fichier ; seul, il fonctionne hors ligne (le jeu en ligne demande une connexion)">⬇️ Télécharger la page</a>
       </nav>
       <p id="dl-msg" class="note" hidden></p>
@@ -336,7 +336,7 @@ td small { color: var(--mist); }
         <h3>Sources de données</h3>
         <ul>
           <li><b>Aucune donnée externe</b> : cartes, graphismes et sons sont générés par le code, sans bibliothèque chargée.</li>
-          <li><b>Serveur de jeu</b> peeksoumi.com (WebSocket), en mode en ligne seulement : reçoit votre nom et vos ordres, rien n’est gardé après la partie.</li>
+          <li><b>Serveur de jeu</b> du site consulté (WebSocket ; peeksoumi.com pour la page téléchargée), en ligne seulement : reçoit votre nom et vos ordres, rien n’est gardé après la partie.</li>
           <li><b>Mythologies</b> grecque, nordique et égyptienne (domaine public) ; jeu original.</li>
         </ul>
         <h3>Limites</h3>
@@ -4548,13 +4548,13 @@ function lsGet(k) { try { return localStorage.getItem(k); } catch (_) { return n
 function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (_) { } }
 function netUrl() {
   const o = lsGet('mythomachie.serveur'); if (o) return o;
-  const h = location.hostname, web = location.protocol === 'https:' || location.protocol === 'http:';
-  if (web && (h === 'peeksoumi.com' || h === 'www.peeksoumi.com' || h === '141.227.151.70')) return (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/mythomachie/ws';
+  const web = location.protocol === 'https:' || location.protocol === 'http:';
+  if (web) return new URL('ws', location.href).href.replace(/^http/, 'ws').split('#')[0]; // serveur du même site
   return 'wss://peeksoumi.com/mythomachie/ws';
 }
 function shareUrl(code) {
-  const h = location.hostname;
-  const base = (h === 'peeksoumi.com' || h === 'www.peeksoumi.com' || h === '141.227.151.70') ? location.origin + location.pathname : 'https://peeksoumi.com/mythomachie/';
+  const web = location.protocol === 'https:' || location.protocol === 'http:';
+  const base = web ? location.origin + location.pathname : 'https://peeksoumi.com/mythomachie/';
   return base + '#' + code;
 }
 function myName() { const v = ($('mp-name').value || '').trim().slice(0, 20); return v || ('Héros ' + (10 + ((Math.random() * 89) | 0))); }
@@ -4579,7 +4579,7 @@ function netConnect() {
     setNetState(NET.retry > 2 ? 'error' : 'off');
     if (NET.want) { const d = Math.min(8000, 700 * Math.pow(2, NET.retry++)); setTimeout(() => { if (NET.want) netConnect(); }, d); }
     if (G && G.mp && !G.over) toast('Connexion perdue : reconnexion…', 'warn');
-    if (NET.retry === 3 && !(G && G.mp)) mpMsg('Le serveur de jeu ne répond pas. Le jeu en ligne fonctionne depuis peeksoumi.com/mythomachie.');
+    if (NET.retry === 3 && !(G && G.mp)) mpMsg('Le serveur de jeu ne répond pas. Le jeu en ligne n’est pas disponible si ce site n’a pas de serveur de jeu.');
   };
 }
 /* Connexion muette (téléphone sorti de veille, réseau changé) : on l'abandonne sans attendre et on en ouvre une autre. */

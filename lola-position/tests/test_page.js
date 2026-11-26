@@ -38,7 +38,7 @@ const releve=(ageS,lat,vit,cap)=>({source:"avt",ais:"ok",samples:[[T0-ageS*1000-
 
   // --- aucune donnée reçue par le relais ---
   t.majTextes(horloge);
-  ok(urls.length>=1 && urls.every(u=>/peeksoumi\.com\/lola-direct\/positions$/.test(u)),"une seule source interrogée : le relais AIS du VPS ("+urls[0]+")");
+  ok(urls.length>=1 && urls.every(u=>/^\.\.\/lola-direct\/positions$/.test(u)),"une seule source interrogée : le relais AIS du VPS ("+urls[0]+")");
   ok(els.statut.className==="warn" && /En attente du premier relevé \(aisstream : connecté, en attente d'une position\)/.test(els.statutTexte.textContent),"relais connecté sans position : attente signalée avec l'état de connexion");
   ok(/◌ Relais AIS : aucun relevé/.test(els.sources.textContent),"ligne de source : aucun relevé");
 

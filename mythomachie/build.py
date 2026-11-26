@@ -17,8 +17,8 @@ html = f"""<!DOCTYPE html>
 <meta name="description" content="Mythomachie : jeu de stratégie en temps réel mythologique, jouable hors ligne dans le navigateur." data-m="1">
 <title data-m="1">Mythomachie</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231e2766'/%3E%3Ctext x='50' y='70' font-size='60' text-anchor='middle'%3E⚡%3C/text%3E%3C/svg%3E" data-m="1">
-<link rel="manifest" href="/manifest.json">
-<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(function(){{}});</script>
+<link rel="manifest" href="../manifest.json">
+<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('../sw.js').catch(function(){{}});</script>
 <style data-m="1">
 {css}
 </style>
