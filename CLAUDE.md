@@ -42,6 +42,8 @@ dans son `<head>`, juste après `<link rel="icon" …>` :
 <script>if('serviceWorker' in navigator)navigator.serviceWorker.register('../sw.js').catch(function(){});</script>
 ```
 
+- **Proposition d'installation** : juste après ces deux lignes, `<script src="../install.js" defer></script>` (`install.js` sur l'accueil). Il affiche le bandeau « Installer » ; dans `mythomachie/build.py`, sans `data-m`.
+  À vérifier : `grep -c 'install.js' <dossier>/index.html` doit donner 1.
 - **Chaque application a son propre manifeste** (`<dossier>/manifest.json`) avec ses propres icônes (`<dossier>/icons/`) : c'est le manifeste, pas le favicon,
   qui fixe l'icône de l'appli installée. Ne jamais pointer une page d'outil vers `../manifest.json` (elle prendrait l'icône de l'accueil).
 - Ne pas écrire ces fichiers à la main : après tout nouvel outil ou tout changement de favicon, de `<title>` ou de nom de tuile, lancer `python3 tools/gen_manifests.py`
@@ -111,6 +113,7 @@ qui explique comment l'outil produit son résultat et d'où viennent les donnée
 - Un dossier par outil, avec `index.html` autonome (CSS/JS inlinés), un `README.md`, et un test si possible.
 - Ne pas ajouter de dépendance externe sans nécessité ; rien n'est envoyé à un serveur tiers sans le dire dans la page.
 - Tout nouvel outil doit avoir sa carte (Ouvrir + Télécharger la page) et sa tuile de raccourci (`.launcher`) dans `index.html` à la racine, la page d'accueil du site.
+- Chaque carte de l'accueil a un encart `.deps` (dépendances de la page téléchargée et données envoyées, à tenir à jour avec la page) et un bouton « Installer l’appli » (`<dossier>/?installer`).
 - Après modification : tester, puis fusionner dans `main` soi-même (procédure ci-dessus ; le serveur se met à jour seul).
 
 ## Fusionner dans `main` : procédure qui marche du premier coup
