@@ -46,18 +46,19 @@ tr.cour td{background:rgba(169,139,217,.14)}
 .off-ev.prevu{border-left-color:var(--gris)}.off-ev.prevu .titre{color:var(--gris)}
 .off-ok,.off-hor{font-size:12px;color:var(--dim);margin-top:4px}
 .alerte{background:var(--rouge);color:#fff;border-radius:6px;padding:6px 10px;margin-top:8px;font-size:14px;font-weight:600}
-.voie{position:relative;height:74px;margin:2px 14px 0}
-.voie .eau{position:absolute;left:0;right:0;top:44px;height:3px;border-radius:2px;background:var(--bleu);opacity:.55}
-.voie .pilier{position:absolute;top:38px;width:3px;height:16px;background:var(--gris);border-radius:2px}
-.voie .nomq{position:absolute;top:56px;font-family:var(--mono);font-size:11px;color:var(--dim);white-space:nowrap}
-.voie .reste{position:absolute;top:43px;height:5px;border-radius:2px;background:var(--orange)}
-.voie .pointe{position:absolute;top:36px;width:0;height:0;border:10px solid transparent}
-.voie .pointe.n{right:3px;border-right-width:0;border-left:18px solid var(--orange)}
-.voie .pointe.s{left:3px;border-left-width:0;border-right:18px solid var(--orange)}
+.voie{position:relative;height:200px;margin:6px 14px 4px}
+.voie .rail{position:absolute;top:38px;bottom:38px;left:0;right:0}
+.voie .eau{position:absolute;top:0;bottom:0;left:50%;width:3px;margin-left:-1.5px;border-radius:2px;background:var(--bleu);opacity:.55}
+.voie .pilier{position:absolute;left:50%;width:16px;margin-left:-8px;height:3px;background:var(--gris);border-radius:2px}
+.voie .nomq{position:absolute;left:0;right:0;text-align:center;font-family:var(--mono);font-size:11px;color:var(--dim);white-space:nowrap}
+.voie .reste{position:absolute;left:50%;width:5px;margin-left:-2.5px;border-radius:2px;background:var(--orange)}
+.voie .pointe{position:absolute;left:50%;margin-left:-10px;width:0;height:0;border:10px solid transparent}
+.voie .pointe.n{top:3px;border-top-width:0;border-bottom:18px solid var(--orange)}
+.voie .pointe.s{bottom:3px;border-bottom-width:0;border-top:18px solid var(--orange)}
 .voie .nomq.dest{color:var(--orange);font-weight:700}
 #carte .sens{font-size:16px;color:var(--txt,#e8edf0);font-weight:600}
 #carte .sens small{display:block;font-size:13px;font-weight:400;color:var(--dim);margin-top:2px}
-.bateau{position:absolute;top:2px;width:44px;margin-left:-22px;transition:left 1.2s linear;line-height:0}
+.bateau{position:absolute;left:50%;width:44px;height:36px;margin:-18px 0 0 -22px;transition:top 1.2s linear;line-height:0}
 .bateau svg{display:block;transition:transform .3s}
 a.bateau{cursor:pointer;z-index:2;border-radius:50%}
 a.bateau::before{content:"";position:absolute;inset:-5px -3px;border:2px solid var(--text);border-radius:50%;pointer-events:none;animation:onde 1.8s ease-out infinite}
@@ -73,8 +74,8 @@ a.bateau:hover svg,a.bateau:focus-visible svg{filter:drop-shadow(0 0 6px #fff)}
 .quai.hypo{border:1px dashed var(--gris);background:#0d1113}
 .quai.hypo .badge{color:var(--gris)}
 .bateau.hypo{opacity:.6;outline:1px dashed var(--gris);outline-offset:2px;border-radius:6px}
-.voie .reste.hy{height:0;background:none;border-top:2px dashed var(--gris)}
-.voie .pointe.n.hy{border-left-color:var(--gris)}.voie .pointe.s.hy{border-right-color:var(--gris)}
+.voie .reste.hy{width:0;margin-left:-1px;background:none;border-left:2px dashed var(--gris)}
+.voie .pointe.n.hy{border-bottom-color:var(--gris)}.voie .pointe.s.hy{border-top-color:var(--gris)}
 .quai .grand,.ta,.td,#chaine table.qq td span{text-decoration:underline dotted;text-underline-offset:4px;text-decoration-thickness:1px}
 #quais{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .quai{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 12px;min-width:0;text-align:center}
@@ -83,7 +84,7 @@ a.bateau:hover svg,a.bateau:focus-visible svg{filter:drop-shadow(0 0 6px #fff)}
 .quai .badge{font-family:var(--mono);font-size:11px;letter-spacing:.06em;min-height:15px;margin:-4px 0 4px;text-transform:uppercase}
 .quai.ici .badge{color:var(--vert)}.quai.approche .badge{color:var(--orange)}
 .voie .nomq.ici{color:var(--vert);font-weight:700}
-.voie .pilier.ici{background:var(--vert);width:5px}
+.voie .pilier.ici{background:var(--vert);height:5px}
 tr.next td{background:var(--soft)}
 .quai .nom{font-size:17px;font-weight:600}
 .quai .itin{display:inline-block;margin-top:10px;padding:5px 10px;border:1px solid var(--faint);border-radius:6px;font-size:13px;color:var(--text);text-decoration:none}
@@ -143,14 +144,14 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
     <li><b>Détection</b> : la page lit la dernière heure de positions AIS de Lola (projetées sur le chenal) dans la copie publique GitHub du relais, toutes les 75 s par l'API GitHub (repli toutes les 30 s sur raw.githubusercontent.com, dont le cache retarde de plusieurs minutes ; voir sources). arrivée et départ à un quai sont confirmés par deux positions cohérentes (lieu et vitesse). Tout le calcul reste dans le navigateur.</li>
     <li><b>Entre deux mises à jour</b> : la copie GitHub est mise à jour à chaque nouvelle position (en pratique une toutes les 30 à 80 s en traversée comme à quai (mesuré : AIS Vessel Tracker fournit la plupart des positions, aisstream une toutes les 1 à 3 min) ; le relais republie aussi chaque minute sans nouvelle position, et la page affiche un avertissement et repasse en hypothèse s'il se tait plus de 4 min (8 min en repli sur raw)) ; tant que la position est fraîche (moins de 2 min en mouvement, moins de 4 min à quai), la situation affichée est une <b>mesure</b> (point vert plein) et le modèle ne la contredit jamais. Au-delà, c'est une <b>hypothèse</b> : le modèle déroule les départs et arrivées prévus déjà passés, et la situation, le bateau (position interpolée) et le mode sont signalés en gris pointillé (« supposé », « dernier état connu »). Les heures prévues sont soulignées en pointillé. Les tableaux « changements mesurés » ne montrent que des mesures ; chaque mise à jour recale l'hypothèse.</li>
     <li><b>Nominal</b> : grille GTFS, un départ toutes les 20 min par quai (semaine : Basse-Indre 05:30→22:10, Indret 05:40→22:20 ; week-end et fériés : 06:30→21:30 et 06:40→21:20). Arrivée nominale = départ nominal + 3 min.</li>
-    <li><b>Lecture</b> : chaque quai affiche son prochain départ prévu et la situation du bac (à quai ici, en traversée vers l'autre quai, à l'autre quai, en traversée vers ici) ; l'enchaînement complet des changements est listé une seule fois, une ligne par traversée, départ et arrivée ensemble, chacun dans la colonne de son quai (Indret à gauche, Basse-Indre à droite, comme le schéma) ; l'horaire officiel et l'écart Δ restent sur les cartes.</li>
+    <li><b>Lecture</b> : chaque quai affiche son prochain départ prévu et la situation du bac (à quai ici, en traversée vers l'autre quai, à l'autre quai, en traversée vers ici) ; l'enchaînement complet des changements est listé une seule fois, une ligne par traversée, départ et arrivée ensemble, chacun dans la colonne de son quai (Basse-Indre à gauche, Indret à droite) ; l'horaire officiel et l'écart Δ restent sur les cartes.</li>
     <li><b>Modes</b> : <i>rotation continue</i> si les départs consécutifs sont espacés de ≤ 8,5 min ; <i>retard / perturbation</i> si l'écart médian à la grille dépasse 4,5 min ; <i>arrêt</i> hors service ou sans mouvement depuis 30 min.</li>
     <li><b>Prévision (modèle 3)</b> : simulation du cycle départ → traversée → arrivée → départ. Les heures d'événement sont d'abord <b>recalées sur les coordonnées</b> (profil de vitesse trapézoïdal : démarrage 5 s, freinage 60 s, croisière ≈ 4,4 nœuds), car le détecteur confirme avec une à deux positions de retard. Traversée apprise par type de jour, quai et sens du courant (≈ 3,1–3,7 min). En grille : créneau + décalage appris (semaine ≈ +0,8–0,9 min, week-end ≈ +1,2 min). En rotation : arrivée + séjour appris par quai et par heure (≈ 4,1 min à Indret, 4,8 min à Basse-Indre). Chaque valeur apprise est corrigée par les derniers événements (le prior compte pour 3 observations ; 5 derniers départs, 6 traversées, 5 séjours). En semaine, les fenêtres de pointe (06:55–09:30, 16:00–18:55) anticipent l'entrée et la sortie de rotation. <b>Retour au poste de nuit</b> : arrivé à Indret avec le prochain départ nominal à plus de 3 h (bac en retard après le dernier créneau), le bac repart 2 min plus tard vers Basse-Indre.</li>
     <li><b>Validation</b> : rejeu « page ouverte en continu » (lecture toutes les 75 s) avec prévision à 15 min, comparée aux heures recalées sur les coordonnées. Constantes apprises sur 17→23/11 et testées sur le 24/11 : erreur moyenne 1,53 min contre 1,67 min pour l'ancien modèle (−8 %) ; sur toute la période, le gain vient surtout du recalage et du décalage à la grille appris sans effet de courant. Les constantes de la page sont apprises sur les 7 derniers jours (18→24/11), donc sans test indépendant : l'écart réel sera un peu moins bon que sur ces jours.</li>
     <li><b>Changement de courant</b> : la page calcule seule, d'après la <b>date</b>, les pleines et basses mers de <b>Nantes</b> et leur coefficient (analyse harmonique : constantes REFMAR, calage SHOM, moteur de <i>courant-loire</i>), et le débit moyen mensuel de la Loire à Montjean Q (m³/s). Équation, en minutes après l'étale : <b>début du flot = basse mer + 30,2 − 0,0241·Q + 0,164·C</b> ; <b>début du jusant = pleine mer + 34,3 + 0,0136·Q − 0,096·C</b> (C = coefficient ; 20 min mesurées sur le bac incluses ; valable pour Q de 200 à 1 600). À petits débits (Q ≈ 300, C ≈ 50) : flot ≈ +31 min, jusant ≈ +34 min ; en janvier (Q = 1 450, C ≈ 50) : flot ≈ +4 min, jusant ≈ +49 min. Calée sur 12 renverses mesurées du 13 au 19/11/2026 (Q de 200 à 310) : erreur moyenne ≈ 13–16 min, pire cas 29–38 min, fenêtre ± 20 min (± 30 min au-delà de 1 000 m³/s : <b>jamais mesuré</b>). Le changement est affiché comme un retard possible, en violet, dans l'enchaînement prévu, à l'heure de la renverse (à venir ou en cours, jusqu'à 90 min avant) ; les lignes dont un horaire tombe dans la fenêtre sont surlignées.</li>
     <li><b>Quais et courant</b> : le sens du courant (flot ou jusant) déduit de l'équation sert à choisir la durée de traversée apprise (à Basse-Indre ≈ 0,3 min de plus au jusant en semaine). L'effet de ± 0,7 min sur l'heure de départ, mesuré avec les heures brutes du détecteur, n'apparaît plus avec les heures recalées : il n'est plus appliqué.</li>
     <li><b>Informations officielles</b> : indépendamment du modèle, la page interroge toutes les 2 min l'API du Département qui alimente l'appli « Bacs de Loire » et affiche tel quel le message d'une perturbation annoncée (en cours ou prévisionnelle) ; sans perturbation, une ligne discrète le dit. Sous l'enchaînement prévu, elle affiche aussi les horaires officiels (lus toutes les 30 min) et avertit s'ils diffèrent de la grille GTFS du modèle. Ces informations ne changent pas les prévisions.</li>
-    <li><b>Visuel</b> : un bateau est placé entre Indret et Basse-Indre selon la dernière position AIS projetée sur le chenal ; sa situation (à quai à Indret, à quai à Basse-Indre, en route vers l'un ou l'autre) est la même que celle des cartes de quai : elle vient du dernier changement détecté, pas de la vitesse brute. Une flèche orange indique la direction ; atténué si la position est ancienne.</li>
+    <li><b>Visuel</b> : un bateau est placé entre Basse-Indre (en haut, au nord) et Indret (en bas, au sud) selon la dernière position AIS projetée sur le chenal ; sa situation (à quai à Indret, à quai à Basse-Indre, en route vers l'un ou l'autre) est la même que celle des cartes de quai : elle vient du dernier changement détecté, pas de la vitesse brute. Une flèche orange indique la direction ; atténué si la position est ancienne.</li>
   </ul>
   <h3>Sources de données</h3>
   <ul>
@@ -1082,11 +1083,11 @@ async function lirePosition(){
 // --- affichage ---
 const fmtDelta=d=>d==null?"–":(d>=0?"+":"−")+Math.abs(d).toFixed(1).replace(".",",");
 function classeDelta(d){ if(d==null) return ""; if(d<-2) return "d-av"; if(d<=2.5) return "d-ok"; if(d<=5) return "d-moy"; return "d-fort"; }
-// Une ligne par traversée : départ et arrivée sur la même ligne, dans la colonne de leur quai (Indret à gauche, Basse-Indre à droite, comme le schéma)
+// Une ligne par traversée : départ et arrivée sur la même ligne, dans la colonne de leur quai (Basse-Indre à gauche, Indret à droite : même ordre de lecture que le schéma, de haut en bas)
 // Point d'accès à chaque quai (extrémité du tracé du chenal) : destination du lien « Itinéraire » (Google Maps, voiture)
 const ACCES_QUAI={S:"47.195334,-1.6743426", N:"47.19744,-1.67439"};
 const lienItineraire=q=>"https://www.google.com/maps/dir/?api=1&amp;travelmode=driving&amp;destination="+ACCES_QUAI[q];
-const ENTETE_QQ='<table class="qq"><tr><th>Indret</th><th>Basse-Indre</th></tr>';
+const ENTETE_QQ='<table class="qq"><tr><th>Basse-Indre</th><th>Indret</th></tr>';
 function traversees(evs){ // événements chronologiques → [{de, dep, arr}] (dep ou arr peut manquer)
     const rows=[];
     evs.forEach(e=>{
@@ -1097,8 +1098,8 @@ function traversees(evs){ // événements chronologiques → [{de, dep, arr}] (d
 }
 function ligneTraversee(r,fmt,now,cls){
     const t=(e,pre,post)=>e?'<span>'+pre+fmt(e.t)+(e.approx?' ~':'')+post+'</span>'+(jourTag(e.t,now)?'<small>'+jourTag(e.t,now).trim()+'</small>':''):'<span>…</span>';
-    const dep=t(r.dep,r.de==="N"?"⬅ ":"",r.de==="S"?" ➜":""), arr=t(r.arr,"","");
-    const gauche=r.de==="S"?['dep',dep]:['arr',arr], droite=r.de==="S"?['arr',arr]:['dep',dep];
+    const dep=t(r.dep,r.de==="S"?"⬅ ":"",r.de==="N"?" ➜":""), arr=t(r.arr,"","");
+    const gauche=r.de==="N"?['dep',dep]:['arr',arr], droite=r.de==="N"?['arr',arr]:['dep',dep];
     const cell=c=>'<td class="'+((c[0]==="dep"?r.dep:r.arr)?c[0]:'vide2')+'">'+c[1]+'</td>';
     return '<tr'+(cls?' class="'+cls+'"':'')+'>'+cell(gauche)+cell(droite)+'</tr>';
 }
@@ -1163,18 +1164,19 @@ function rendre(){
         const hyp=etatSit==="hypothese";
         let p=aQuai?(Q==="S"?0.04:0.96):Math.min(0.92,Math.max(0.08,pBac===null?0.5:pBac));
         if(!aQuai&&prochain&&hyp){ const f=Math.min(1,Math.max(0,(now-der.t)/(prochain.t-der.t))), a0=der.q==="S"?0.04:0.96, a1=vers==="N"?0.96:0.04; p=a0+(a1-a0)*f; } // position estimée entre deux mises à jour
-        const cote=(aQuai?autre(Q):vers)==="N"?1:-1;
         if(!indispo) focus={q:cible,kind:hyp?"hypo":(aQuai?"ici":"approche"),aQuai:aQuai};
         const ici=q=>(focus&&focus.kind==="ici"&&focus.q===q)?' ici':'';
-        let h='<div class="voie"><div class="eau"></div><div class="pilier'+ici("S")+'" style="left:0"></div><div class="pilier'+ici("N")+'" style="right:0"></div>';
+        // schéma vertical : Basse-Indre (nord) en haut, Indret (sud) en bas ; p = 0 Indret → 1 Basse-Indre
+        const nomq=q=>'<div class="nomq'+(!aQuai&&!hyp&&vers===q?' dest':'')+ici(q)+'" style="'+(q==="N"?'top':'bottom')+':0">'+NOM_QUAI[q]+'</div>';
+        let h='<div class="voie">'+nomq("N")+'<div class="rail"><div class="eau"></div><div class="pilier'+ici("N")+'" style="top:0"></div><div class="pilier'+ici("S")+'" style="bottom:0"></div>';
         const hy=hyp?' hy':'';
-        if(!aQuai) h+= vers==="N" ? '<div class="reste'+hy+'" style="left:'+(p*100).toFixed(1)+'%;right:14px"></div><div class="pointe n'+hy+'"></div>'
-                                  : '<div class="reste'+hy+'" style="left:14px;right:'+((1-p)*100).toFixed(1)+'%"></div><div class="pointe s'+hy+'"></div>';
-        h+='<a class="bateau'+(indispo?' vieux':(hyp?' hypo':''))+'" style="left:'+(p*100).toFixed(1)+'%" '+LIEN_DIRECT+' aria-label="Voir Lola en direct sur MyShipTracking"><div style="transform:scaleX('+cote+')">'+BATEAU+'</div></a>'
-          +'<div class="nomq'+(!aQuai&&!hyp&&vers==="S"?' dest':'')+ici("S")+'" style="left:0">Indret</div><div class="nomq'+(!aQuai&&!hyp&&vers==="N"?' dest':'')+ici("N")+'" style="right:0">Basse-Indre</div></div>';
+        if(!aQuai) h+= vers==="N" ? '<div class="reste'+hy+'" style="top:14px;bottom:'+(p*100).toFixed(1)+'%"></div><div class="pointe n'+hy+'"></div>'
+                                  : '<div class="reste'+hy+'" style="top:'+((1-p)*100).toFixed(1)+'%;bottom:14px"></div><div class="pointe s'+hy+'"></div>';
+        h+='<a class="bateau'+(indispo?' vieux':(hyp?' hypo':''))+'" style="top:'+((1-p)*100).toFixed(1)+'%" '+LIEN_DIRECT+' aria-label="Voir Lola en direct sur MyShipTracking">'+BATEAU+'</a></div>'
+          +nomq("S")+'</div>';
         let t,sous="";
         if(aQuai){ t="À quai à "+NOM_QUAI[Q]+(hyp?" (supposé)":""); if(prochain&&!indispo) sous=(prochain.t-now<60000?'<span class="td">Départ imminent</span>':'Départ prévu vers <span class="td">'+formatHM(prochain.t)+'</span>'); }
-        else { t=(vers==="N"?"En route vers "+NOM_QUAI[vers]+" ➜":"⬅ En route vers "+NOM_QUAI[vers])+(hyp?" (supposé)":""); if(prochain&&!indispo) sous='Arrivée prévue vers <span class="ta">'+formatHM(prochain.t)+'</span>'; }
+        else { t=(vers==="N"?"⬆ ":"⬇ ")+"En route vers "+NOM_QUAI[vers]+(hyp?" (supposé)":""); if(prochain&&!indispo) sous='Arrivée prévue vers <span class="ta">'+formatHM(prochain.t)+'</span>'; }
         if(indispo) sous="Position trop ancienne : situation à confirmer";
         else if(hyp) sous+=(sous?' · ':'')+'<i>~ hypothèse du modèle · dernière position il y a '+dur(age)+(horsChenal&&etatMes==="mesure"?' (hors du chenal)':'')+'</i>';
         majCarte(h+'<div class="sens">'+t+(sous?'<small>'+sous+'</small>':'')+'</div><div class="centre"><a class="voir" '+LIEN_DIRECT+'>👆 Touchez le bateau : suivez-le en direct ↗</a></div>');
@@ -1182,7 +1184,7 @@ function rendre(){
     const panne=indispo || (mode.mode==="arret" && mode.raison.indexOf("Arrêt")===0);
     const horsService=mode.mode==="arret" && !panne;
     let html="";
-    ["S","N"].forEach(Q=>{ // même ordre que le visuel : Indret à gauche, Basse-Indre à droite
+    ["N","S"].forEach(Q=>{ // même ordre que le visuel : Basse-Indre (haut du schéma) à gauche, Indret à droite
         const O=autre(Q), no=NOM_QUAI[O];
         const deps=pr.evenements.filter(x=>x.type==="dep"&&x.q===Q);
         const arr=pr.evenements.find(x=>x.type==="arr"&&x.q===Q);
