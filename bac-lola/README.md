@@ -2,7 +2,7 @@
 
 Page autonome (un seul `index.html`) : deux colonnes côte à côte, une par quai (Basse-Indre, Indret), avec en grand l'heure du **prochain départ**
 prévu depuis ce quai et la situation du bac (à quai ici → en traversée vers l'autre quai → à l'autre quai → en traversée vers ici). En dessous, une seule
-liste de l'enchaînement prévu des changements (une ligne par traversée, départ et arrivée ensemble, Indret à gauche et Basse-Indre à droite ; l'horaire officiel et l'écart Δ restent sur les cartes de quai) et les derniers changements réellement mesurés. Un bandeau indique le mode du service :
+liste de l'enchaînement prévu des changements (une ligne par traversée, départ et arrivée ensemble, Basse-Indre à gauche et Indret à droite ; l'horaire officiel et l'écart Δ restent sur les cartes de quai) et les derniers changements réellement mesurés. Un bandeau indique le mode du service :
 **normal**, **rotation continue**, **retard / perturbation** ou **arrêt** (nuit, panne).
 
 ## Méthode (modèle hybride)
@@ -69,7 +69,7 @@ Petit pictogramme en en-tête : température, ciel et vent actuels aux bacs, lus
 Un seul quai est mis en évidence, partout à la fois (schéma, carte, première ligne de l'enchaînement) : en vert le quai où se trouve le bac, en orange le quai vers lequel il navigue. Rien n'est surligné si la position est trop ancienne.
 
 ## Visuel
-Un bateau se déplace entre Indret et Basse-Indre selon la dernière position AIS (progression le long du chenal) ; la situation (4 cas : à quai Indret, à quai Basse-Indre, en route vers l'un ou l'autre) vient du dernier changement détecté, comme les cartes de quai, avec une flèche de direction.
+Schéma vertical : Basse-Indre (nord) en haut, Indret (sud) en bas. Le bateau se déplace entre les deux selon la dernière position AIS (progression le long du chenal) ; la situation (4 cas : à quai Indret, à quai Basse-Indre, en route vers l'un ou l'autre) vient du dernier changement détecté, comme les cartes de quai, avec une flèche de direction.
 
 ## Limites
 Un bandeau rouge « Connexion perdue » apparaît dès que le serveur de positions ne répond plus (avec l'ancienneté de la dernière mise à jour), et un autre après 3 min sans nouvelle position. La page suspend ses prévisions après 10 min sans nouvelle position AIS. Les causes d'un retard (autre bateau, vent) ne sont pas détectées en direct ; le changement de courant est anticipé par le calcul mais son effet n'est pas encore mesuré ; le serveur les enregistre
