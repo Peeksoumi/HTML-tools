@@ -1,6 +1,6 @@
 {
-  "name": "Poubelles à verre près de moi",
-  "short_name": "Verre",
+  "name": "Poubelles à verre et déchets alimentaires",
+  "short_name": "Verre & bio",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
