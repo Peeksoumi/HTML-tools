@@ -231,6 +231,10 @@ const Core = (() => {
   // ---------- Pipeline : 1) préparation (masque → squelette), 2) assemblage ----------
   function prepare(rgba, w, h, o) {
     const mask = colorMask(rgba, w, h, o.rgb, o.tol);
+    if (o.shade) {   // tracé vu à travers un voile sombre (bouton lecture d'une vidéo…) : même teinte, deux fois plus foncée
+      const dm = colorMask(rgba, w, h, o.rgb.map(v => v / 2), o.tol * 0.64);
+      for (let i = 0; i < mask.length; i++) mask[i] |= dm[i];
+    }
     for (const r of (o.exclude || [])) {
       const x0 = Math.max(0, Math.floor(Math.min(r[0], r[2]))), x1 = Math.min(w - 1, Math.ceil(Math.max(r[0], r[2])));
       const y0 = Math.max(0, Math.floor(Math.min(r[1], r[3]))), y1 = Math.min(h - 1, Math.ceil(Math.max(r[1], r[3])));
@@ -247,7 +251,7 @@ const Core = (() => {
 
   function assemble(prep, o = {}) {
     const { all, lineW } = prep;
-    const minLen = o.minLen || Math.max(8, 4 * lineW);
+    const minLen = o.minLen || prep.minLen || Math.max(8, 4 * lineW);
     const maxGap = o.maxGap || Math.max(30, 25 * lineW);
     const segs = all.filter(p => plen(p) >= minLen);
     const ch = chain(segs, maxGap, o.startPt);
@@ -267,11 +271,18 @@ const Core = (() => {
     }
     if (o.reverse) full = full.slice().reverse();
     const route = simplify(full, o.eps || 0.7);
-    return { route, minLen, maxGap, nSegs: segs.length, nUsed: ch.used.size };
+    return { route, minLen, maxGap, nSegs: segs.length, nUsed: ch.used.size, ink: ch.total || 0 };
+  }
+
+  // on ne garde les teintes assombries que si elles allongent nettement le tracé (sinon elles n'ajoutent que du bruit)
+  function prepareBest(rgba, w, h, o) {
+    const plain = prepare(rgba, w, h, o), shaded = prepare(rgba, w, h, Object.assign({}, o, { shade: true }));
+    shaded.minLen = Math.max(8, 1.75 * shaded.lineW);   // voiles et pictos découpent le tracé : on garde les petits morceaux
+    return assemble(shaded).ink > 1.15 * assemble(plain).ink ? shaded : plain;   // ink : longueur réellement dessinée, sans les sauts
   }
 
   function extractRoute(rgba, w, h, o) {
-    const p = prepare(rgba, w, h, o);
+    const p = prepareBest(rgba, w, h, o);
     return Object.assign(assemble(p, o), { half: p.half, radius: p.radius, opened: p.opened });
   }
 
@@ -315,7 +326,8 @@ const Core = (() => {
     for (const rgb of cand) {
       const prep = prepare(d.rgba, d.w, d.h, { rgb, tol: 55 });
       const a = assemble(prep, {});
-      const score = plen(a.route) / Math.max(d.w, d.h);   // longueur du tracé chaîné, en largeurs d'image
+      // longueur réellement dessinée moins les sauts entre morceaux (sinon un fond moucheté, relié en zigzag, l'emporte), en largeurs d'image
+      const score = (2 * a.ink - plen(a.route)) / Math.max(d.w, d.h);
       tested.push({ rgb: rgb.map(Math.round), score });
       if (!best || score > best.score) best = { rgb: rgb.map(Math.round), tol: 55, score };
     }
@@ -338,7 +350,9 @@ const Core = (() => {
           let th = 1; while (y + th < h && th < 8 && dark(x + (len >> 1), y + th)) th++;
           const tick = (xx) => { let n = 0; for (let k = 1; k <= 8; k++) { if (y - k >= 0 && dark(xx, y - k)) n++; } for (let k = 1; k <= 8; k++) { if (y + th + k < h && dark(xx, y + th + k)) n++; } return n; };
           const t1 = tick(x + 1), t2 = tick(x2 - 2);
-          if (th <= 4 && t1 >= 3 && t2 >= 3 && (!best || len > best.len)) best = { x1: x, x2: x2 - 1, y: y + th / 2, len };
+          // la barre est posée sur un fond clair : on écarte le texte écrit sur un bandeau sombre
+          const clear = (yy) => { if (yy < 0 || yy >= h) return false; let n = 0; for (let xx = x; xx < x2; xx++) if (!dark(xx, yy)) n++; return n >= 0.7 * len; };
+          if (th <= 4 && t1 >= 3 && t2 >= 3 && (clear(y - 5) || clear(y + th + 4)) && (!best || len > best.len)) best = { x1: x, x2: x2 - 1, y: y + th / 2, len };
         }
         x = x2 + 1;
       }
@@ -381,7 +395,7 @@ const Core = (() => {
     return { x: lines(cols, h), y: lines(rows, w) };
   }
 
-  return { extractJpegsFromPdf, colorMask, edt, openDisk, thin, skeletonPaths, chain, simplify, prepare, assemble, extractRoute, downscale, autoColor, detectScaleBar, detectGrid, plen };
+  return { extractJpegsFromPdf, colorMask, edt, openDisk, thin, skeletonPaths, chain, simplify, prepare, assemble, extractRoute, downscale, autoColor, prepareBest, detectScaleBar, detectGrid, plen };
 })();
 
 // ===== Géodésie =====
