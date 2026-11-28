@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Poubelles à verre près de moi</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2315803d'/%3E%3Ctext x='50' y='70' font-size='60' text-anchor='middle'%3E♻️%3C/text%3E%3C/svg%3E">
+<link rel="manifest" href="manifest.json">
+<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('../sw.js').catch(function(){});</script>
+<script src="../install.js" defer></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --txt:#1c2330; --mut:#667085; --pri:#15803d; --bd:#e4e7ec; --ko:#d92d20; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#10141b; --card:#1a202b; --txt:#e8ecf3; --mut:#98a2b3; --pri:#22a355; --bd:#2b3442; } }
+  * { box-sizing:border-box; }
+  body { margin:0; font:16px/1.45 system-ui,sans-serif; background:var(--bg); color:var(--txt); }
+  main { max-width:900px; margin:0 auto; padding:12px; }
+  h1 { font-size:1.35rem; margin:.3rem 0 .6rem; }
+  h2 { font-size:1.05rem; margin:1.2rem 0 .4rem; }
+  a { color:var(--pri); }
+  .liens, .actions { display:flex; flex-wrap:wrap; gap:6px 16px; margin:0 0 .6rem; font-size:.9rem; }
+  .card { background:var(--card); border:1px solid var(--bd); border-radius:12px; padding:12px; }
+  form { display:flex; flex-wrap:wrap; gap:8px; }
+  input, button { font:inherit; padding:9px 11px; border-radius:9px; border:1px solid var(--bd); background:var(--card); color:var(--txt); }
+  input { flex:1 1 220px; min-width:0; }
+  button { cursor:pointer; background:var(--pri); color:#fff; border:0; }
+  button.sec { background:var(--card); color:var(--txt); border:1px solid var(--bd); }
+  #msg { margin:.6rem 0; color:var(--mut); min-height:1.3em; }
+  #msg.err { color:var(--ko); }
+  #map { height:360px; border-radius:12px; margin:10px 0; border:1px solid var(--bd); }
+  ul.liste { list-style:none; padding:0; margin:0; display:grid; gap:6px; }
+  ul.liste li { background:var(--card); border:1px solid var(--bd); border-radius:10px; padding:9px 11px; display:flex; justify-content:space-between; gap:10px; }
+  ul.liste small { color:var(--mut); display:block; }
+  ul.liste .go { white-space:nowrap; text-align:right; }
+  .hide { display:none !important; }
+  .fonct { margin-top:24px; padding:14px 16px; border:1px solid var(--bd); border-radius:12px; background:var(--card); font-size:.88rem; }
+  .fonct h2 { font-size:1rem; margin:0 0 4px; }
+  .fonct h3 { font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; color:var(--mut); margin:12px 0 4px; }
+  .fonct ul { margin:0; padding-left:18px; } .fonct li { margin:2px 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>♻️ Poubelles à verre</h1>
+  <p class="liens"><a href="https://github.com/Peeksoumi/HTML-tools/issues/new?title=%5Bpoubelles-verre%5D%20&amp;body=Outil%20concern%C3%A9%20%3A%20poubelles-verre%0A%0A**Ma%20suggestion%20ou%20le%20bug%20rencontr%C3%A9%20%3A**%0A%0A" target="_blank" rel="noopener">💡 Proposer une amélioration</a>
+    <a href="index.html" download="poubelles-verre.html" title="Connexion requise (Leaflet, OpenStreetMap, services publics)">⬇️ Télécharger la page</a></p>
+  <div class="card">
+    <form id="f">
+      <input type="search" id="q" aria-label="Ville ou adresse en France" placeholder="Ville ou adresse en France" autocomplete="off">
+      <button type="submit">Chercher</button>
+      <button type="button" class="sec" id="geo">📍 Ma position</button>
+    </form>
+  </div>
+  <div id="msg" role="status"></div>
+
+  <section id="ville" class="card hide">
+    <b id="nomVille"></b>
+    <p class="liens" id="sites" style="margin:.4rem 0 0"></p>
+  </section>
+
+  <section id="res" class="hide">
+    <h2 id="titre"></h2>
+    <div id="map"></div>
+    <p class="actions">
+      <button type="button" class="sec" id="csv">Exporter en CSV</button>
+      <button type="button" class="sec" id="geojson">Exporter en GeoJSON</button>
+      <a id="manque" target="_blank" rel="noopener">➕ Signaler un point manquant</a>
+    </p>
+    <ul class="liste" id="liste"></ul>
+    <p><button type="button" class="sec hide" id="plus">Afficher plus</button></p>
+  </section>
+
+  <div class="fonct" id="fonctionnement">
+    <h2>Fonctionnement et sources</h2>
+    <h3>Fonctionnement</h3><ul><li><b>Commune</b> : le lieu saisi ou votre position sert à trouver la commune ; tous ses points de collecte du verre sont listés.</li><li><b>Distance</b> : à vol d’oiseau, depuis votre position, l’adresse trouvée ou le centre de la ville.</li><li><b>Données envoyées</b> : texte saisi et position partent de votre navigateur vers les services ci-dessous, qui voient votre adresse IP.</li></ul>
+    <h3>Sources de données</h3><ul><li><b>OpenStreetMap</b> (Overpass) : emplacements des conteneurs ; © contributeurs OSM, ODbL.</li><li><b>Nominatim</b> : recherche d’adresse. <b>geo.api.gouv.fr</b> : commune et intercommunalité.</li><li><b>Annuaire de l’administration</b> (DILA) : sites de la mairie et de l’intercommunalité.</li></ul>
+    <h3>Limites</h3><ul><li>La liste n’est pas garantie complète ni à jour : elle dépend des contributions à OpenStreetMap. Vérifiez auprès de la ville.</li><li>France uniquement. Les déchèteries sont exclues. Les sites des villes mènent à leur accueil, pas toujours à la page du tri.</li></ul>
+  </div>
+<p class="depot-github" hidden style="grid-column:1/-1;margin:16px 0 0;padding:0 8px;text-align:center;font-size:13px;opacity:.75">Cette page est stockée sur GitHub : <a href="https://github.com/Peeksoumi/HTML-tools" target="_blank" rel="noopener" style="color:inherit">Peeksoumi/HTML-tools</a></p>
+<script>if(location.hostname.endsWith('.github.io'))document.currentScript.previousElementSibling.hidden=false</script>
+</main>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const OVERPASS_URLS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
+const ANNUAIRE = 'https://api-lannuaire.service-public.gouv.fr/api/explore/v2.1/catalog/datasets/api-lannuaire-administration/records';
+const PAGE = 100;
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const msg = (t, err) => { $('msg').textContent = t || ''; $('msg').className = err ? 'err' : ''; };
+let points = [], commune = null, affiches = 0, map, couche, tour = 0;
+
+async function httpJson(url, options = {}, delai = 20) {
+  const r = await fetch(url, { ...options, signal: AbortSignal.timeout(delai * 1000) });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+function distance(lat1, lon1, lat2, lon2) {
+  const p = Math.PI / 180;
+  const a = Math.sin((lat2 - lat1) * p / 2) ** 2 + Math.cos(lat1 * p) * Math.cos(lat2 * p) * Math.sin((lon2 - lon1) * p / 2) ** 2;
+  return Math.round(12742000 * Math.asin(Math.sqrt(a)));
+}
+
+async function communeDe(lat, lon) {
+  const d = await httpJson(`https://geo.api.gouv.fr/communes?lat=${lat}&lon=${lon}&fields=nom,code,epci`);
+  if (!d.length) throw new Error('Aucune commune française à cet endroit.');
+  return d[0];
+}
+
+async function conteneurs(codeInsee) {
+  const q = `[out:json][timeout:50];
+area["boundary"="administrative"]["ref:INSEE"="${codeInsee}"]->.a;
+(nwr(area.a)["amenity"="recycling"]["recycling_type"!="centre"]["recycling:glass_bottles"="yes"];
+ nwr(area.a)["amenity"="recycling"]["recycling_type"!="centre"]["recycling:glass"="yes"];);
+out center tags;`;
+  let derniere;
+  for (const url of OVERPASS_URLS) {
+    try {
+      const d = await httpJson(url, { method: 'POST', body: new URLSearchParams({ data: q }) }, 55);
+      // Overpass répond 200 avec un « remark » quand la requête a échoué côté serveur.
+      if (d.remark && /error|timed out/i.test(d.remark)) throw new Error('requête interrompue');
+      return d.elements || [];
+    } catch (e) { derniere = e; }
+  }
+  throw derniere;
+}
+
+function enPoints(elements, lat, lon) {
+  return elements.map(e => {
+    const t = e.tags || {}, la = e.lat ?? e.center?.lat, lo = e.lon ?? e.center?.lon;
+    const adresse = [t['addr:housenumber'], t['addr:street']].filter(Boolean).join(' ');
+    return { id: `${e.type}/${e.id}`, lat: la, lon: lo,
+      nom: t.name || adresse || t.description || 'Conteneur à verre',
+      type: t.location === 'underground' ? 'enterré' : '', operateur: t.operator || '',
+      distance_m: distance(lat, lon, la, lo) };
+  }).filter(p => p.lat != null && p.lon != null).sort((a, b) => a.distance_m - b.distance_m);
+}
+
+// Le champ site_internet de l'annuaire est une liste encodée en JSON : [{"libelle":"","valeur":"https://…"}].
+function siteDe(champ) {
+  try {
+    const l = typeof champ === 'string' ? JSON.parse(champ) : champ;
+    const url = l?.[0]?.valeur || '';
+    return /^https?:\/\//i.test(url) ? url : null;
+  } catch (e) { return null; }
+}
+
+async function siteOfficiel(where, filtre) {
+  try {
+    const d = await httpJson(ANNUAIRE + '?' + new URLSearchParams({ where, limit: 100 }));
+    const fiches = (d.results || []).filter(filtre);
+    for (const f of fiches) { const s = siteDe(f.site_internet); if (s) return s; }
+  } catch (e) { /* les liens de recherche restent proposés */ }
+  return null;
+}
+
+const lien = (url, texte) => `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(texte)}</a>`;
+const recherche = t => 'https://duckduckgo.com/?q=' + encodeURIComponent(t);
+
+async function afficherSites(c, n) {
+  $('ville').classList.remove('hide');
+  $('nomVille').textContent = c.nom + (c.epci ? ' — ' + c.epci.nom : '');
+  const secours = [
+    lien(recherche(`colonnes à verre ${c.nom}`), '🔎 Chercher la page « verre » de la ville'),
+    lien('https://www.data.gouv.fr/datasets/search?q=' + encodeURIComponent(`verre ${c.epci?.nom || c.nom}`), '📂 Données ouvertes (data.gouv.fr)')];
+  $('sites').innerHTML = secours.join('');
+  const [mairie, epci] = await Promise.all([
+    siteOfficiel(`code_insee_commune LIKE "${c.code}"`, f => /"mairie"/.test(JSON.stringify(f.pivot ?? '').replace(/\\/g, ''))),
+    c.epci ? siteOfficiel(`siren:"${c.epci.code}"`, () => true) : null]);
+  if (n !== tour) return;
+  $('sites').innerHTML = [mairie && lien(mairie, '🏛️ Site de la mairie'), epci && lien(epci, '🚛 Site de l’intercommunalité (collecte)'), ...secours].filter(Boolean).join('');
+}
+
+function lignes(debut, fin) {
+  return points.slice(debut, fin).map(p => `<li><div>${esc(p.nom)}<small>${esc([p.distance_m + ' m', p.type, p.operateur].filter(Boolean).join(' · '))}<br>${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}</small></div>
+    <div class="go">${lien(`https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lon}&travelmode=walking`, 'Itinéraire')}<small>${lien('https://www.openstreetmap.org/' + p.id, 'Fiche OSM')}</small></div></li>`).join('');
+}
+
+function plus() {
+  $('liste').insertAdjacentHTML('beforeend', lignes(affiches, affiches + PAGE));
+  affiches += PAGE;
+  $('plus').classList.toggle('hide', affiches >= points.length);
+}
+
+function carte(lat, lon) {
+  if (!window.L) { $('map').classList.add('hide'); return; }   // CDN bloqué : la liste reste utilisable
+  if (!map) {
+    map = L.map('map', { preferCanvas: true });
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+    couche = L.layerGroup().addTo(map);
+  }
+  couche.clearLayers();
+  map.setView([lat, lon], 15);
+  map.invalidateSize();
+  L.circleMarker([lat, lon], { radius: 8, color: '#2563eb', fillOpacity: .9 }).bindPopup('Point de départ').addTo(couche);
+  for (const p of points) L.circleMarker([p.lat, p.lon], { radius: 7, color: '#15803d', fillOpacity: .8 })
+    .bindPopup(`${esc(p.nom)}<br>${p.distance_m} m · ${lien(`https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lon}&travelmode=walking`, 'Itinéraire')}`).addTo(couche);
+}
+
+async function rechercher(lat, lon, n) {
+  msg('Recherche de la commune…');
+  $('res').classList.add('hide'); $('ville').classList.add('hide');
+  const c = await communeDe(lat, lon);
+  if (n !== tour) return;
+  commune = c;
+  afficherSites(c, n);
+  msg('Recherche des conteneurs à verre… (jusqu’à une minute dans les grandes villes)');
+  const elements = await conteneurs(c.code).catch(e => { throw new Error(`OpenStreetMap ne répond pas (${e.message}). Réessayez ou utilisez les liens ci-dessus.`); });
+  if (n !== tour) return;
+  points = enPoints(elements, lat, lon);
+  $('res').classList.remove('hide');
+  $('titre').textContent = points.length ? `${points.length} point(s) recensé(s) à ${c.nom}` : `Aucun point recensé dans OpenStreetMap à ${c.nom}`;
+  $('csv').classList.toggle('hide', !points.length); $('geojson').classList.toggle('hide', !points.length);
+  $('manque').href = `https://www.openstreetmap.org/note/new#map=18/${lat}/${lon}`;
+  $('liste').innerHTML = ''; affiches = 0; plus();
+  carte(lat, lon);
+  msg('');
+}
+
+async function lancer(fn) {
+  const n = ++tour;
+  try { await fn(n); } catch (e) { if (n === tour) msg(e.message, true); }
+}
+
+$('f').addEventListener('submit', e => {
+  e.preventDefault();
+  const q = $('q').value.trim();
+  if (!q) return;
+  lancer(async n => {
+    msg('Recherche du lieu…');
+    const g = await httpJson('https://nominatim.openstreetmap.org/search?' + new URLSearchParams({ q, format: 'jsonv2', limit: 1, countrycodes: 'fr', 'accept-language': 'fr' }))
+      .catch(err => { throw new Error(`Recherche du lieu impossible (${err.message}).`); });
+    if (n !== tour) return;
+    if (!g.length) throw new Error('Lieu introuvable en France.');
+    await rechercher(parseFloat(g[0].lat), parseFloat(g[0].lon), n);
+  });
+});
+
+$('geo').addEventListener('click', () => {
+  if (!navigator.geolocation) return msg('Géolocalisation indisponible : saisissez une ville.', true);
+  const n = ++tour;
+  msg('Localisation…');
+  navigator.geolocation.getCurrentPosition(
+    p => { if (n === tour) lancer(m => rechercher(p.coords.latitude, p.coords.longitude, m)); },
+    () => { if (n === tour) msg('Position indisponible (autorisation refusée ou page non sécurisée en http) : saisissez une ville.', true); },
+    { enableHighAccuracy: true, timeout: 15000 });
+});
+
+$('plus').addEventListener('click', plus);
+
+function telecharger(nom, type, contenu) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([contenu], { type }));
+  a.download = nom; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+// Les textes OSM sont libres : on neutralise ceux qu'un tableur prendrait pour une formule.
+const cellule = v => '"' + String(v).replace(/^[=+\-@\t\r]/, "'$&").replace(/"/g, '""') + '"';
+$('csv').addEventListener('click', () => telecharger(`verre-${commune.code}.csv`, 'text/csv;charset=utf-8',
+  '﻿nom;latitude;longitude;type;operateur;osm\n' + points.map(p => [cellule(p.nom), p.lat, p.lon, cellule(p.type), cellule(p.operateur), p.id].join(';')).join('\n')));
+$('geojson').addEventListener('click', () => telecharger(`verre-${commune.code}.geojson`, 'application/geo+json', JSON.stringify({
+  type: 'FeatureCollection', attribution: '© contributeurs OpenStreetMap (ODbL)',
+  features: points.map(p => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [p.lon, p.lat] }, properties: { nom: p.nom, type: p.type, operateur: p.operateur, osm: p.id } })) })));
+</script>
+</body>
+</html>
