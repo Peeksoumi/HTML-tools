@@ -108,9 +108,18 @@ qui explique comment l'outil produit son résultat et d'où viennent les donnée
 - Le site doit fonctionner à la fois à la racine d'un domaine (`peeksoumi.com`, VPS) et dans un sous-dossier (`…github.io/HTML-tools/`) : jamais de chemin commençant par `/` dans les pages, le manifeste ou le service worker.
 - Les deux sites sont indépendants : aucune redirection, aucun lien ni appel d'une page vers l'autre site (`peeksoumi.com`, IP du VPS, `github.io`). Un serveur s'appelle par un chemin relatif au site consulté.
 - GitHub Pages ne sert que des fichiers : une fonction qui dépend du serveur doit y afficher qu'elle est indisponible, ou utiliser une source publique tierce.
-- Seule exception : la page Mythomachie téléchargée (`file:`) utilise le serveur de jeu de `peeksoumi.com`.
+- Exceptions (les seules) :
+  - la page Mythomachie téléchargée (`file:`) utilise le serveur de jeu de `peeksoumi.com` ;
+  - **abonnements aux notifications** (décision du 28/11/2026) : les pages, y compris sur GitHub Pages, peuvent appeler le serveur OVH (`https://peeksoumi.com`, HTTPS obligatoire) pour enregistrer ou supprimer un abonnement Web Push. Rien d'autre ne passe par cet appel.
 - Garder `.nojekyll` à la racine (fichiers publiés tels quels).
 - Après fusion, vérifier l'exécution du workflow dans l'onglet Actions.
+
+## Notifications : GitHub Actions déclenche et envoie
+- GitHub Actions déclenche et envoie les notifications ; le serveur OVH ne fait que garder la liste des destinataires.
+- Clé privée VAPID et accès à la liste : dans les secrets GitHub (et côté serveur), jamais dans le dépôt ni dans une page. La liste ne se lit qu'avec authentification.
+- Serveur : n'accepter que les adresses des services de notification connus, limiter les inscriptions abusives ; supprimer les abonnements dont l'envoi répond 404 ou 410.
+- Page : abonnement seulement après un clic, bouton « Désactiver », information sur les données conservées (à dire aussi dans « Fonctionnement et sources » et l'encart `.deps`).
+- Les tâches planifiées de GitHub peuvent être retardées ou sautées : ne pas les utiliser pour une alerte à la minute près.
 
 ## Conventions
 - Un dossier par outil, avec `index.html` autonome (CSS/JS inlinés), un `README.md`, et un test si possible.
