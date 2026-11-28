@@ -62,6 +62,9 @@ et `.../bacspsn_android/1.0/traficparameter?id=bacs_horaires` (toutes les 30 min
 Sous le bandeau : un bloc par perturbation annoncée (rouge si en cours, gris si prévisionnelle), sinon une ligne « aucune perturbation annoncée ». Sous l'enchaînement prévu : les horaires officiels, avec un avertissement rouge s'ils diffèrent de la grille GTFS du modèle (constatés identiques le 26/11/2026 : « jours spéciaux » = week-end et fériés). Ces informations ne modifient pas les prévisions.
 Limites : API non documentée, format réel d'une perturbation encore jamais observé (liste vide depuis le 25/11/2026). Test : `node tests/test_officiel.js`.
 
+## Alertes
+Notification à chaque nouvelle perturbation annoncée (facultatif) : voir [`notifications/README.md`](notifications/README.md).
+
 ## Météo
 Petit pictogramme en en-tête : température, ciel et vent actuels aux bacs, lus sur Open-Meteo (coordonnées fixes, rafraîchi toutes les 10 min ; masqué si indisponible).
 

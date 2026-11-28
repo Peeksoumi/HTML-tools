@@ -110,7 +110,7 @@ qui explique comment l'outil produit son résultat et d'où viennent les donnée
 - GitHub Pages ne sert que des fichiers : une fonction qui dépend du serveur doit y afficher qu'elle est indisponible, ou utiliser une source publique tierce.
 - Exceptions (les seules) :
   - la page Mythomachie téléchargée (`file:`) utilise le serveur de jeu de `peeksoumi.com` ;
-  - **abonnements aux notifications** (décision du 28/11/2026) : les pages, y compris sur GitHub Pages, peuvent appeler le serveur OVH (`https://peeksoumi.com`, HTTPS obligatoire) pour enregistrer ou supprimer un abonnement Web Push. Rien d'autre ne passe par cet appel.
+  - **abonnements aux notifications** (décision du 28/11/2026) : les pages, y compris sur GitHub Pages, peuvent appeler le serveur OVH (`https://peeksoumi.com`, HTTPS obligatoire) pour enregistrer ou supprimer un abonnement Web Push (et lire la clé publique nécessaire à l'inscription). Rien d'autre ne passe par cet appel.
 - Garder `.nojekyll` à la racine (fichiers publiés tels quels).
 - Après fusion, vérifier l'exécution du workflow dans l'onglet Actions.
 
@@ -119,6 +119,7 @@ qui explique comment l'outil produit son résultat et d'où viennent les donnée
 - Clé privée VAPID et accès à la liste : dans les secrets GitHub (et côté serveur), jamais dans le dépôt ni dans une page. La liste ne se lit qu'avec authentification.
 - Serveur : n'accepter que les adresses des services de notification connus, limiter les inscriptions abusives ; supprimer les abonnements dont l'envoi répond 404 ou 410.
 - Page : abonnement seulement après un clic, bouton « Désactiver », information sur les données conservées (à dire aussi dans « Fonctionnement et sources » et l'encart `.deps`).
+- Un service worker propre à chaque alerte (portée `<dossier>/alertes/`) : ne jamais toucher à l'abonnement du service worker du site. Référence : `bac-lola/notifications/README.md`.
 - Les tâches planifiées de GitHub peuvent être retardées ou sautées : ne pas les utiliser pour une alerte à la minute près.
 
 ## Conventions

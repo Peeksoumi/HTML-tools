@@ -8,6 +8,7 @@
 <link rel="manifest" href="manifest.json">
 <script>if('serviceWorker' in navigator)navigator.serviceWorker.register('../sw.js').catch(function(){});</script>
 <script src="../install.js" defer></script>
+<script src="notifs.js" defer></script>
 <style>
 :root{
     --bg:#000;--panel:#0a0f12;--panel2:#12181c;--inset:#070b0d;--border:#232d33;--soft:#171f24;
@@ -39,6 +40,7 @@ tr.cour td{background:rgba(169,139,217,.14)}
 .m-perturbation{border-left-color:var(--orange)}.m-perturbation .mode{color:var(--orange)}
 .m-arret{border-left-color:var(--gris)}.m-arret .mode{color:var(--gris)}
 .led{width:7px;height:7px;display:inline-block;border-radius:50%;background:var(--vert);box-shadow:0 0 4px var(--vert);margin-right:6px}
+#notif{margin:0 4px 12px;font-size:12px;color:var(--dim)}#notif button{font:inherit;font-size:14px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer}#notif p{margin:4px 0}
 #officiel{margin-bottom:12px}#officielHor{margin:6px 0 12px}
 .off-ev{border:1px solid var(--border);border-left-width:6px;border-radius:10px;padding:10px 14px;margin-bottom:8px;background:var(--panel);font-size:14px}
 .off-ev .titre{font-weight:600;margin-bottom:4px}
@@ -131,6 +133,7 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
 </header>
 <div id="bandeau" class="m-arret"><div class="mode">Chargement…</div><div class="detail"></div><div class="live"></div></div>
 <div id="officiel"></div>
+<div id="notif" hidden><button type="button"></button><p></p><small>En activant les alertes, l’adresse de notification de cet appareil et ses clés sont enregistrées sur le serveur peeksoumi.com, jusqu’à désactivation. Délai : 10 min ou plus.</small></div>
 <div id="carte" class="bloc"></div>
 <div id="quais"></div>
 <h2 class="t">Enchaînement prévu</h2><div class="bloc" id="chaine"></div>
@@ -150,6 +153,7 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
     <li><b>Validation</b> : rejeu « page ouverte en continu » (lecture toutes les 75 s) avec prévision à 15 min, comparée aux heures recalées sur les coordonnées. Constantes apprises sur 17→23/11 et testées sur le 24/11 : erreur moyenne 1,53 min contre 1,67 min pour l'ancien modèle (−8 %) ; sur toute la période, le gain vient surtout du recalage et du décalage à la grille appris sans effet de courant. Les constantes de la page sont apprises sur les 7 derniers jours (18→24/11), donc sans test indépendant : l'écart réel sera un peu moins bon que sur ces jours.</li>
     <li><b>Changement de courant</b> : la page calcule seule, d'après la <b>date</b>, les pleines et basses mers de <b>Nantes</b> et leur coefficient (analyse harmonique : constantes REFMAR, calage SHOM, moteur de <i>courant-loire</i>), et le débit moyen mensuel de la Loire à Montjean Q (m³/s). Équation, en minutes après l'étale : <b>début du flot = basse mer + 30,2 − 0,0241·Q + 0,164·C</b> ; <b>début du jusant = pleine mer + 34,3 + 0,0136·Q − 0,096·C</b> (C = coefficient ; 20 min mesurées sur le bac incluses ; valable pour Q de 200 à 1 600). À petits débits (Q ≈ 300, C ≈ 50) : flot ≈ +31 min, jusant ≈ +34 min ; en janvier (Q = 1 450, C ≈ 50) : flot ≈ +4 min, jusant ≈ +49 min. Calée sur 12 renverses mesurées du 13 au 19/11/2026 (Q de 200 à 310) : erreur moyenne ≈ 13–16 min, pire cas 29–38 min, fenêtre ± 20 min (± 30 min au-delà de 1 000 m³/s : <b>jamais mesuré</b>). Le changement est affiché comme un retard possible, en violet, dans l'enchaînement prévu, à l'heure de la renverse (à venir ou en cours, jusqu'à 90 min avant) ; les lignes dont un horaire tombe dans la fenêtre sont surlignées.</li>
     <li><b>Quais et courant</b> : le sens du courant (flot ou jusant) déduit de l'équation sert à choisir la durée de traversée apprise (à Basse-Indre ≈ 0,3 min de plus au jusant en semaine). L'effet de ± 0,7 min sur l'heure de départ, mesuré avec les heures brutes du détecteur, n'apparaît plus avec les heures recalées : il n'est plus appliqué.</li>
+    <li><b>Alertes</b> (facultatif) : GitHub Actions consulte les perturbations toutes les 10 min environ et envoie une notification Web Push ; le serveur peeksoumi.com garde seulement la liste des abonnés (adresse de notification et clés), supprimée à la désactivation.</li>
     <li><b>Informations officielles</b> : indépendamment du modèle, la page interroge toutes les 2 min l'API du Département qui alimente l'appli « Bacs de Loire » et affiche tel quel le message d'une perturbation annoncée (en cours ou prévisionnelle) ; sans perturbation, une ligne discrète le dit. Sous l'enchaînement prévu, elle affiche aussi les horaires officiels (lus toutes les 30 min) et avertit s'ils diffèrent de la grille GTFS du modèle. Ces informations ne changent pas les prévisions.</li>
     <li><b>Visuel</b> : un bateau est placé entre Basse-Indre (en haut, au nord) et Indret (en bas, au sud) selon la dernière position AIS projetée sur le chenal ; sa situation (à quai à Indret, à quai à Basse-Indre, en route vers l'un ou l'autre) est la même que celle des cartes de quai : elle vient du dernier changement détecté, pas de la vitesse brute. Une flèche orange indique la direction ; atténué si la position est ancienne.</li>
   </ul>
@@ -167,6 +171,7 @@ th:nth-child(2),td:nth-child(2){text-align:left;white-space:normal;color:var(--d
   </ul>
   <h3>Limites</h3>
   <ul>
+    <li>Alertes : GitHub peut retarder ou sauter une vérification ; ne pas compter dessus pour un départ imminent.</li>
     <li>Perturbations officielles : l'API n'est pas documentée et peut changer sans préavis ; son format réel n'a pas encore été observé (aucune perturbation depuis le début de la collecte le 25/11/2026), donc l'affichage du message est générique. Une perturbation non annoncée (panne, passage d'un bateau) n'y figure pas.</li>
     <li>Courant : Q vient de la date, pas du débit réel. Une année sèche en hiver ou humide en été est mal classée : en novembre 2026, le débit mesuré (≈ 310 m³/s) est la moitié de la moyenne du mois (775 m³/s), ce qui porte l'erreur moyenne de ≈ 13 à ≈ 16 min. Les 12 renverses de référence sont toutes en mortes-eaux (coefficients 32 à 69) à petits débits ; le terme en coefficient n'améliore pas l'ajustement mesuré (il reprend l'effet des tables du Port), et les gros débits et les vives-eaux ne sont pas validés. Le sens du courant est déduit de la trajectoire du bac, pas d'une mesure directe. Sur 397 départs, aucun retard significatif n'a été relevé près des renverses (22 % d'écarts > 4 min dans ± 30 min, 19 % ailleurs) : seul le sens du courant décale légèrement départs et traversées (≈ ± 1 min).</li>
     <li>Calibrage sur 7 jours seulement (5 de semaine, 2 de week-end) : séjours par heure, décalages et fenêtres de rotation provisoires (certaines heures n'ont que quelques observations), vacances non étudiées. Les constantes sont figées dans la page : à réentraîner régulièrement.</li><li>Le recalage suppose un profil de vitesse moyen : l'heure d'un départ ou d'une arrivée reste connue à quelques secondes près, pas davantage.</li>
