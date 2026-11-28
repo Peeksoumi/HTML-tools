@@ -1,0 +1,58 @@
+name: Alerte bac Lola
+on:
+  schedule:
+    - cron: "3-59/10 * * * *"
+  workflow_dispatch:
+    inputs:
+      essai:
+        description: Envoyer une notification d'essai à tous les abonnés
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: alerte-bac-lola
+  cancel-in-progress: false
+
+jobs:
+  alerte:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CONFIGURE: ${{ secrets.VAPID_PRIVATE_KEY != '' && secrets.ABO_JETON != '' }}
+    steps:
+      - name: Secrets absents
+        if: env.CONFIGURE != 'true'
+        run: echo "::notice::Secrets VAPID_PRIVATE_KEY et ABO_JETON absents, rien à faire (voir bac-lola/notifications/README.md)."
+      - uses: actions/checkout@v4
+        if: env.CONFIGURE == 'true'
+      - uses: actions/setup-python@v5
+        if: env.CONFIGURE == 'true'
+        with: { python-version: "3.12" }
+      - run: pip install "pywebpush>=2,<3"
+        if: env.CONFIGURE == 'true'
+      - uses: actions/cache/restore@v4
+        if: env.CONFIGURE == 'true'
+        with:
+          path: etat.json
+          key: alerte-bac-lola-${{ github.run_id }}
+          restore-keys: alerte-bac-lola-
+      - name: Vérifier les perturbations et envoyer
+        if: env.CONFIGURE == 'true'
+        env:
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          ABO_JETON: ${{ secrets.ABO_JETON }}
+          TEST: ${{ inputs.essai && '1' || '0' }}
+        run: |
+          avant=$(cat etat.json 2>/dev/null || true)
+          code=0
+          python3 bac-lola/notifications/envoyer.py || code=$?
+          if [ "$(cat etat.json 2>/dev/null || true)" != "$avant" ]; then echo "CHANGE=true" >> "$GITHUB_ENV"; fi
+          exit $code
+      - uses: actions/cache/save@v4
+        if: always() && env.CHANGE == 'true'
+        with:
+          path: etat.json
+          key: alerte-bac-lola-${{ github.run_id }}

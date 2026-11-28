@@ -1,0 +1,18 @@
+[Unit]
+Description=Liste des abonnés aux alertes du bac Lola
+After=network.target
+
+[Service]
+# Adapter le chemin au dossier du dépôt sur le serveur.
+ExecStart=/usr/bin/python3 /opt/HTML-tools/bac-lola/notifications/serveur_abonnements.py
+# Contient ABO_CLE_PUBLIQUE=... et ABO_JETON=... (fichier root, droits 600)
+EnvironmentFile=/etc/abonnements-bac-lola.env
+Environment=ABO_FICHIER=/var/lib/abonnements-bac-lola/abonnements.json
+DynamicUser=yes
+StateDirectory=abonnements-bac-lola
+NoNewPrivileges=yes
+ProtectHome=yes
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
